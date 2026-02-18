@@ -16,7 +16,8 @@ export const getSalesAdvice = async (
       Datos de la cotización actual:
       - Producto: ${product.name}
       - Talla: ${inputs.talla} (${inputs.categoria})
-      - Precio de Venta: $${results.precioSugerido.toLocaleString()} COP
+      // Fix: Use results.precioUnidad instead of results.precioSugerido as defined in types.ts
+      - Precio de Venta: $${results.precioUnidad.toLocaleString()} COP
       - Área de estampado: ${inputs.cmEstampado} cm2
       
       Genera un breve discurso de venta (pitch) persuasivo y con estilo rockero para convencer al cliente de comprar esta prenda. Menciona la calidad y el diseño único. Máximo 3 párrafos. Usa un tono rebelde pero profesional.

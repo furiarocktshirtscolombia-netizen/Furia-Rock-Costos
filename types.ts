@@ -9,12 +9,15 @@ export interface ProductReference {
 }
 
 export interface QuoteInputs {
+  clientName: string;
+  quantity: number;
   referencia: string;
   categoria: Category;
   talla: string;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
+  costoEmpaque: number; // New field for flexible packaging costs
 }
 
 export interface QuoteResults {
@@ -24,7 +27,8 @@ export interface QuoteResults {
   costoPlanchado: number;
   costoEmpaque: number;
   costoTotal: number;
-  precioSugerido: number;
+  precioUnidad: number;
+  precioTotal: number;
   ganancia: number;
   margen: number;
 }
