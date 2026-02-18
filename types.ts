@@ -4,7 +4,7 @@ export type Category = 'Niño' | 'Adulto';
 export interface ProductReference {
   id: string;
   name: string;
-  baseCost: number; // Single base cost from Excel
+  baseCost: number;
   description?: string;
 }
 
@@ -14,7 +14,7 @@ export interface QuoteInputs {
   talla: string;
   cmEstampado: number;
   cmCorazon: number;
-  qtyPlanchado: number; // Added quantity for ironing
+  qtyPlanchado: number;
 }
 
 export interface QuoteResults {

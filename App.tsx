@@ -1,13 +1,13 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { QuoteInputs, QuoteResults, ProductReference } from './types';
 import { 
   PRODUCT_REFERENCES_INITIAL, 
-  TALLAS_NIÑO, 
+  TALLAS_NINO, 
   TALLAS_ADULTO, 
-  COSTO_POR_CM2, 
-  COSTO_PLANCHADO_UNITARIO,
+  COSTO_CM2, 
+  COSTO_PLANCHADO,
   COSTO_EMPAQUE,
   GANANCIA_FIJA
 } from './constants';
@@ -33,20 +33,20 @@ import {
   TrendingUp, 
   Layers, 
   Sparkles,
-  Info,
   Loader2,
   FileUp,
   Package,
   Flame,
-  Zap
+  Zap,
+  Target
 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [productRefs, setProductRefs] = useState<ProductReference[]>(PRODUCT_REFERENCES_INITIAL);
   const [inputs, setInputs] = useState<QuoteInputs>({
-    referencia: productRefs[0].id,
+    referencia: PRODUCT_REFERENCES_INITIAL[0].id,
     categoria: 'Niño',
-    talla: TALLAS_NIÑO[3], 
+    talla: TALLAS_NINO[3], // Talla 8 or similar
     cmEstampado: 0,
     cmCorazon: 0,
     qtyPlanchado: 1
@@ -56,12 +56,13 @@ const App: React.FC = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Flexible column detection helper
+  // Helper to find keys in Excel rows regardless of accents or case
   const findKey = (obj: any, candidates: string[]) => {
     const keys = Object.keys(obj);
-    const normalize = (s: string) => s.toLowerCase().trim().replace(/[\s_-]/g, '');
+    const normalize = (s: string) => s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[\s_-]/g, '');
     for (const cand of candidates) {
-      const match = keys.find(k => normalize(k) === normalize(cand));
+      const target = normalize(cand);
+      const match = keys.find(k => normalize(k) === target);
       if (match) return match;
     }
     return null;
@@ -77,48 +78,57 @@ const App: React.FC = () => {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws) as any[];
 
-      if (rows.length === 0) throw new Error("Archivo vacío");
+      if (rows.length === 0) throw new Error("El archivo está vacío");
 
       const newRefs: ProductReference[] = rows.map((row, index) => {
-        const refKey = findKey(row, ['referencia', 'ref', 'reference', 'nombre', 'name', 'producto']);
-        const costKey = findKey(row, ['precio_unitario', 'precio unitario', 'precio', 'costo', 'cost', 'unit_price', 'base']);
+        const refKey = findKey(row, ['referencia', 'ref', 'reference', 'nombre', 'producto']);
+        const costKey = findKey(row, ['precio_unitario', 'precio', 'costo', 'base', 'unit_price']);
         
         return {
           id: String(row[refKey || ''] || `id-${index}`),
           name: String(row[refKey || ''] || `Producto ${index + 1}`),
           baseCost: Number(String(row[costKey || ''] || '0').replace(/[^\d.]/g, '')) || 0,
-          description: row.description || ''
         };
       }).filter(p => p.name);
 
       if (newRefs.length > 0) {
         setProductRefs(newRefs);
         setInputs(prev => ({ ...prev, referencia: newRefs[0].id }));
-        alert(`¡Éxito! Se cargaron ${newRefs.length} referencias.`);
+        alert(`¡Base de datos cargada! ${newRefs.length} productos detectados.`);
       }
     } catch (err) {
       console.error(err);
-      alert('Error al procesar el Excel. Verifica las columnas (Referencia y Precio).');
+      alert('Error al procesar el Excel. Asegúrate de tener columnas de "Referencia" y "Precio".');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
+  // Automated category-based size switching
+  useEffect(() => {
+    setInputs(prev => ({
+      ...prev,
+      talla: prev.categoria === 'Niño' ? TALLAS_NINO[0] : TALLAS_ADULTO[0]
+    }));
+  }, [inputs.categoria]);
+
+  // Main calculation engine
   const results = useMemo((): QuoteResults => {
     const product = productRefs.find(p => p.id === inputs.referencia) || productRefs[0];
     const costoBase = product.baseCost;
     
-    // Logic: cm2 * 170
-    const costoEstampado = (inputs.cmEstampado || 0) * COSTO_POR_CM2;
-    const costoCorazon = (inputs.cmCorazon || 0) * COSTO_POR_CM2;
+    // Formula: cm2 * 170
+    const costoEstampado = Number(inputs.cmEstampado || 0) * COSTO_CM2;
+    const costoCorazon = Number(inputs.cmCorazon || 0) * COSTO_CM2;
     
-    // Logic: planchados * 1000
-    const costoPlanchado = (inputs.qtyPlanchado || 0) * COSTO_PLANCHADO_UNITARIO;
+    // Formula: planchados * 1000
+    const costoPlanchado = Number(inputs.qtyPlanchado || 0) * COSTO_PLANCHADO;
     const costoEmpaque = COSTO_EMPAQUE;
     
+    // Total Cost
     const costoTotal = costoBase + costoEstampado + costoCorazon + costoPlanchado + costoEmpaque;
     
-    // Logic: Fixed $30,000 profit
+    // Profit Logic: Fixed $30,000
     const ganancia = GANANCIA_FIJA;
     const precioSugerido = Math.round(costoTotal + ganancia);
     const margen = (ganancia / precioSugerido) * 100;
@@ -138,42 +148,38 @@ const App: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setInputs(prev => {
-      const next = { ...prev, [name]: (name.includes('cm') || name.includes('qty')) ? Number(value) : value };
-      if (name === 'categoria') {
-        next.talla = value === 'Niño' ? TALLAS_NIÑO[3] : TALLAS_ADULTO[0];
-      }
-      return next;
-    });
+    setInputs(prev => ({ 
+      ...prev, 
+      [name]: (name.includes('cm') || name.includes('qty')) ? Number(value) : value 
+    }));
   };
 
   const generatePitch = async () => {
     setIsAiLoading(true);
     const product = productRefs.find(p => p.id === inputs.referencia)!;
-    // Map internal structure to expected structure for Gemini service
-    const legacyProduct = { ...product, baseCostNiño: product.baseCost, baseCostAdulto: product.baseCost };
-    const advice = await getSalesAdvice(inputs, results, legacyProduct);
+    // Map to legacy format for the service
+    const advice = await getSalesAdvice(inputs, results, product);
     setAiAdvice(advice);
     setIsAiLoading(false);
   };
 
   const chartData = [
-    { name: 'Base', value: results.costoBase, color: '#6366f1' },
-    { name: 'Estampados', value: results.costoEstampado + results.costoCorazon, color: '#ec4899' },
-    { name: 'Extras/Fijos', value: results.costoPlanchado + results.costoEmpaque, color: '#f59e0b' },
+    { name: 'Base Prenda', value: results.costoBase, color: '#4f46e5' },
+    { name: 'Tinta (cm²)', value: results.costoEstampado + results.costoCorazon, color: '#db2777' },
+    { name: 'Op/Fijos', value: results.costoPlanchado + results.costoEmpaque, color: '#f59e0b' },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-20">
-      <header className="bg-slate-900 border-b border-red-900/50 py-6 px-4 md:px-8 mb-8 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-red-600 p-2 rounded-lg rotate-3 shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+    <div className="min-h-screen bg-slate-950 pb-20 selection:bg-red-500/30">
+      <header className="bg-slate-900/80 backdrop-blur-lg border-b border-red-900/30 py-6 px-4 md:px-8 mb-8 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-4">
+            <div className="bg-gradient-to-tr from-red-600 to-red-800 p-2.5 rounded-2xl rotate-6 shadow-[0_0_20px_rgba(220,38,38,0.4)]">
               <Shirt size={32} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tighter text-white">FURIA <span className="text-red-600">ROCK</span> KIDS</h1>
-              <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Cotizador de Precisión v3.0</p>
+              <h1 className="text-3xl font-black tracking-tighter text-white">FURIA <span className="text-red-600">ROCK</span> KIDS</h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-[0.3em] font-bold">Financial Precision Console v3.5</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -186,102 +192,108 @@ const App: React.FC = () => {
             />
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-900/40 border border-indigo-400/20"
+              className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-bold px-6 py-3 rounded-2xl transition-all border border-slate-700 shadow-xl"
             >
               <FileUp size={18} />
-              Cargar Base de Datos
+              Cargar Base (XLSX)
             </button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Column Left: Inputs */}
+      <main className="max-w-7xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Left: Input Panel */}
         <div className="lg:col-span-5 space-y-6">
-          <section className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-xl">
-            <div className="flex items-center gap-2 mb-6">
-              <Calculator className="text-red-500" />
-              <h2 className="text-xl font-bold text-white">Configuración</h2>
+          <section className="bg-slate-900 rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+               <Calculator size={120} />
+            </div>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="bg-red-500/20 p-2 rounded-lg"><Calculator size={20} className="text-red-500" /></div>
+              <h2 className="text-xl font-bold text-white tracking-tight">Parametrización</h2>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Referencia de Producto</label>
+                <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2.5">Referencia de Producto</label>
                 <select 
                   name="referencia"
                   value={inputs.referencia}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-red-500 transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-red-600 transition-all outline-none"
                 >
                   {productRefs.map(ref => (
                     <option key={ref.id} value={ref.id}>{ref.name}</option>
                   ))}
                 </select>
-                <div className="mt-2 text-xs text-indigo-400 font-bold">
-                  Precio Base: ${results.costoBase.toLocaleString()}
+                <div className="mt-3 flex justify-between px-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">Precio Base Cargado:</span>
+                  <span className="text-[11px] font-black text-indigo-400">${results.costoBase.toLocaleString()}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Categoría</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2.5">Categoría</label>
                   <select 
                     name="categoria"
                     value={inputs.categoria}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-red-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-red-600 transition-all outline-none"
                   >
-                    <option value="Niño">Niño</option>
-                    <option value="Adulto">Adulto</option>
+                    <option value="Niño">👦 Niño</option>
+                    <option value="Adulto">🧔 Adulto</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Talla</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2.5">Talla</label>
                   <select 
                     name="talla"
                     value={inputs.talla}
                     onChange={handleInputChange}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-red-600 transition-all outline-none"
                   >
-                    {(inputs.categoria === 'Niño' ? TALLAS_NIÑO : TALLAS_ADULTO).map(talla => (
+                    {(inputs.categoria === 'Niño' ? TALLAS_NINO : TALLAS_ADULTO).map(talla => (
                       <option key={talla} value={talla}>{talla}</option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              <div className="space-y-4 pt-2 border-t border-slate-800">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">Cm² Principal ($170)</label>
+              <div className="space-y-5 pt-6 border-t border-slate-800/50">
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="relative">
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2.5">Cm² Principal</label>
                     <div className="relative">
                       <input 
                         type="number"
                         name="cmEstampado"
                         value={inputs.cmEstampado}
                         onChange={handleInputChange}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 pl-10 text-white focus:ring-2 focus:ring-red-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 pl-12 text-white font-bold focus:ring-2 focus:ring-red-600 outline-none"
+                        placeholder="0"
                       />
-                      <Layers className="absolute left-3 top-3.5 text-slate-500" size={18} />
+                      <Layers className="absolute left-4 top-4.5 text-slate-600" size={18} />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">Cm² Corazón ($170)</label>
+                  <div className="relative">
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2.5">Cm² Corazón</label>
                     <div className="relative">
                       <input 
                         type="number"
                         name="cmCorazon"
                         value={inputs.cmCorazon}
                         onChange={handleInputChange}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 pl-10 text-white focus:ring-2 focus:ring-red-500"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 pl-12 text-white font-bold focus:ring-2 focus:ring-red-600 outline-none"
+                        placeholder="0"
                       />
-                      <Sparkles className="absolute left-3 top-3.5 text-slate-500" size={18} />
+                      <Sparkles className="absolute left-4 top-4.5 text-slate-600" size={18} />
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Cantidad de Planchados ($1000/u)</label>
+                <div className="relative">
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2.5">Ctd. de Planchados</label>
                   <div className="relative">
                     <input 
                       type="number"
@@ -289,152 +301,157 @@ const App: React.FC = () => {
                       min="0"
                       value={inputs.qtyPlanchado}
                       onChange={handleInputChange}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 pl-10 text-white focus:ring-2 focus:ring-red-500"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 pl-12 text-white font-bold focus:ring-2 focus:ring-red-600 outline-none"
                     />
-                    <Zap className="absolute left-3 top-3.5 text-slate-500" size={18} />
+                    <Zap className="absolute left-4 top-4.5 text-slate-600" size={18} />
                   </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-xl overflow-hidden relative">
-            <h4 className="text-white font-bold mb-4 flex items-center gap-2">
-              <Package size={18} className="text-blue-500" />
-              Gastos de Procesamiento
+          <div className="bg-slate-900 rounded-[2rem] p-8 border border-slate-800 shadow-2xl">
+            <h4 className="text-white font-bold mb-6 flex items-center gap-3">
+              <Package size={20} className="text-blue-500" />
+              Gastos Operativos
             </h4>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-xl">
-                <span className="text-slate-400 text-sm">Planchado ({inputs.qtyPlanchado}x)</span>
-                <span className="text-white font-bold">${results.costoPlanchado.toLocaleString()}</span>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-slate-950/50 p-4 rounded-2xl border border-slate-800/50">
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Planchados ({inputs.qtyPlanchado}x)</span>
+                <span className="text-white font-black">${results.costoPlanchado.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center bg-slate-800/50 p-3 rounded-xl">
-                <span className="text-slate-400 text-sm">Empaque Fijo</span>
-                <span className="text-white font-bold">${COSTO_EMPAQUE.toLocaleString()}</span>
+              <div className="flex justify-between items-center bg-slate-950/50 p-4 rounded-2xl border border-slate-800/50">
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">Empaque Fijo</span>
+                <span className="text-white font-black">${COSTO_EMPAQUE.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center bg-green-500/10 p-4 rounded-xl border border-green-500/20 mt-4">
-                <span className="text-green-400 text-sm font-black uppercase tracking-widest">Ganancia Asegurada</span>
-                <span className="text-green-400 text-xl font-black">${GANANCIA_FIJA.toLocaleString()}</span>
+              <div className="mt-6 p-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 flex justify-between items-center group transition-all hover:bg-emerald-500/20">
+                <div>
+                   <span className="text-emerald-500 text-[10px] font-black uppercase tracking-widest block mb-1">Margen de Seguridad</span>
+                   <span className="text-emerald-400 text-xl font-black">GANANCIA FIJA</span>
+                </div>
+                <span className="text-emerald-400 text-3xl font-black">${GANANCIA_FIJA.toLocaleString()}</span>
               </div>
-            </div>
-            <div className="absolute top-[-20px] right-[-20px] opacity-10">
-              <DollarSign size={120} className="text-green-500" />
             </div>
           </div>
         </div>
 
-        {/* Column Right: Results & Charts */}
+        {/* Right: Results Panel */}
         <div className="lg:col-span-7 space-y-8">
-          <div className="relative overflow-hidden bg-gradient-to-br from-red-600 to-red-900 rounded-[2.5rem] p-10 shadow-2xl shadow-red-900/30 ring-1 ring-white/10">
-            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="relative overflow-hidden bg-gradient-to-br from-red-600 via-red-700 to-black rounded-[3rem] p-12 shadow-[0_35px_60px_-15px_rgba(220,38,38,0.3)] border border-white/5">
+            <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
               <div className="text-center md:text-left">
-                <h3 className="text-white/80 font-bold uppercase tracking-widest text-sm mb-2">Precio de Venta Rockero</h3>
-                <div className="flex items-baseline gap-3 justify-center md:justify-start">
-                  <span className="text-7xl font-black text-white tracking-tighter drop-shadow-xl">
+                <p className="text-white/60 font-black uppercase tracking-[0.4em] text-[11px] mb-3">Precio de Venta Final</p>
+                <div className="flex items-baseline gap-4 justify-center md:justify-start">
+                  <span className="text-8xl font-black text-white tracking-tighter drop-shadow-2xl">
                     ${results.precioSugerido.toLocaleString()}
                   </span>
-                  <span className="text-2xl text-white/70 font-bold uppercase">COP</span>
+                  <span className="text-3xl text-white/50 font-bold">COP</span>
                 </div>
-                <div className="mt-6 flex flex-wrap gap-3 justify-center md:justify-start">
-                  <div className="bg-white/20 backdrop-blur-md px-6 py-2 rounded-full text-white text-sm font-black border border-white/20 flex items-center gap-2">
+                <div className="mt-8 flex flex-wrap gap-4 justify-center md:justify-start">
+                  <div className="bg-white/10 backdrop-blur-xl px-7 py-2.5 rounded-full text-white text-xs font-black border border-white/10 flex items-center gap-2.5 shadow-xl">
+                    <Target size={18} className="text-red-400" />
+                    MARGEN REAL: {results.margen.toFixed(2)}%
+                  </div>
+                  <div className="bg-emerald-500/20 backdrop-blur-xl px-7 py-2.5 rounded-full text-emerald-400 text-xs font-black border border-emerald-500/10 flex items-center gap-2.5 shadow-xl">
                     <Flame size={18} className="text-orange-400" />
-                    MARGEN: {results.margen.toFixed(2)}%
+                    UTILIDAD: ${results.ganancia.toLocaleString()}
                   </div>
                 </div>
               </div>
               
-              <div className="bg-black/30 p-8 rounded-[2rem] backdrop-blur-2xl border border-white/10 w-full md:w-72 shadow-2xl">
-                <p className="text-white/60 text-xs font-black uppercase mb-4 tracking-widest">Resumen de Inversión</p>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/70">Prenda Base:</span>
-                    <span className="text-white font-bold">${results.costoBase.toLocaleString()}</span>
+              <div className="bg-black/40 p-8 rounded-[2.5rem] backdrop-blur-3xl border border-white/5 w-full md:w-80 shadow-3xl">
+                <p className="text-white/40 text-[10px] font-black uppercase mb-5 tracking-[0.2em] flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                  Costos de Producción
+                </p>
+                <div className="space-y-4">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-white/60 font-bold uppercase">Base Prenda:</span>
+                    <span className="text-white font-black tracking-wider">${results.costoBase.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/70">Estampado:</span>
-                    <span className="text-white font-bold">${(results.costoEstampado + results.costoCorazon).toLocaleString()}</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-white/60 font-bold uppercase">Tinta/Extra:</span>
+                    <span className="text-white font-black tracking-wider">${(results.costoEstampado + results.costoCorazon).toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/70">Operativo:</span>
-                    <span className="text-white font-bold">${(results.costoPlanchado + results.costoEmpaque).toLocaleString()}</span>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-white/60 font-bold uppercase">Iron/Pack:</span>
+                    <span className="text-white font-black tracking-wider">${(results.costoPlanchado + results.costoEmpaque).toLocaleString()}</span>
                   </div>
-                  <div className="pt-3 mt-3 border-t border-white/30 flex justify-between font-black text-xl text-white">
-                    <span className="text-white/80 text-sm self-center">TOTAL:</span>
-                    <span>${results.costoTotal.toLocaleString()}</span>
+                  <div className="pt-5 mt-5 border-t border-white/10 flex justify-between font-black text-2xl text-white">
+                    <span className="text-white/40 text-[11px] self-center tracking-widest uppercase font-black">Total:</span>
+                    <span className="text-red-500">${results.costoTotal.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
             </div>
             
-            <Rock className="absolute bottom-[-40px] left-[-40px] opacity-10 text-white" size={300} />
+            <Rock className="absolute -bottom-16 -left-16 opacity-10 text-white scale-150 rotate-12" size={400} />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 shadow-xl">
-              <h4 className="text-white font-black uppercase text-xs tracking-widest mb-8 flex items-center gap-2">
-                <Layers size={18} className="text-indigo-500" />
-                Desglose de Costos
-              </h4>
-              <div className="h-56">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800 shadow-2xl flex flex-col items-center">
+              <h4 className="text-slate-500 font-black uppercase text-[10px] tracking-[0.3em] mb-10 self-start">Distribución Financiera</h4>
+              <div className="h-60 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={chartData} innerRadius={50} outerRadius={75} paddingAngle={8} dataKey="value">
+                    <Pie data={chartData} innerRadius={60} outerRadius={85} paddingAngle={10} dataKey="value">
                       {chartData.map((entry, index) => <Cell key={index} fill={entry.color} stroke="none" />)}
                     </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderRadius: '12px', border: 'none', color: '#fff' }} />
+                    <Tooltip contentStyle={{ backgroundColor: '#020617', borderRadius: '20px', border: '1px solid #1e293b', color: '#fff', fontWeight: '900' }} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            <div className="bg-slate-900 p-8 rounded-[2rem] border border-slate-800 shadow-xl flex flex-col justify-center items-center text-center">
-              <div className="bg-green-500/20 p-4 rounded-full mb-4">
-                <TrendingUp size={32} className="text-green-500" />
+            <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800 shadow-2xl flex flex-col justify-center items-center text-center relative overflow-hidden group">
+              <div className="bg-emerald-500/10 p-6 rounded-full mb-6 transition-transform group-hover:scale-110 duration-500">
+                <TrendingUp size={48} className="text-emerald-500" />
               </div>
-              <p className="text-slate-400 text-sm uppercase font-black tracking-[0.2em] mb-2">Utilidad por Prenda</p>
-              <p className="text-5xl font-black text-green-400">${GANANCIA_FIJA.toLocaleString()}</p>
-              <div className="mt-6 bg-slate-800/50 px-6 py-2 rounded-full border border-slate-700">
-                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Ganancia Fija Configuradas</p>
+              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mb-3">Utilidad Neta Directa</p>
+              <p className="text-6xl font-black text-white tracking-tighter">${GANANCIA_FIJA.toLocaleString()}</p>
+              <div className="mt-8 bg-slate-950 px-8 py-3 rounded-full border border-slate-800 shadow-inner">
+                <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Fixed Profit Active</p>
               </div>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-30"></div>
             </div>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-8 relative overflow-hidden group shadow-xl">
-             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="bg-indigo-600/20 p-3 rounded-2xl">
-                    <Sparkles className="text-indigo-500" size={28} />
+          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-10 relative overflow-hidden group shadow-2xl">
+             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8 relative z-10">
+                <div className="flex items-center gap-5">
+                  <div className="bg-indigo-600/20 p-4 rounded-2xl shadow-inner">
+                    <Sparkles className="text-indigo-500" size={32} />
                   </div>
                   <div>
-                    <h4 className="text-white font-black uppercase text-sm tracking-widest">Asistente de Ventas IA</h4>
-                    <p className="text-xs text-slate-400">Argumento persuasivo para el cliente</p>
+                    <h4 className="text-white font-black uppercase text-sm tracking-widest">Generador de Pitch (IA)</h4>
+                    <p className="text-xs text-slate-500 font-medium">Crea un discurso de ventas impactante</p>
                   </div>
                 </div>
                 <button 
                   onClick={generatePitch}
                   disabled={isAiLoading}
-                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black px-8 py-3 rounded-2xl transition-all shadow-xl shadow-indigo-900/40 flex items-center justify-center gap-3 uppercase text-xs tracking-widest"
+                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black px-10 py-4 rounded-[1.5rem] transition-all shadow-2xl shadow-indigo-900/40 flex items-center justify-center gap-3 uppercase text-xs tracking-[0.2em] border-t border-white/20"
                 >
-                  {isAiLoading ? <Loader2 className="animate-spin" size={18} /> : 'Generar Pitch'}
+                  {isAiLoading ? <Loader2 className="animate-spin" size={20} /> : 'Rockear el Pitch'}
                 </button>
              </div>
-             <div className="min-h-[120px] bg-slate-950/60 rounded-2xl p-8 border border-slate-800/50 relative z-10 text-slate-300 leading-relaxed font-medium italic">
-                {aiAdvice ? `"${aiAdvice}"` : "Presiona el botón para recibir un discurso de ventas profesional basado en esta cotización."}
+             <div className="min-h-[140px] bg-slate-950/80 rounded-3xl p-10 border border-slate-800/50 relative z-10 text-slate-300 leading-relaxed font-semibold italic text-lg shadow-inner">
+                {aiAdvice ? `"${aiAdvice}"` : "Configura tu prenda y presiona el botón para recibir un discurso de ventas profesional."}
              </div>
-             <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-600/10 blur-[100px] rounded-full"></div>
+             <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-indigo-600/10 blur-[120px] rounded-full group-hover:bg-indigo-600/20 duration-1000"></div>
           </div>
         </div>
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-slate-800 py-4 px-8 z-50">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-          <div className="flex gap-6">
-             <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500"></div> TINTA: ${COSTO_POR_CM2}/cm²</span>
-             <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div> PLANCHADO: ${COSTO_PLANCHADO_UNITARIO}</span>
-             <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div> EMPAQUE: ${COSTO_EMPAQUE}</span>
+      <footer className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-2xl border-t border-slate-800 py-5 px-10 z-50">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+          <div className="flex flex-wrap justify-center gap-8">
+             <span className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.5)]"></div> TINTA: ${COSTO_CM2}/cm²</span>
+             <span className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.5)]"></div> PLANCHADO: ${COSTO_PLANCHADO}</span>
+             <span className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-orange-600 shadow-[0_0_8px_rgba(234,88,12,0.5)]"></div> EMPAQUE: ${COSTO_EMPAQUE}</span>
           </div>
-          <div className="text-indigo-400/80">FURIA ROCK KIDS • SISTEMA DE GESTIÓN PRO</div>
+          <div className="text-indigo-400 font-black">FURIA ROCK KIDS • OPERATIONAL INTELLIGENCE</div>
         </div>
       </footer>
     </div>
