@@ -14,10 +14,11 @@ export interface QuoteInputs {
   referencia: string;
   categoria: Category;
   talla: string;
+  color: string; // Added color selection
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
-  costoEmpaque: number; // New field for flexible packaging costs
+  costoEmpaque: number;
 }
 
 export interface QuoteResults {
