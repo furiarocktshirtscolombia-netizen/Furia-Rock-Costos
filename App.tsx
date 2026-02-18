@@ -49,7 +49,7 @@ const App: React.FC = () => {
   const [observaciones, setObservaciones] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const formatCOP = (val: number) => `$ ${Math.round(val).toLocaleString('es-CO')}`;
+  const formatCOP = (val: number) => "$ " + Math.round(Number(val || 0)).toLocaleString("es-CO");
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,18 +100,25 @@ const App: React.FC = () => {
     productRefs.find(p => p.id === inputs.referencia) || productRefs[0], 
   [inputs.referencia, productRefs]);
 
-  const esConjunto = useMemo(() => {
-    const name = (currentProduct?.name || "").toLowerCase();
-    return name.includes("conjunto") || name.includes("set") || name.includes("+") || name.includes("bermuda") || name.includes("jogger") || name.includes("joker");
-  }, [currentProduct]);
+  const checkIsConjunto = (refName: string) => {
+    const ref = (refName || "").toLowerCase();
+    return ref.includes("conjunto") || ref.includes("jogger") || ref.includes("bermuda") || ref.includes("joker") || ref.includes("set") || ref.includes("+");
+  };
+
+  const isConjunto = useMemo(() => checkIsConjunto(currentProduct?.name), [currentProduct]);
+
+  // Bermuda color selector logic: Only show for Kids category AND if it's a set
+  const showBermudaSelector = useMemo(() => {
+    return (inputs.categoria === 'Niño') && isConjunto;
+  }, [inputs.categoria, isConjunto]);
 
   useEffect(() => {
-    if (!esConjunto) {
+    if (!showBermudaSelector) {
       setInputs(prev => ({ ...prev, colorBermuda: "No aplica" }));
     } else if (inputs.colorBermuda === "No aplica") {
       setInputs(prev => ({ ...prev, colorBermuda: COLORES_BERMUDA[1] }));
     }
-  }, [esConjunto]);
+  }, [showBermudaSelector]);
 
   const currentResults = useMemo((): QuoteResults => {
     const base = currentProduct.baseCost;
@@ -146,7 +153,7 @@ const App: React.FC = () => {
       categoria: inputs.categoria,
       talla: inputs.talla,
       colorCamiseta: inputs.colorCamiseta,
-      colorBermuda: esConjunto ? inputs.colorBermuda : "No aplica",
+      colorBermuda: showBermudaSelector ? inputs.colorBermuda : "No aplica",
       cmEstampado: inputs.cmEstampado,
       cmCorazon: inputs.cmCorazon,
       qtyPlanchado: inputs.qtyPlanchado,
@@ -159,111 +166,124 @@ const App: React.FC = () => {
 
   const removeItem = (id: string) => setQuoteItems(prev => prev.filter(it => it.id !== id));
 
-  // SOLUCIÓN DEFINITIVA: Exportar con jsPDF
+  // OPTIMIZED PDF EXPORT (Landscape)
   const downloadPDF_jsPDF = () => {
-    const itemsToExport = quoteItems.length > 0 ? quoteItems : [{
+    const itemsToExport: QuoteItem[] = quoteItems.length > 0 ? quoteItems : [{
+      id: 'preview',
       product: currentProduct,
       categoria: inputs.categoria,
       talla: inputs.talla,
       colorCamiseta: inputs.colorCamiseta,
-      colorBermuda: esConjunto ? inputs.colorBermuda : "No aplica",
+      colorBermuda: showBermudaSelector ? inputs.colorBermuda : "No aplica",
+      cmEstampado: inputs.cmEstampado,
+      cmCorazon: inputs.cmCorazon,
+      qtyPlanchado: inputs.qtyPlanchado,
+      costoEmpaque: inputs.costoEmpaque,
       quantity: inputs.quantity,
       results: currentResults
-    }];
-
-    if (itemsToExport.length === 0 && !inputs.clientName) {
-      alert("No hay productos o datos del cliente para exportar.");
-      return;
-    }
+    } as QuoteItem];
 
     // @ts-ignore
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) {
-      alert("Librería jsPDF no detectada.");
+      alert("Error: Librería jsPDF no detectada.");
       return;
     }
 
-    const doc = new jsPDF("p", "mm", "a4");
+    const doc = new jsPDF("l", "mm", "a4"); // "l" for Landscape
     const clienteNombre = inputs.clientName || "CLIENTE VALIOSO";
     const fechaStr = new Date().toLocaleDateString("es-CO");
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Encabezado Estilo Furia
+    // HEADER
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.setTextColor(255, 79, 216); // Hot Pink
+    doc.setTextColor(255, 79, 216); 
     doc.text("FURIA ROCK KIDS", 14, 20);
     
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text("PREMIUM KIDS FASHION", 14, 25);
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text("PREMIUM KIDS FASHION • EXPERTOS EN DTG & DTF", 14, 26);
 
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.text(`CLIENTE: ${clienteNombre.toUpperCase()}`, 14, 38);
-    doc.text(`FECHA: ${fechaStr}`, 140, 38);
+    doc.text(`FECHA: ${fechaStr}`, pageWidth - 14, 38, { align: 'right' });
 
-    // Tabla de Productos
+    // BUILD TABLE
     const head = [["REFERENCIA", "DETALLES / COLORES", "CANT.", "V. UNITARIO", "V. TOTAL"]];
     const body = itemsToExport.map(it => {
-      const detalle = [
-        `Talla: ${it.talla}`,
-        it.colorCamiseta ? `Superior: ${it.colorCamiseta}` : null,
-        it.colorBermuda && it.colorBermuda !== "No aplica" ? `Inferior: ${it.colorBermuda}` : null
-      ].filter(Boolean).join("\n");
+      // Optimized detail string as requested
+      const detail = 
+        `Talla: ${it.talla || "-"}\n` +
+        (it.colorCamiseta ? `Camiseta: ${it.colorCamiseta}\n` : "") +
+        (it.colorBermuda && it.colorBermuda !== "No aplica" ? `Bermuda/Jogger: ${it.colorBermuda}` : "");
 
       return [
         it.product.name.toUpperCase(),
-        detalle,
+        detail.trim(),
         String(it.quantity),
         formatCOP(it.results.precioUnidad),
         formatCOP(it.results.precioTotal)
       ];
     });
 
+    // OPTIMIZED AUTOTABLE (Landscape Distribution)
+    // A4 Landscape width is ~297mm. Available space with 14mm margins is 269mm.
+    // Sum: 90 + 100 + 15 + 32 + 32 = 269mm
     // @ts-ignore
     doc.autoTable({
       startY: 45,
       head,
       body,
       theme: 'grid',
-      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 4, valign: 'middle' },
+      styles: {
+        font: "helvetica",
+        fontSize: 10,
+        cellPadding: 4,
+        valign: "middle"
+      },
+      headStyles: {
+        fillColor: [0, 0, 0],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        halign: "center"
+      },
       columnStyles: {
-        0: { cellWidth: 50, fontStyle: 'bold' },
-        1: { cellWidth: 70 },
-        2: { halign: 'center', cellWidth: 15 },
-        3: { halign: 'right', cellWidth: 30 },
-        4: { halign: 'right', cellWidth: 30, fontStyle: 'bold' }
-      }
+        0: { cellWidth: 90, halign: "left" },   // REFERENCIA
+        1: { cellWidth: 100, halign: "left" },  // DETALLES / COLORES
+        2: { cellWidth: 15, halign: "center" }, // CANTIDAD
+        3: { cellWidth: 32, halign: "right" },  // UNITARIO
+        4: { cellWidth: 32, halign: "right", fontStyle: "bold" }   // TOTAL
+      },
+      margin: { left: 14, right: 14 }
     });
 
-    // Total General
+    // TOTALS & NOTES
     // @ts-ignore
     const finalY = doc.lastAutoTable.finalY || 150;
-    const totalGeneral = itemsToExport.reduce((acc, it) => acc + it.results.precioTotal, 0);
+    const totalGeneral = itemsToExport.reduce<number>((acc, it) => acc + it.results.precioTotal, 0);
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text(`TOTAL: ${formatCOP(totalGeneral)} COP`, 196, finalY + 12, { align: "right" });
+    doc.text(`TOTAL: ${formatCOP(totalGeneral)} COP`, pageWidth - 14, finalY + 12, { align: "right" });
 
-    // Observaciones
     if (observaciones) {
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text("Observaciones:", 14, finalY + 25);
+      doc.setFontSize(11);
+      doc.text("Observaciones:", 14, finalY + 22);
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setTextColor(60, 60, 60);
-      const lines = doc.splitTextToSize(observaciones, 180);
-      doc.text(lines, 14, finalY + 31);
+      const lines = doc.splitTextToSize(observaciones, pageWidth - 28);
+      doc.text(lines, 14, finalY + 28);
     }
 
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text("Esta cotización tiene validez de 5 días hábiles.", 105, 285, { align: "center" });
+    doc.setTextColor(180, 180, 180);
+    doc.text("Furia Rock Kids - Pasión por el diseño infantil con alma rockera.", pageWidth / 2, 200, { align: "center" });
 
-    doc.save(`Cotizacion_FuriaRock_${clienteNombre.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Cotizacion_FuriaRock_${Date.now()}.pdf`);
   };
 
   return (
@@ -289,7 +309,7 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* PANEL CONFIGURACION */}
+        {/* PANEL IZQUIERDO: CONFIGURACIÓN */}
         <div className="lg:col-span-5 space-y-8">
           <section className="card p-8">
             <div className="flex items-center gap-4 mb-6">
@@ -308,7 +328,7 @@ const App: React.FC = () => {
           <section className="card p-8">
             <div className="flex items-center gap-4 mb-8 border-b border-slate-700/50 pb-4">
               <LayoutGrid size={18} className="text-neon-green" />
-              <h2 className="text-lg font-black uppercase tracking-widest">2. Selección Técnica</h2>
+              <h2 className="text-lg font-black uppercase tracking-widest">2. Selección de Producto</h2>
             </div>
 
             <div className="space-y-6">
@@ -353,20 +373,22 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Superior</label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Camiseta / Superior</label>
                   <select value={inputs.colorCamiseta} onChange={(e) => setInputs({...inputs, colorCamiseta: e.target.value})} className="w-full">
+                    <option value="No aplica">No aplica</option>
                     {COLORES_CAMISETA.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 
-                {esConjunto && (
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Inferior (Bermuda/Jogger)</label>
+                {showBermudaSelector && (
+                  <div className="space-y-2" id="wrapColorInferior">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Bermuda / Jogger</label>
                     <select 
                       value={inputs.colorBermuda} 
                       onChange={(e) => setInputs({...inputs, colorBermuda: e.target.value})} 
                       className="w-full"
                     >
+                      <option value="No aplica">No aplica</option>
                       {COLORES_BERMUDA.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -375,11 +397,11 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Cm² Estampado Principal <Info size={10} /></label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Cm² Estampado <Info size={10} /></label>
                   <input type="number" min="0" value={inputs.cmEstampado} onChange={(e) => setInputs({...inputs, cmEstampado: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Cm² Punto Corazón <Info size={10} /></label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Punto Corazón <Info size={10} /></label>
                   <input type="number" min="0" value={inputs.cmCorazon} onChange={(e) => setInputs({...inputs, cmCorazon: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold border-2 border-aqua/30" />
                 </div>
               </div>
@@ -396,12 +418,12 @@ const App: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Cantidad del Pedido</label>
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Cantidad Ítems</label>
                 <input type="number" min="1" value={inputs.quantity} onChange={(e) => setInputs({...inputs, quantity: Math.max(1, Number(e.target.value))})} className="w-full bg-slate-900/40 border-2 border-dashed border-slate-700 rounded-xl px-5 py-4 text-white font-black text-center text-2xl outline-none focus:border-neon-green transition-colors" />
               </div>
 
               <button onClick={addToQuote} className="btn-primary w-full py-5 text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl mt-4">
-                <Plus size={18} /> AGREGAR PRENDA AL PEDIDO
+                <Plus size={18} /> AGREGAR AL PEDIDO
               </button>
             </div>
           </section>
@@ -414,7 +436,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* RESULTS AND CART COLUMN */}
+        {/* PANEL DERECHO: RESULTADOS Y PEDIDO */}
         <div className="lg:col-span-7 space-y-10">
            {/* Resumen Hero Section */}
            <section className="card p-10 relative overflow-hidden group">
@@ -450,7 +472,7 @@ const App: React.FC = () => {
               </div>
            </section>
 
-           {/* Pedido Actual Table */}
+           {/* Pedido Actual List */}
            <section className="card p-10">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
                  <div className="flex items-center gap-4">
@@ -462,13 +484,13 @@ const App: React.FC = () => {
                   disabled={quoteItems.length === 0 && !inputs.clientName} 
                   className="bg-white hover:bg-neon-green text-black font-black px-8 py-4 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-20"
                  >
-                    <Download size={16} /> EXPORTAR COTIZACIÓN PDF
+                    <Download size={16} /> EXPORTAR PDF PARA CLIENTE
                  </button>
               </div>
 
               {quoteItems.length === 0 ? (
                 <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-[2.5rem]">
-                   <p className="text-slate-600 font-bold uppercase tracking-widest text-[11px]">No hay productos cotizados.</p>
+                   <p className="text-slate-600 font-bold uppercase tracking-widest text-[11px]">No hay productos en el pedido.</p>
                 </div>
               ) : (
                 <div className="space-y-5">
@@ -479,9 +501,9 @@ const App: React.FC = () => {
                           <div>
                              <h4 className="text-white font-black uppercase text-base tracking-tight">{item.product.name}</h4>
                              <div className="flex flex-wrap gap-2 mt-2">
-                                <span className="bg-aqua/10 text-aqua px-2 py-0.5 rounded text-[8px] font-black uppercase">TALLA {item.talla}</span>
-                                <span className="bg-hot-pink/10 text-hot-pink px-2 py-0.5 rounded text-[8px] font-black uppercase">SUPERIOR: {item.colorCamiseta}</span>
-                                {item.colorBermuda && item.colorBermuda !== "No aplica" && <span className="bg-lime/10 text-lime px-2 py-0.5 rounded text-[8px] font-black uppercase">INFERIOR: {item.colorBermuda}</span>}
+                                <span className="bg-aqua/10 text-aqua px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">TALLA {item.talla}</span>
+                                <span className="bg-hot-pink/10 text-hot-pink px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">SUP: {item.colorCamiseta}</span>
+                                {item.colorBermuda && item.colorBermuda !== "No aplica" && <span className="bg-lime/10 text-lime px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">INF: {item.colorBermuda}</span>}
                              </div>
                           </div>
                        </div>
@@ -502,7 +524,9 @@ const App: React.FC = () => {
                         <p className="text-hot-pink font-black text-[10px] uppercase tracking-[0.4em] flex items-center gap-2 mb-2">
                            <Target size={14} /> VALOR TOTAL COTIZADO
                         </p>
-                        <p className="text-6xl font-black text-white tracking-tighter">{formatCOP(quoteItems.reduce((a, b) => a + b.results.precioTotal, 0))}</p>
+                        <p className="text-6xl font-black text-white tracking-tighter">
+                          {formatCOP(quoteItems.reduce<number>((acc: number, item: QuoteItem) => acc + item.results.precioTotal, 0))}
+                        </p>
                      </div>
                   </div>
                 </div>
@@ -513,13 +537,13 @@ const App: React.FC = () => {
            <section className="card p-10 bg-slate-900/20">
               <div className="space-y-4">
                  <label className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">
-                   <MessageSquare size={14} className="text-neon-green" /> Notas Personalizadas para el PDF
+                   <MessageSquare size={14} className="text-neon-green" /> Notas para el PDF
                  </label>
                  <textarea 
                   value={observaciones} 
                   onChange={(e) => setObservaciones(e.target.value)} 
                   className="w-full bg-slate-900/60 border border-slate-800 rounded-[1.8rem] px-8 py-6 text-white text-sm font-medium min-h-[120px] resize-none focus:ring-2 focus:ring-hot-pink outline-none transition-all" 
-                  placeholder="Ej: Lavar a mano, no planchar directamente sobre el estampado. Entrega estimada en 8 días..." 
+                  placeholder="Ej: Lavar a mano, no planchar directamente sobre el estampado. Entrega en 10 días hábiles..." 
                  />
               </div>
            </section>
