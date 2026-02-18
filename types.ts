@@ -8,13 +8,29 @@ export interface ProductReference {
   description?: string;
 }
 
+export interface QuoteItem {
+  id: string;
+  product: ProductReference;
+  categoria: Category;
+  talla: string;
+  colorCamiseta: string;
+  colorBermuda: string;
+  cmEstampado: number;
+  cmCorazon: number;
+  qtyPlanchado: number;
+  costoEmpaque: number;
+  quantity: number;
+  results: QuoteResults;
+}
+
 export interface QuoteInputs {
   clientName: string;
   quantity: number;
   referencia: string;
   categoria: Category;
   talla: string;
-  color: string; // Added color selection
+  colorCamiseta: string;
+  colorBermuda: string;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
