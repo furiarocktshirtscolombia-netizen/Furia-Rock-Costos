@@ -1,54 +1,37 @@
 import { ProductReference } from './types';
 
 export const PRODUCT_REFERENCES_INITIAL: ProductReference[] = [
-  {
-    id: 'cam-basic',
-    name: 'Camiseta Algodón Premium',
-    baseCost: 15000,
-    description: 'Camiseta 100% algodón.'
-  },
-  {
-    id: 'set-rock',
-    name: 'Conjunto Rockero Pro',
-    baseCost: 35000,
-    description: 'Camiseta + Bermuda.'
-  },
-  {
-    id: 'hoodie-rock',
-    name: 'Hoodie Rockero',
-    baseCost: 45000,
-    description: 'Saco con capota.'
-  }
+  { id: 'cam-c4', name: 'Camiseta C4', baseCost: 19000 },
+  { id: 'cam-randy', name: 'Camiseta Randy', baseCost: 27000 },
+  { id: 'cam-per-a', name: 'Camiseta Peruana', baseCost: 37000 },
+  { id: 'cam-catar', name: 'Camiseta Catar', baseCost: 35000 },
+  { id: 'cam-per-n', name: 'Camiseta Niño Peruana', baseCost: 23500 },
+  { id: 'cam-acid-n', name: 'Camiseta Niño Acid Wash', baseCost: 23500 },
+  { id: 'cam-nac-n', name: 'Camiseta Niño 100% Nacional', baseCost: 14000 },
+  { id: 'set-per-b', name: 'Conjunto Niño Camiseta Peruana y Bermuda 100% Algodón', baseCost: 37000 },
+  { id: 'set-acid-b', name: 'Conjunto Niño Camiseta Acid Wash y Bermuda 100% Algodón', baseCost: 37000 },
+  { id: 'set-nac-b', name: 'Conjunto Niño Camiseta Bermuda 100% Algodón Nacional', baseCost: 27500 },
+  { id: 'set-per-j', name: 'Conjunto Niño Camiseta Peruana y Jogger 100% Algodón', baseCost: 43000 },
+  { id: 'set-acid-j', name: 'Conjunto Niño Camiseta Acid Wash y Jogger 100% Algodón', baseCost: 43000 },
+  { id: 'set-nac-j', name: 'Conjunto Niño Camiseta Jogger 100% Algodón Nacional', baseCost: 33500 }
 ];
 
 export const TALLAS_NINO = ['2', '4', '6', '8', '10', '12', '14', '16'];
 export const TALLAS_ADULTO = ['S', 'M', 'L', 'XL', 'XXL'];
 
 export const COLORES_CAMISETA = [
-  "Blanco", "Negro", "Arena", "Rojo", "Verde",
+  "No aplica", "Blanco", "Negro", "Arena", "Rojo", "Verde", "Café",
   "Acid Wash Café", "Acid Wash Negro", "Acid Wash Verde", "Acid Wash Azul", "Acid Wash Gris"
 ];
 
 export const COLORES_BERMUDA = [
-  "Blanco", "Negro", "Gris Oscuro", "Gris Claro", "Azul Rey", "Palo de Rosa", "Guayaba",
+  "No aplica", "Blanco", "Negro", "Gris Oscuro", "Gris Claro", "Azul Rey", "Palo de Rosa", "Guayaba",
   "Azul Cielo", "Azul Oscuro", "Lila", "Verde Antioquia", "Camel", "Fucsia", "Fantasía",
   "Verde Oliva", "Café"
 ];
-
-export const COLOR_HEX: Record<string, string> = {
-  "Blanco": "#F5F6F7", "Negro": "#0F1115", "Arena": "#D8C3A5", "Rojo": "#D62828", "Verde": "#118A5A",
-  "Café": "#6F4E37", "Gris Oscuro": "#4B4F57", "Gris Claro": "#C9CDD3",
-  "Azul Rey": "#1F5EFF", "Azul Cielo": "#69B9FF", "Azul Oscuro": "#102A56",
-  "Palo de Rosa": "#D6A3B5", "Guayaba": "#FF6F91", "Lila": "#B39DDB",
-  "Verde Antioquia": "#1E8E3E", "Camel": "#C19A6B", "Fucsia": "#E81E8C", "Fantasía": "#8E44AD",
-  "Verde Oliva": "#556B2F",
-  "Acid Wash Café": "#6F4E37", "Acid Wash Negro": "#1B1E24", "Acid Wash Verde": "#1F6F4A",
-  "Acid Wash Azul": "#2C6FB7", "Acid Wash Gris": "#6E7580"
-};
 
 export const COSTO_CM2 = 170; 
 export const COSTO_PLANCHADO = 1000;
 export const COSTO_EMPAQUE = 1300;
 export const GANANCIA_NINO = 35000;
 export const GANANCIA_ADULTO = 30000;
-export const GANANCIA_FIJA = 30000; // Legacy if needed
