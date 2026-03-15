@@ -14,7 +14,7 @@ export interface QuoteItem {
   categoria: Category;
   talla: string;
   colorCamiseta: string;
-  colorBermuda: string;
+  colorInferior: string;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
@@ -30,7 +30,7 @@ export interface QuoteInputs {
   categoria: Category;
   talla: string;
   colorCamiseta: string;
-  colorBermuda: string;
+  colorInferior: string;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
@@ -51,16 +51,17 @@ export interface QuoteResults {
 }
 
 export interface Sale {
-  id: string;
+  id: string | number;
   fecha: string;
   cliente: string;
   referencia: string;
   categoria: Category;
   talla: string;
   colorCamiseta: string;
-  colorBermuda: string;
+  colorInferior: string;
   cantidad: number;
-  precioUnitario: number;
+  precioVentaUnitario: number;
+  costoUnitario: number;
   totalVenta: number;
   costoTotal: number;
   ganancia: number;
@@ -70,15 +71,13 @@ export interface Sale {
 }
 
 export interface Purchase {
-  id: string;
+  id: string | number;
   fecha: string;
   proveedor: string;
-  tipoCompra: string;
   producto: string;
   categoria: string;
   cantidad: number;
   valorUnitario: number;
   totalCompra: number;
-  formaPago: string;
   observaciones: string;
 }

@@ -8,14 +8,14 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: PieChartIcon },
     { id: 'cotizador', label: 'Cotizador', icon: LayoutGrid },
     { id: 'ventas', label: 'Ventas', icon: ShoppingCart },
     { id: 'compras', label: 'Compras', icon: ShoppingBag },
-    { id: 'dashboard', label: 'Dashboard', icon: PieChartIcon },
   ];
 
   return (
-    <nav className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-2xl border border-white/5">
+    <nav className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-sm">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -23,13 +23,13 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300 ${
               isActive 
-                ? 'bg-white text-black shadow-lg shadow-white/10' 
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
+                ? 'bg-white text-black shadow-xl shadow-white/5' 
+                : 'text-gray-500 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Icon size={14} />
+            <Icon size={14} strokeWidth={isActive ? 3 : 2} />
             <span className="hidden sm:inline">{tab.label}</span>
           </button>
         );
