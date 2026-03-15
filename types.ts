@@ -49,3 +49,36 @@ export interface QuoteResults {
   ganancia: number;
   margen: number;
 }
+
+export interface Sale {
+  id: string;
+  fecha: string;
+  cliente: string;
+  referencia: string;
+  categoria: Category;
+  talla: string;
+  colorCamiseta: string;
+  colorBermuda: string;
+  cantidad: number;
+  precioUnitario: number;
+  totalVenta: number;
+  costoTotal: number;
+  ganancia: number;
+  metodoPago: string;
+  estado: 'Pagado' | 'Pendiente' | 'Entregado';
+  observaciones: string;
+}
+
+export interface Purchase {
+  id: string;
+  fecha: string;
+  proveedor: string;
+  tipoCompra: string;
+  producto: string;
+  categoria: string;
+  cantidad: number;
+  valorUnitario: number;
+  totalCompra: number;
+  formaPago: string;
+  observaciones: string;
+}

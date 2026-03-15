@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { QuoteInputs, QuoteResults, ProductReference, QuoteItem } from './types';
+import { QuoteInputs, QuoteResults, ProductReference, QuoteItem, Sale, Purchase } from './types';
 import { 
   PRODUCT_REFERENCES_INITIAL, 
   TALLAS_NINO, 
@@ -11,8 +11,13 @@ import {
   COSTO_PLANCHADO,
   COSTO_EMPAQUE,
   GANANCIA_NINO,
-  GANANCIA_ADULTO
+  GANANCIA_ADULTO,
+  METODOS_PAGO
 } from './constants';
+import Navigation from './src/components/Navigation';
+import Ventas from './src/components/Ventas';
+import Compras from './src/components/Compras';
+import Dashboard from './src/components/Dashboard';
 import { 
   FileUp,
   Download,
@@ -24,15 +29,25 @@ import {
   LayoutGrid,
   Target,
   Zap,
-  Info
+  Info,
+  CheckCircle2
 } from 'lucide-react';
 
 const LOGO_FURIA = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23FF4FD8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E";
 const LOGO_COCO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%2334FF4A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M8 14s1.5 2 4 2 4-2 4-2'/%3E%3Cline x1='9' y1='9' x2='9.01' y2='9'/%3E%3Cline x1='15' y1='9' x2='15.01' y2='9'/%3E%3C/svg%3E";
 
 const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState('cotizador');
   const [productRefs, setProductRefs] = useState<ProductReference[]>(PRODUCT_REFERENCES_INITIAL);
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
+  const [sales, setSales] = useState<Sale[]>(() => {
+    const saved = localStorage.getItem('furia_sales');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [purchases, setPurchases] = useState<Purchase[]>(() => {
+    const saved = localStorage.getItem('furia_purchases');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [inputs, setInputs] = useState<QuoteInputs>({
     clientName: "",
     quantity: 1,
@@ -48,6 +63,64 @@ const App: React.FC = () => {
   });
   const [observaciones, setObservaciones] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem('furia_sales', JSON.stringify(sales));
+  }, [sales]);
+
+  useEffect(() => {
+    localStorage.setItem('furia_purchases', JSON.stringify(purchases));
+  }, [purchases]);
+
+  const handleRegisterSale = () => {
+    if (quoteItems.length === 0) return alert("No hay items para vender.");
+    
+    const newSales: Sale[] = quoteItems.map(item => ({
+      id: crypto.randomUUID(),
+      fecha: new Date().toLocaleDateString("es-CO"),
+      cliente: inputs.clientName || "Cliente General",
+      referencia: item.product.name,
+      categoria: item.categoria,
+      talla: item.talla,
+      colorCamiseta: item.colorCamiseta,
+      colorBermuda: item.colorBermuda,
+      cantidad: item.quantity,
+      precioUnitario: item.results.precioUnidad,
+      totalVenta: item.results.precioTotal,
+      costoTotal: item.results.costoTotal * item.quantity,
+      ganancia: item.results.ganancia * item.quantity,
+      metodoPago: METODOS_PAGO[0],
+      estado: 'Pendiente',
+      observaciones: observaciones
+    }));
+
+    setSales(prev => [...prev, ...newSales]);
+    setQuoteItems([]);
+    setInputs(prev => ({ ...prev, clientName: "" }));
+    setObservaciones("");
+    setActiveTab('ventas');
+    alert("¡Venta registrada con éxito!");
+  };
+
+  const handleDeleteSale = (id: string) => {
+    if (confirm("¿Eliminar esta venta?")) {
+      setSales(prev => prev.filter(s => s.id !== id));
+    }
+  };
+
+  const handleUpdateSaleStatus = (id: string, status: Sale['estado']) => {
+    setSales(prev => prev.map(s => s.id === id ? { ...s, estado: status } : s));
+  };
+
+  const handleAddPurchase = (purchase: Purchase) => {
+    setPurchases(prev => [...prev, purchase]);
+  };
+
+  const handleDeletePurchase = (id: string) => {
+    if (confirm("¿Eliminar este registro de compra?")) {
+      setPurchases(prev => prev.filter(p => p.id !== id));
+    }
+  };
 
   const formatCOP = (val: number) => "$ " + Math.round(Number(val || 0)).toLocaleString("es-CO");
 
@@ -256,10 +329,255 @@ const App: React.FC = () => {
     doc.save(`Cotizacion_FuriaRock_${clienteNombre.replace(/\s+/g, '_')}.pdf`);
   };
 
+  const renderCotizador = () => (
+    <main className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <div className="lg:col-span-5 space-y-8">
+        <section className="card p-8">
+          <div className="flex items-center gap-4 mb-6">
+            <User size={18} className="text-aqua" />
+            <h2 className="text-lg font-black uppercase tracking-widest">1. Datos del Cliente</h2>
+          </div>
+          <input 
+            type="text" 
+            value={inputs.clientName} 
+            onChange={(e) => setInputs({...inputs, clientName: e.target.value})} 
+            className="w-full px-5 py-4 text-white font-bold transition-all" 
+            placeholder="Nombre del cliente..." 
+          />
+        </section>
+
+        <section className="card p-8">
+          <div className="flex items-center gap-4 mb-8 border-b border-slate-700/50 pb-4">
+            <LayoutGrid size={18} className="text-neon-green" />
+            <h2 className="text-lg font-black uppercase tracking-widest">2. Selección Técnica</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Referencia</label>
+                <select 
+                  value={inputs.referencia} 
+                  onChange={(e) => setInputs({...inputs, referencia: e.target.value})} 
+                  className="w-full"
+                  id="selReferencia"
+                >
+                  {productRefs.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Costo Base</label>
+                <div className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-3.5 text-aqua font-black">
+                  $ {currentProduct.baseCost.toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Categoría</label>
+                <select 
+                  value={inputs.categoria} 
+                  onChange={(e) => setInputs({...inputs, categoria: e.target.value as any})} 
+                  className="w-full"
+                  id="selCategoria"
+                >
+                  <option value="Niño">Niño</option>
+                  <option value="Adulto">Adulto</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Talla</label>
+                <select value={inputs.talla} onChange={(e) => setInputs({...inputs, talla: e.target.value})} className="w-full">
+                  {(inputs.categoria === 'Niño' ? TALLAS_NINO : TALLAS_ADULTO).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Camiseta</label>
+                <select value={inputs.colorCamiseta} onChange={(e) => setInputs({...inputs, colorCamiseta: e.target.value})} className="w-full">
+                  {COLORES_CAMISETA.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              
+              {showBermudaSelector && (
+                <div className="space-y-2" id="wrapColorInferior">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Bermuda/Jogger</label>
+                  <select 
+                    value={inputs.colorBermuda} 
+                    onChange={(e) => setInputs({...inputs, colorBermuda: e.target.value})} 
+                    className="w-full"
+                  >
+                    {COLORES_BERMUDA.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Cm² Estampado <Info size={10} /></label>
+                <input type="number" min="0" value={inputs.cmEstampado} onChange={(e) => setInputs({...inputs, cmEstampado: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Punto Corazón <Info size={10} /></label>
+                <input type="number" min="0" value={inputs.cmCorazon} onChange={(e) => setInputs({...inputs, cmCorazon: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold border-2 border-aqua/30" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Planchados</label>
+                <input type="number" min="0" value={inputs.qtyPlanchado} onChange={(e) => setInputs({...inputs, qtyPlanchado: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Empaque</label>
+                <input type="number" min="0" value={inputs.costoEmpaque} onChange={(e) => setInputs({...inputs, costoEmpaque: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Cantidad Lote</label>
+              <input type="number" min="1" value={inputs.quantity} onChange={(e) => setInputs({...inputs, quantity: Math.max(1, Number(e.target.value))})} className="w-full bg-slate-900/40 border-2 border-dashed border-slate-700 rounded-xl px-5 py-4 text-white font-black text-center text-2xl outline-none focus:border-neon-green transition-colors" />
+            </div>
+
+            <button onClick={addToQuote} className="btn-primary w-full py-5 text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl mt-4">
+              <Plus size={18} /> AGREGAR PRENDA AL PEDIDO
+            </button>
+          </div>
+        </section>
+
+        <div className="text-center">
+           <button onClick={() => fileInputRef.current?.click()} className="text-[10px] text-slate-500 font-bold uppercase tracking-widest hover:text-aqua transition-colors flex items-center gap-2 justify-center mx-auto">
+              <FileUp size={14} /> Importar Excel de Precios
+           </button>
+           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls,.csv" className="hidden" />
+        </div>
+      </div>
+
+      <div className="lg:col-span-7 space-y-10">
+         <section className="card p-10 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:rotate-12 transition-transform duration-700">
+               <Zap size={140} strokeWidth={3} className="text-white" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row gap-12 items-center">
+               <div className="flex-1">
+                  <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[9px] mb-4">Venta Sugerida (Unidad)</p>
+                  <h3 className="text-7xl font-black text-white tracking-tighter drop-shadow-lg mb-6">
+                     {formatCOP(currentResults.precioUnidad)}
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                     <div className="bg-neon-green/10 text-neon-green px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-neon-green/20">TOTAL LOTE: {formatCOP(currentResults.precioTotal)}</div>
+                  </div>
+               </div>
+               <div className="w-full md:w-64 bg-slate-950/30 backdrop-blur-xl p-8 rounded-[2rem] border border-white/5 shadow-inner">
+                  <h4 className="text-slate-500 font-black text-[9px] uppercase tracking-widest mb-6">Rentabilidad</h4>
+                  <div className="space-y-6">
+                     <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold">Ganancia Real</span>
+                        <span className="text-white font-black text-sm">{formatCOP(currentResults.ganancia)}</span>
+                     </div>
+                     <div className="h-px bg-slate-800 w-full"></div>
+                     <div className="flex justify-between items-end">
+                        <span className="text-slate-400 text-[10px] uppercase font-bold pb-1">Margen</span>
+                        <span className="text-lime font-black text-4xl tracking-tighter">{currentResults.margen.toFixed(1)}%</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </section>
+
+         <section className="card p-10">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
+               <div className="flex items-center gap-4">
+                  <div className="bg-aqua/10 p-3 rounded-xl"><ShoppingCart size={20} className="text-aqua" /></div>
+                  <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pedido Actual</h2>
+               </div>
+               <div className="flex flex-wrap gap-3 justify-center">
+                <button 
+                  onClick={downloadPDF_jsPDF} 
+                  disabled={quoteItems.length === 0 && !inputs.clientName} 
+                  className="bg-white hover:bg-neon-green text-black font-black px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-20"
+                >
+                  <Download size={16} /> PDF
+                </button>
+                <button 
+                  onClick={handleRegisterSale} 
+                  disabled={quoteItems.length === 0} 
+                  className="bg-neon-green hover:bg-white text-black font-black px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-20"
+                >
+                  <CheckCircle2 size={16} /> CONVERTIR EN VENTA
+                </button>
+               </div>
+            </div>
+
+            {quoteItems.length === 0 ? (
+              <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-[2.5rem]">
+                 <p className="text-slate-600 font-bold uppercase tracking-widest text-[11px]">No hay productos en la cotización.</p>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {quoteItems.map(item => (
+                  <div key={item.id} className="bg-slate-800/30 border border-slate-700/50 p-6 rounded-[1.8rem] flex flex-col sm:flex-row justify-between items-center gap-6 hover:border-aqua/40 transition-all group">
+                     <div className="flex items-center gap-6">
+                        <div className="w-14 h-14 bg-slate-700 rounded-2xl flex items-center justify-center text-white/50 font-black text-lg rotate-3 group-hover:rotate-0 transition-transform">x{item.quantity}</div>
+                        <div className="flex-1">
+                           <h4 className="text-white font-black uppercase text-base tracking-tight">{item.product.name}</h4>
+                           <div className="flex flex-wrap gap-2 mt-2">
+                              <span className="bg-aqua/10 text-aqua px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">TALLA {item.talla}</span>
+                              {item.colorCamiseta !== "No aplica" && <span className="bg-hot-pink/10 text-hot-pink px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">SUP: {item.colorCamiseta}</span>}
+                              {item.colorBermuda && item.colorBermuda !== "No aplica" && <span className="bg-lime/10 text-lime px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">INF: {item.colorBermuda}</span>}
+                           </div>
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-8">
+                        <div className="text-right">
+                           <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Subtotal Item</p>
+                           <p className="text-white font-black text-2xl tracking-tighter">{formatCOP(item.results.precioTotal)}</p>
+                        </div>
+                        <button onClick={() => removeItem(item.id)} className="p-4 bg-slate-900/60 hover:bg-red-500/20 text-slate-600 hover:text-red-500 rounded-2xl transition-all border border-slate-700">
+                           <Trash2 size={18} />
+                        </button>
+                     </div>
+                  </div>
+                ))}
+                <div className="mt-12 pt-10 border-t border-slate-800 flex justify-between items-end">
+                   <div>
+                      <p className="text-hot-pink font-black text-[10px] uppercase tracking-[0.4em] flex items-center gap-2 mb-2">
+                         <Target size={14} /> VALOR TOTAL COTIZADO
+                      </p>
+                      <p className="text-6xl font-black text-white tracking-tighter">
+                        {formatCOP(quoteItems.reduce<number>((acc: number, item: QuoteItem) => acc + item.results.precioTotal, 0))}
+                      </p>
+                   </div>
+                </div>
+              </div>
+            )}
+         </section>
+
+         <section className="card p-10 bg-slate-900/20">
+            <div className="space-y-4">
+               <label className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">
+                 <MessageSquare size={14} className="text-neon-green" /> Notas Personalizadas para el PDF
+               </label>
+               <textarea 
+                value={observaciones} 
+                onChange={(e) => setObservaciones(e.target.value)} 
+                className="w-full bg-slate-900/60 border border-slate-800 rounded-[1.8rem] px-8 py-6 text-white text-sm font-medium min-h-[120px] resize-none focus:ring-2 focus:ring-hot-pink outline-none transition-all" 
+                placeholder="Ej: Lavar a mano, no planchar directamente sobre el estampado. Entrega en 10 días hábiles..." 
+               />
+            </div>
+         </section>
+      </div>
+    </main>
+  );
+
   return (
     <div className="min-h-screen pb-24">
-      <header className="app-header py-6 px-12 mb-10 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <header className="app-header py-6 px-12 mb-10 shadow-lg sticky top-0 z-[100]">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-6">
             <img src={LOGO_FURIA} className="logo-img" alt="Furia" />
             <div>
@@ -267,7 +585,10 @@ const App: React.FC = () => {
               <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase">Expertos en DTG & DTF</p>
             </div>
           </div>
-          <div className="flex items-center gap-8 text-right">
+          
+          <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+
+          <div className="flex items-center gap-8 text-right hidden lg:flex">
             <div>
               <h1 className="text-xl font-black tracking-widest uppercase splatter-green">COCO YEMA</h1>
               <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase">Premium Kids Fashion</p>
@@ -277,239 +598,29 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-10">
-        <div className="lg:col-span-5 space-y-8">
-          <section className="card p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <User size={18} className="text-aqua" />
-              <h2 className="text-lg font-black uppercase tracking-widest">1. Datos del Cliente</h2>
-            </div>
-            <input 
-              type="text" 
-              value={inputs.clientName} 
-              onChange={(e) => setInputs({...inputs, clientName: e.target.value})} 
-              className="w-full px-5 py-4 text-white font-bold transition-all" 
-              placeholder="Nombre del cliente..." 
-            />
-          </section>
-
-          <section className="card p-8">
-            <div className="flex items-center gap-4 mb-8 border-b border-slate-700/50 pb-4">
-              <LayoutGrid size={18} className="text-neon-green" />
-              <h2 className="text-lg font-black uppercase tracking-widest">2. Selección Técnica</h2>
-            </div>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Referencia</label>
-                  <select 
-                    value={inputs.referencia} 
-                    onChange={(e) => setInputs({...inputs, referencia: e.target.value})} 
-                    className="w-full"
-                    id="selReferencia"
-                  >
-                    {productRefs.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Costo Base</label>
-                  <div className="w-full bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-3.5 text-aqua font-black">
-                    $ {currentProduct.baseCost.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Categoría</label>
-                  <select 
-                    value={inputs.categoria} 
-                    onChange={(e) => setInputs({...inputs, categoria: e.target.value as any})} 
-                    className="w-full"
-                    id="selCategoria"
-                  >
-                    <option value="Niño">Niño</option>
-                    <option value="Adulto">Adulto</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Talla</label>
-                  <select value={inputs.talla} onChange={(e) => setInputs({...inputs, talla: e.target.value})} className="w-full">
-                    {(inputs.categoria === 'Niño' ? TALLAS_NINO : TALLAS_ADULTO).map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Camiseta</label>
-                  <select value={inputs.colorCamiseta} onChange={(e) => setInputs({...inputs, colorCamiseta: e.target.value})} className="w-full">
-                    {COLORES_CAMISETA.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                
-                {showBermudaSelector && (
-                  <div className="space-y-2" id="wrapColorInferior">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Color Bermuda/Jogger</label>
-                    <select 
-                      value={inputs.colorBermuda} 
-                      onChange={(e) => setInputs({...inputs, colorBermuda: e.target.value})} 
-                      className="w-full"
-                    >
-                      {COLORES_BERMUDA.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Cm² Estampado <Info size={10} /></label>
-                  <input type="number" min="0" value={inputs.cmEstampado} onChange={(e) => setInputs({...inputs, cmEstampado: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-1">Punto Corazón <Info size={10} /></label>
-                  <input type="number" min="0" value={inputs.cmCorazon} onChange={(e) => setInputs({...inputs, cmCorazon: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold border-2 border-aqua/30" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Planchados</label>
-                  <input type="number" min="0" value={inputs.qtyPlanchado} onChange={(e) => setInputs({...inputs, qtyPlanchado: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Empaque</label>
-                  <input type="number" min="0" value={inputs.costoEmpaque} onChange={(e) => setInputs({...inputs, costoEmpaque: Number(e.target.value)})} className="w-full px-4 py-3.5 text-white font-bold" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Cantidad Lote</label>
-                <input type="number" min="1" value={inputs.quantity} onChange={(e) => setInputs({...inputs, quantity: Math.max(1, Number(e.target.value))})} className="w-full bg-slate-900/40 border-2 border-dashed border-slate-700 rounded-xl px-5 py-4 text-white font-black text-center text-2xl outline-none focus:border-neon-green transition-colors" />
-              </div>
-
-              <button onClick={addToQuote} className="btn-primary w-full py-5 text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl mt-4">
-                <Plus size={18} /> AGREGAR PRENDA AL PEDIDO
-              </button>
-            </div>
-          </section>
-
-          <div className="text-center">
-             <button onClick={() => fileInputRef.current?.click()} className="text-[10px] text-slate-500 font-bold uppercase tracking-widest hover:text-aqua transition-colors flex items-center gap-2 justify-center mx-auto">
-                <FileUp size={14} /> Importar Excel de Precios
-             </button>
-             <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls,.csv" className="hidden" />
-          </div>
-        </div>
-
-        <div className="lg:col-span-7 space-y-10">
-           <section className="card p-10 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:rotate-12 transition-transform duration-700">
-                 <Zap size={140} strokeWidth={3} className="text-white" />
-              </div>
-              <div className="relative z-10 flex flex-col md:flex-row gap-12 items-center">
-                 <div className="flex-1">
-                    <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[9px] mb-4">Venta Sugerida (Unidad)</p>
-                    <h3 className="text-7xl font-black text-white tracking-tighter drop-shadow-lg mb-6">
-                       {formatCOP(currentResults.precioUnidad)}
-                    </h3>
-                    <div className="flex flex-wrap gap-3">
-                       <div className="bg-neon-green/10 text-neon-green px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest border border-neon-green/20">TOTAL LOTE: {formatCOP(currentResults.precioTotal)}</div>
-                    </div>
-                 </div>
-                 <div className="w-full md:w-64 bg-slate-950/30 backdrop-blur-xl p-8 rounded-[2rem] border border-white/5 shadow-inner">
-                    <h4 className="text-slate-500 font-black text-[9px] uppercase tracking-widest mb-6">Rentabilidad</h4>
-                    <div className="space-y-6">
-                       <div className="flex justify-between items-center">
-                          <span className="text-slate-400 text-[10px] uppercase font-bold">Ganancia Real</span>
-                          <span className="text-white font-black text-sm">{formatCOP(currentResults.ganancia)}</span>
-                       </div>
-                       <div className="h-px bg-slate-800 w-full"></div>
-                       <div className="flex justify-between items-end">
-                          <span className="text-slate-400 text-[10px] uppercase font-bold pb-1">Margen</span>
-                          <span className="text-lime font-black text-4xl tracking-tighter">{currentResults.margen.toFixed(1)}%</span>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-           </section>
-
-           <section className="card p-10">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
-                 <div className="flex items-center gap-4">
-                    <div className="bg-aqua/10 p-3 rounded-xl"><ShoppingCart size={20} className="text-aqua" /></div>
-                    <h2 className="text-2xl font-black text-white uppercase tracking-tight">Pedido Actual</h2>
-                 </div>
-                 <button 
-                  onClick={downloadPDF_jsPDF} 
-                  disabled={quoteItems.length === 0 && !inputs.clientName} 
-                  className="bg-white hover:bg-neon-green text-black font-black px-8 py-4 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-xl active:scale-95 disabled:opacity-20"
-                 >
-                    <Download size={16} /> EXPORTAR PDF (HORIZONTAL)
-                 </button>
-              </div>
-
-              {quoteItems.length === 0 ? (
-                <div className="py-20 text-center border-2 border-dashed border-slate-800 rounded-[2.5rem]">
-                   <p className="text-slate-600 font-bold uppercase tracking-widest text-[11px]">No hay productos en la cotización.</p>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  {quoteItems.map(item => (
-                    <div key={item.id} className="bg-slate-800/30 border border-slate-700/50 p-6 rounded-[1.8rem] flex flex-col sm:flex-row justify-between items-center gap-6 hover:border-aqua/40 transition-all group">
-                       <div className="flex items-center gap-6">
-                          <div className="w-14 h-14 bg-slate-700 rounded-2xl flex items-center justify-center text-white/50 font-black text-lg rotate-3 group-hover:rotate-0 transition-transform">x{item.quantity}</div>
-                          <div className="flex-1">
-                             <h4 className="text-white font-black uppercase text-base tracking-tight">{item.product.name}</h4>
-                             <div className="flex flex-wrap gap-2 mt-2">
-                                <span className="bg-aqua/10 text-aqua px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">TALLA {item.talla}</span>
-                                {item.colorCamiseta !== "No aplica" && <span className="bg-hot-pink/10 text-hot-pink px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">SUP: {item.colorCamiseta}</span>}
-                                {item.colorBermuda && item.colorBermuda !== "No aplica" && <span className="bg-lime/10 text-lime px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">INF: {item.colorBermuda}</span>}
-                             </div>
-                          </div>
-                       </div>
-                       <div className="flex items-center gap-8">
-                          <div className="text-right">
-                             <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Subtotal Item</p>
-                             <p className="text-white font-black text-2xl tracking-tighter">{formatCOP(item.results.precioTotal)}</p>
-                          </div>
-                          <button onClick={() => removeItem(item.id)} className="p-4 bg-slate-900/60 hover:bg-red-500/20 text-slate-600 hover:text-red-500 rounded-2xl transition-all border border-slate-700">
-                             <Trash2 size={18} />
-                          </button>
-                       </div>
-                    </div>
-                  ))}
-                  <div className="mt-12 pt-10 border-t border-slate-800 flex justify-between items-end">
-                     <div>
-                        <p className="text-hot-pink font-black text-[10px] uppercase tracking-[0.4em] flex items-center gap-2 mb-2">
-                           <Target size={14} /> VALOR TOTAL COTIZADO
-                        </p>
-                        <p className="text-6xl font-black text-white tracking-tighter">
-                          {formatCOP(quoteItems.reduce<number>((acc: number, item: QuoteItem) => acc + item.results.precioTotal, 0))}
-                        </p>
-                     </div>
-                  </div>
-                </div>
-              )}
-           </section>
-
-           <section className="card p-10 bg-slate-900/20">
-              <div className="space-y-4">
-                 <label className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">
-                   <MessageSquare size={14} className="text-neon-green" /> Notas Personalizadas para el PDF
-                 </label>
-                 <textarea 
-                  value={observaciones} 
-                  onChange={(e) => setObservaciones(e.target.value)} 
-                  className="w-full bg-slate-900/60 border border-slate-800 rounded-[1.8rem] px-8 py-6 text-white text-sm font-medium min-h-[120px] resize-none focus:ring-2 focus:ring-hot-pink outline-none transition-all" 
-                  placeholder="Ej: Lavar a mano, no planchar directamente sobre el estampado. Entrega en 10 días hábiles..." 
-                 />
-              </div>
-           </section>
-        </div>
-      </main>
+      <div className="max-w-7xl mx-auto px-6">
+        {activeTab === 'cotizador' && renderCotizador()}
+        {activeTab === 'ventas' && (
+          <Ventas 
+            sales={sales} 
+            onDeleteSale={handleDeleteSale} 
+            onUpdateSaleStatus={handleUpdateSaleStatus} 
+          />
+        )}
+        {activeTab === 'compras' && (
+          <Compras 
+            purchases={purchases} 
+            onAddPurchase={handleAddPurchase} 
+            onDeletePurchase={handleDeletePurchase} 
+          />
+        )}
+        {activeTab === 'dashboard' && (
+          <Dashboard 
+            sales={sales} 
+            purchases={purchases} 
+          />
+        )}
+      </div>
 
       <footer className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-3xl border-t border-white/5 py-5 px-12 z-[60]">
          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-black uppercase tracking-[0.5em] text-slate-600">

@@ -1,9 +1,10 @@
 import { ProductReference } from './types';
 
 export const PRODUCT_REFERENCES_INITIAL: ProductReference[] = [
-  { id: 'cam-c4', name: 'Camiseta C4', baseCost: 19000 },
-  { id: 'cam-randy', name: 'Camiseta Randy', baseCost: 27000 },
-  { id: 'cam-per-a', name: 'Camiseta Peruana', baseCost: 37000 },
+  { id: 'cam-c4', name: 'Camiseta Regular Fit de Algodón Nacional de 200 gr', baseCost: 19000 },
+  { id: 'cam-randy', name: 'Camiseta Regular Fit de Algodón Peruano de 200 gramos', baseCost: 27000 },
+  { id: 'cam-per-a', name: 'Camiseta Oversize de Algodón Peruano de 200 gramos', baseCost: 37000 },
+  { id: 'cam-per-ov-26', name: 'Camiseta Oversize Algodón Nacional de 200 gramos', baseCost: 26000 },
   { id: 'cam-catar', name: 'Camiseta Catar', baseCost: 35000 },
   { id: 'cam-per-n', name: 'Camiseta Niño Peruana', baseCost: 23500 },
   { id: 'cam-acid-n', name: 'Camiseta Niño Acid Wash', baseCost: 23500 },
@@ -35,3 +36,13 @@ export const COSTO_PLANCHADO = 1000;
 export const COSTO_EMPAQUE = 1300;
 export const GANANCIA_NINO = 35000;
 export const GANANCIA_ADULTO = 30000;
+
+export const CATEGORIAS_COMPRA = [
+  "Tela", "Camisetas base", "Joggers", "Tinta", "Vinilo", "Empaque", "Etiquetas", "Transporte", "Otros"
+];
+
+export const METODOS_PAGO = [
+  "Efectivo", "Transferencia", "Nequi", "Daviplata", "Tarjeta"
+];
+
+export const ESTADOS_VENTA = ["Pagado", "Pendiente", "Entregado"];
