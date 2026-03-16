@@ -74,10 +74,26 @@ export interface Purchase {
   id: string | number;
   fecha: string;
   proveedor: string;
+  referencia: string;
   producto: string;
   categoria: string;
+  talla: string;
+  color: string;
   cantidad: number;
   valorUnitario: number;
   totalCompra: number;
   observaciones: string;
+}
+
+export interface InventoryItem {
+  referencia: string;
+  producto: string;
+  categoria: string;
+  talla: string;
+  color: string;
+  cantidadComprada: number;
+  cantidadVendida: number;
+  stockActual: number;
+  costoPromedioCompra: number;
+  valorTotalInventario: number;
 }

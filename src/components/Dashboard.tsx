@@ -1,17 +1,19 @@
 import React, { useMemo } from 'react';
-import { Sale, Purchase } from '../../types';
+import { Sale, Purchase, InventoryItem } from '../../types';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Package, Star, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, Star, AlertCircle, AlertTriangle } from 'lucide-react';
 
 interface DashboardProps {
   sales: Sale[];
   purchases: Purchase[];
+  inventory: InventoryItem[];
+  onExportExcel: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
+const Dashboard: React.FC<DashboardProps> = ({ sales, purchases, inventory, onExportExcel }) => {
   const formatCOP = (val: number) => "$ " + Math.round(Number(val || 0)).toLocaleString("es-CO");
 
   // Basic stats
@@ -20,6 +22,30 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
   const totalPurchases = purchases.reduce((acc, p) => acc + p.totalCompra, 0);
   const grossProfit = totalSales - totalCostOfSales;
   const netProfit = grossProfit - totalPurchases;
+
+  // Inventory stats
+  const totalInventoryValue = inventory.reduce((acc, item) => acc + item.valorTotalInventario, 0);
+  const totalUnitsAvailable = inventory.reduce((acc, item) => acc + item.stockActual, 0);
+  const totalVariants = inventory.length;
+  const totalRefs = new Set(inventory.map(i => i.referencia)).size;
+  const lowStockVariants = inventory.filter(item => item.stockActual <= 5 && item.stockActual > 2).length;
+  const criticalStockVariants = inventory.filter(item => item.stockActual <= 2).length;
+
+  // Top variants sold
+  const salesByVariant = sales.reduce((acc: any, s) => {
+    const key = `${s.referencia} (${s.talla} - ${s.colorCamiseta})`;
+    acc[key] = (acc[key] || 0) + s.cantidad;
+    return acc;
+  }, {});
+  const topVariantsData = Object.entries(salesByVariant)
+    .map(([name, value]) => ({ name, value: value as number }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+
+  // Variants with lowest stock
+  const lowestStockVariants = [...inventory]
+    .sort((a, b) => a.stockActual - b.stockActual)
+    .slice(0, 5);
 
   // Sales by reference
   const salesByRef = sales.reduce((acc: any, s) => {
@@ -33,10 +59,10 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
 
   // Financial summary data
   const financialData = [
-    { name: 'Ventas', value: totalSales, color: '#000000' },
-    { name: 'Costo Ventas', value: totalCostOfSales, color: '#4b5563' },
-    { name: 'Compras', value: totalPurchases, color: '#9ca3af' },
-    { name: 'Ganancia Neta', value: netProfit, color: '#111827' }
+    { name: 'Ventas', value: totalSales, color: '#ff7a00' },
+    { name: 'Costo Ventas', value: totalCostOfSales, color: '#b9c0cc' },
+    { name: 'Compras', value: totalPurchases, color: '#8f97a6' },
+    { name: 'Ganancia Neta', value: netProfit, color: '#4ade80' }
   ];
 
   // Sales by payment method
@@ -63,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
     .map(([name, value]) => ({ name, value: value as number }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const COLORS = ['#000000', '#374151', '#6b7280', '#9ca3af', '#d1d5db', '#111827', '#4b5563'];
+  const COLORS = ['#ff7a00', '#ff8f26', '#d96500', '#b9c0cc', '#8f97a6', '#4ade80', '#ef4444'];
 
   // Profitability Analysis by Product
   const profitabilityData = useMemo(() => {
@@ -138,63 +164,129 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
 
   return (
     <div className="space-y-10">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Dashboard de Negocio</h2>
+        <button 
+          onClick={onExportExcel}
+          className="bg-[#ff7a00] hover:bg-[#ff8f26] text-white font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-lg shadow-[#ff7a00]/20 active:scale-95"
+        >
+          <TrendingUp size={16} /> DESCARGAR EXCEL COMPLETO
+        </button>
+      </div>
+
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="panel p-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-5"><DollarSign size={64} className="text-black" /></div>
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Ventas Totales</p>
-          <p className="text-3xl font-bold text-gray-900 tracking-tighter">{formatCOP(totalSales)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[10px] text-green-600 font-bold">
-            <TrendingUp size={12} /> +12.5% vs mes anterior
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><DollarSign size={48} className="text-[#ff7a00]" /></div>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Total Ventas</p>
+          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(totalSales)}</p>
         </div>
-        <div className="panel p-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-5"><TrendingDown size={64} className="text-gray-400" /></div>
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Compras / Inversión</p>
-          <p className="text-3xl font-bold text-gray-900 tracking-tighter">{formatCOP(totalPurchases)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[10px] text-red-600 font-bold">
-            <TrendingDown size={12} /> -5.2% vs mes anterior
-          </div>
+        <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><Package size={48} className="text-[#b9c0cc]" /></div>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Costo Producción</p>
+          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(totalCostOfSales)}</p>
         </div>
-        <div className="panel p-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-5"><Star size={64} className="text-gray-300" /></div>
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Costo de Ventas</p>
-          <p className="text-3xl font-bold text-gray-900 tracking-tighter">{formatCOP(totalCostOfSales)}</p>
-          <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400 font-bold">
-            Inversión en prendas vendidas
-          </div>
+        <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingDown size={48} className="text-[#8f97a6]" /></div>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Total Compras</p>
+          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(totalPurchases)}</p>
         </div>
-        <div className="panel p-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-5"><AlertCircle size={64} className="text-gray-200" /></div>
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Ganancia Neta Real</p>
-          <p className={`text-3xl font-bold tracking-tighter ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingUp size={48} className="text-[#4ade80]" /></div>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Ganancia Bruta</p>
+          <p className="text-2xl font-bold text-[#4ade80] tracking-tighter">{formatCOP(grossProfit)}</p>
+        </div>
+        <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
+          <div className="absolute top-0 right-0 p-4 opacity-10"><Star size={48} className="text-[#ff7a00]" /></div>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Ganancia Neta</p>
+          <p className={`text-2xl font-bold tracking-tighter ${netProfit >= 0 ? 'text-[#ff7a00]' : 'text-[#ef4444]'}`}>
             {formatCOP(netProfit)}
           </p>
-          <div className="mt-4 flex items-center gap-2 text-[10px] text-gray-400 font-bold">
-            Ventas - Costos - Compras
+        </div>
+      </div>
+
+      {/* Inventory Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <div className="panel p-6 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-[#ff7a00]/10">
+          <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Total Refs</p>
+          <p className="text-xl font-bold text-white tracking-tighter">{totalRefs}</p>
+        </div>
+        <div className="panel p-6 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-[#ff7a00]/10">
+          <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Total Variantes</p>
+          <p className="text-xl font-bold text-white tracking-tighter">{totalVariants}</p>
+        </div>
+        <div className="panel p-6 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-[#4ade80]/10">
+          <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Unidades Disponibles</p>
+          <p className="text-xl font-bold text-white tracking-tighter">{totalUnitsAvailable}</p>
+        </div>
+        <div className="panel p-6 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-[#ff7a00]/10">
+          <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Valor Inventario</p>
+          <p className="text-xl font-bold text-[#ff7a00] tracking-tighter">{formatCOP(totalInventoryValue)}</p>
+        </div>
+        <div className="panel p-6 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-[#ff7a00]/10">
+          <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Stock Bajo</p>
+          <p className="text-xl font-bold text-[#ff7a00] tracking-tighter">{lowStockVariants}</p>
+        </div>
+        <div className="panel p-6 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-[#ef4444]/10">
+          <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Stock Crítico</p>
+          <p className="text-xl font-bold text-[#ef4444] tracking-tighter">{criticalStockVariants}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Top Variants Table */}
+        <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Top 5 Variantes Más Vendidas
+          </h3>
+          <div className="space-y-4">
+            {topVariantsData.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                <p className="text-xs font-bold text-[#b9c0cc]">{item.name}</p>
+                <p className="text-sm font-bold text-[#ff7a00]">{item.value} unds</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Lowest Stock Variants Table */}
+        <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ef4444]"></div> Top 5 Variantes con Menor Stock
+          </h3>
+          <div className="space-y-4">
+            {lowestStockVariants.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                <div>
+                  <p className="text-xs font-bold text-[#b9c0cc]">{item.referencia}</p>
+                  <p className="text-[9px] text-[#8f97a6] uppercase font-bold tracking-wider">{item.talla} - {item.color}</p>
+                </div>
+                <p className={`text-sm font-bold ${item.stockActual <= 2 ? 'text-[#ef4444]' : 'text-[#ff7a00]'}`}>{item.stockActual} unds</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Monthly Sales Chart */}
-        <div className="panel p-8 lg:col-span-2">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-black"></div> Tendencia de Ventas Mensuales
+        <div className="panel p-8 lg:col-span-2 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Tendencia de Ventas Mensuales
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#000000" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#ff7a00" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#ff7a00" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                 <XAxis 
                   dataKey="name" 
-                  stroke="#9ca3af" 
+                  stroke="#8f97a6" 
                   fontSize={10} 
                   tickLine={false} 
                   axisLine={false} 
@@ -202,7 +294,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
                   tick={{fontWeight: 600}}
                 />
                 <YAxis 
-                  stroke="#9ca3af" 
+                  stroke="#8f97a6" 
                   fontSize={10} 
                   tickLine={false} 
                   axisLine={false} 
@@ -211,51 +303,51 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#000', 
-                    border: 'none', 
+                    backgroundColor: '#121317', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
                     borderRadius: '12px', 
-                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.5)',
                     padding: '12px'
                   }}
                   itemStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#fff' }}
-                  labelStyle={{ color: '#6b7280', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                  labelStyle={{ color: '#8f97a6', fontSize: '10px', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
                   formatter={(value: number) => [formatCOP(value), 'Ventas']}
                 />
-                <Area type="monotone" dataKey="value" stroke="#000" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                <Area type="monotone" dataKey="value" stroke="#ff7a00" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Profitability Table */}
-        <div className="panel p-8 lg:col-span-2">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-gray-400"></div> Análisis de Rentabilidad por Producto
+        <div className="panel p-8 lg:col-span-2 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Análisis de Rentabilidad por Producto
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Referencia</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Costo Prod.</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Precio Venta</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Ganancia</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">% Ganancia</th>
+                <tr className="border-b border-white/5">
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest">Referencia</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">Costo Prod.</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">Precio Venta</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">Ganancia</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">% Ganancia</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-white/5">
                 {profitabilityData.map((item: any, idx: number) => (
-                  <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-4 px-4 text-sm font-bold text-gray-900">{item.referencia}</td>
-                    <td className="py-4 px-4 text-right text-xs text-gray-500">{formatCOP(item.costo)}</td>
-                    <td className="py-4 px-4 text-right text-xs text-gray-900 font-bold">{formatCOP(item.precio)}</td>
-                    <td className="py-4 px-4 text-right text-sm font-bold text-gray-900">{formatCOP(item.ganancia)}</td>
-                    <td className="py-4 px-4 text-right text-sm font-bold text-gray-900">{item.porcentaje}%</td>
+                  <tr key={idx} className="hover:bg-white/5 transition-colors">
+                    <td className="py-4 px-4 text-sm font-bold text-white">{item.referencia}</td>
+                    <td className="py-4 px-4 text-right text-xs text-[#b9c0cc]">{formatCOP(item.costo)}</td>
+                    <td className="py-4 px-4 text-right text-xs text-white font-bold">{formatCOP(item.precio)}</td>
+                    <td className="py-4 px-4 text-right text-sm font-bold text-[#4ade80]">{formatCOP(item.ganancia)}</td>
+                    <td className="py-4 px-4 text-right text-sm font-bold text-[#ff7a00]">{item.porcentaje}%</td>
                   </tr>
                 ))}
                 {profitabilityData.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                    <td colSpan={5} className="py-10 text-center text-[#8f97a6] text-[10px] font-bold uppercase tracking-widest">
                       No hay datos de ventas para analizar rentabilidad.
                     </td>
                   </tr>
@@ -266,38 +358,38 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
         </div>
 
         {/* Complete Business Matrix */}
-        <div className="panel p-8 lg:col-span-2">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-gray-300"></div> Matriz Completa del Negocio (Ranking)
+        <div className="panel p-8 lg:col-span-2 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Matriz Completa del Negocio (Ranking)
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-center">Ranking</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Producto</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-center">Vendido</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Inversión</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Ventas</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Ganancia</th>
-                  <th className="py-4 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Margen %</th>
+                <tr className="border-b border-white/5">
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-center">Ranking</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest">Producto</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-center">Vendido</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">Inversión</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">Ventas</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">Ganancia</th>
+                  <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest text-right">Margen %</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-white/5">
                 {businessMatrixData.map((item: any) => (
-                  <tr key={item.ranking} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-4 px-4 text-sm font-bold text-gray-400 text-center">{item.ranking}</td>
-                    <td className="py-4 px-4 text-sm font-bold text-gray-900">{item.producto}</td>
-                    <td className="py-4 px-4 text-sm font-bold text-gray-900 text-center">{item.vendido}</td>
-                    <td className="py-4 px-4 text-right text-xs text-gray-500">{formatCOP(item.inversion)}</td>
-                    <td className="py-4 px-4 text-right text-xs text-gray-900">{formatCOP(item.ventas)}</td>
-                    <td className="py-4 px-4 text-right text-sm font-bold text-gray-900">{formatCOP(item.ganancia)}</td>
-                    <td className="py-4 px-4 text-right text-sm font-bold text-gray-900">{item.margen}%</td>
+                  <tr key={item.ranking} className="hover:bg-white/5 transition-colors">
+                    <td className="py-4 px-4 text-sm font-bold text-[#8f97a6] text-center">{item.ranking}</td>
+                    <td className="py-4 px-4 text-sm font-bold text-white">{item.producto}</td>
+                    <td className="py-4 px-4 text-sm font-bold text-white text-center">{item.vendido}</td>
+                    <td className="py-4 px-4 text-right text-xs text-[#b9c0cc]">{formatCOP(item.inversion)}</td>
+                    <td className="py-4 px-4 text-right text-xs text-white">{formatCOP(item.ventas)}</td>
+                    <td className="py-4 px-4 text-right text-sm font-bold text-[#4ade80]">{formatCOP(item.ganancia)}</td>
+                    <td className="py-4 px-4 text-right text-sm font-bold text-[#ff7a00]">{item.margen}%</td>
                   </tr>
                 ))}
                 {businessMatrixData.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                    <td colSpan={7} className="py-10 text-center text-[#8f97a6] text-[10px] font-bold uppercase tracking-widest">
                       Sin datos para generar la matriz de negocio.
                     </td>
                   </tr>
@@ -308,19 +400,19 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
         </div>
 
         {/* Financial Chart */}
-        <div className="panel p-8">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-black"></div> Resumen Financiero
+        <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Resumen Financiero
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={financialData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="name" stroke="#8f97a6" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="#8f97a6" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000}k`} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #f3f4f6', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                  contentStyle={{ backgroundColor: '#121317', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}
                   formatter={(value: number) => formatCOP(value)}
                 />
                 <Bar dataKey="value" radius={[8, 8, 0, 0]}>
@@ -334,9 +426,9 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
         </div>
 
         {/* Top Products Chart */}
-        <div className="panel p-8">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-gray-400"></div> Top 5 Referencias Más Vendidas
+        <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Top 5 Referencias Más Vendidas
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -355,41 +447,41 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #f3f4f6', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#111827' }}
+                  contentStyle={{ backgroundColor: '#121317', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}
                 />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', paddingTop: '20px' }} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', paddingTop: '20px', color: '#8f97a6' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Sales by Payment Method */}
-        <div className="panel p-8">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-gray-300"></div> Ventas por Método de Pago
+        <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Ventas por Método de Pago
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={paymentData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                <XAxis type="number" stroke="#9ca3af" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000}k`} />
-                <YAxis dataKey="name" type="category" stroke="#9ca3af" fontSize={10} tickLine={false} axisLine={false} width={80} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                <XAxis type="number" stroke="#8f97a6" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000}k`} />
+                <YAxis dataKey="name" type="category" stroke="#8f97a6" fontSize={10} tickLine={false} axisLine={false} width={80} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #f3f4f6', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#111827' }}
+                  contentStyle={{ backgroundColor: '#121317', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}
                   formatter={(value: number) => formatCOP(value)}
                 />
-                <Bar dataKey="value" fill="#000000" radius={[0, 8, 8, 0]} />
+                <Bar dataKey="value" fill="#ff7a00" radius={[0, 8, 8, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Sales by Category */}
-        <div className="panel p-8">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-gray-200"></div> Ventas por Categoría (Prendas)
+        <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-8 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Ventas por Categoría (Prendas)
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -408,10 +500,10 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases }) => {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #f3f4f6', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#111827' }}
+                  contentStyle={{ backgroundColor: '#121317', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#fff' }}
                 />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', paddingTop: '20px' }} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 'bold', paddingTop: '20px', color: '#8f97a6' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>

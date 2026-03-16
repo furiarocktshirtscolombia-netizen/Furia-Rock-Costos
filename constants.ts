@@ -37,6 +37,7 @@ export const COSTO_EMPAQUE = 1300;
 export const GANANCIA_NINO = 35000;
 export const GANANCIA_ADULTO = 30000;
 
+export const CATEGORIAS = ["Niño", "Adulto"];
 export const CATEGORIAS_COMPRA = [
   "Tela", "Camisetas base", "Joggers", "Tinta", "Vinilo", "Empaque", "Etiquetas", "Transporte", "Otros"
 ];
