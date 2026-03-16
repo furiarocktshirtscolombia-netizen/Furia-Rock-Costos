@@ -34,6 +34,45 @@ import {
   HelpCircle
 } from 'lucide-react';
 
+// URL GOOGLE APPS SCRIPT
+const API_URL = "https://script.google.com/macros/s/AKfycbxGsiFcP3sIWSdHsB3CGG9SanXFTVFHgOSmrQv-6Gx5U-ggHQL9PaS9JOMh6JxwPMMW/exec";
+
+// FUNCIÓN GUARDAR VENTA
+async function guardarVentaEnSheets(venta: any) {
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify({
+        accion: "guardarVenta",
+        ...venta
+      })
+    });
+  } catch (err) {
+    console.error("Error guardando venta:", err);
+  }
+}
+
+// FUNCIÓN GUARDAR COMPRA
+async function guardarCompraEnSheets(compra: any) {
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify({
+        accion: "guardarCompra",
+        ...compra
+      })
+    });
+  } catch (err) {
+    console.error("Error guardando compra:", err);
+  }
+}
+
 const LOGO_FURIA = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E";
 const LOGO_COCO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M8 14s1.5 2 4 2 4-2 4-2'/%3E%3Cline x1='9' y1='9' x2='9.01' y2='9'/%3E%3Cline x1='15' y1='9' x2='15.01' y2='9'/%3E%3C/svg%3E";
 
@@ -55,7 +94,7 @@ const App: React.FC = () => {
     referencia: PRODUCT_REFERENCES_INITIAL[0].id,
     categoria: 'Niño',
     talla: TALLAS_NINO[3],
-    colorCamiseta: COLORES_CAMISETA[2], // Negro por defecto
+    colorCamiseta: COLORES_CAMISETA[2],
     colorInferior: "No aplica",
     cmEstampado: 0,
     cmCorazon: 0,
@@ -73,7 +112,7 @@ const App: React.FC = () => {
     localStorage.setItem('furia_purchases', JSON.stringify(purchases));
   }, [purchases]);
 
-  const handleRegisterSale = () => {
+  const handleRegisterSale = async () => {
     if (quoteItems.length === 0) return alert("No hay items para vender.");
     
     const newSales: Sale[] = quoteItems.map(item => ({
@@ -97,11 +136,34 @@ const App: React.FC = () => {
     }));
 
     setSales(prev => [...prev, ...newSales]);
+
+    for (const sale of newSales) {
+      await guardarVentaEnSheets({
+        id: sale.id,
+        fecha: sale.fecha,
+        cliente: sale.cliente,
+        referencia: sale.referencia,
+        categoria: sale.categoria,
+        talla: sale.talla,
+        colorSuperior: sale.colorCamiseta,
+        colorInferior: sale.colorInferior || "No aplica",
+        cantidad: sale.cantidad,
+        costoUnitario: sale.costoUnitario,
+        precioVentaUnitario: sale.precioVentaUnitario,
+        totalVenta: sale.totalVenta,
+        costoTotal: sale.costoTotal,
+        ganancia: sale.ganancia,
+        metodoPago: sale.metodoPago,
+        estado: sale.estado,
+        observaciones: sale.observaciones
+      });
+    }
+
     setQuoteItems([]);
     setInputs(prev => ({ ...prev, clientName: "" }));
     setObservaciones("");
     setActiveTab('ventas');
-    alert("¡Venta registrada con éxito!");
+    alert("¡Venta registrada y guardada en Google Sheets!");
   };
 
   const handleAddSale = (sale: Sale) => {
@@ -118,8 +180,22 @@ const App: React.FC = () => {
     setSales(prev => prev.map(s => s.id === id ? { ...s, estado: status } : s));
   };
 
-  const handleAddPurchase = (purchase: Purchase) => {
+  const handleAddPurchase = async (purchase: Purchase) => {
     setPurchases(prev => [...prev, purchase]);
+
+    await guardarCompraEnSheets({
+      id: purchase.id,
+      fecha: purchase.fecha,
+      proveedor: purchase.proveedor,
+      referencia: "",
+      producto: purchase.producto,
+      categoria: purchase.categoria,
+      cantidad: purchase.cantidad,
+      valorUnitarioCompra: purchase.valorUnitario,
+      totalCompra: purchase.total,
+      metodoPago: (purchase as any).metodoPago || "",
+      observaciones: (purchase as any).observaciones || ""
+    });
   };
 
   const handleDeletePurchase = (id: string) => {
@@ -159,7 +235,9 @@ const App: React.FC = () => {
         setProductRefs(newRefs);
         setInputs(prev => ({ ...prev, referencia: newRefs[0].id }));
       }
-    } catch (err) { alert('Error al procesar el Excel.'); }
+    } catch (err) { 
+      alert('Error al procesar el Excel.'); 
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -181,7 +259,6 @@ const App: React.FC = () => {
 
   const isConjuntoItem = useMemo(() => esConjunto(currentProduct?.name), [currentProduct]);
 
-  // Mostrar selector de bermuda solo en Niño + Conjunto
   const showBermudaSelector = useMemo(() => {
     return (inputs.categoria === 'Niño') && isConjuntoItem;
   }, [inputs.categoria, isConjuntoItem]);
@@ -190,7 +267,7 @@ const App: React.FC = () => {
     if (!showBermudaSelector) {
       setInputs(prev => ({ ...prev, colorInferior: "No aplica" }));
     } else if (inputs.colorInferior === "No aplica") {
-      setInputs(prev => ({ ...prev, colorInferior: COLORES_BERMUDA[2] })); // Negro como fallback visible
+      setInputs(prev => ({ ...prev, colorInferior: COLORES_BERMUDA[2] }));
     }
   }, [showBermudaSelector]);
 
@@ -203,7 +280,6 @@ const App: React.FC = () => {
     
     const costoTotalUnidad = base + estampadoPrincipal + estampadoCorazon + costoPlanchado + empaque;
     
-    // Regla de ganancia: Niño Conjunto = 35k, Resto = 30k
     const ganancia = (inputs.categoria === 'Niño' && isConjuntoItem) ? GANANCIA_NINO : GANANCIA_ADULTO;
     const precioUnidad = Math.round(costoTotalUnidad + ganancia);
     
@@ -241,7 +317,6 @@ const App: React.FC = () => {
 
   const removeItem = (id: string) => setQuoteItems(prev => prev.filter(it => it.id !== id));
 
-  // EXPORTACIÓN PDF HORIZONTAL OPTIMIZADA
   const downloadPDF_jsPDF = () => {
     const itemsToExport: QuoteItem[] = quoteItems.length > 0 ? quoteItems : [{
       id: 'preview',
@@ -267,7 +342,6 @@ const App: React.FC = () => {
     const fechaStr = new Date().toLocaleDateString("es-CO");
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // HEADER
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(255, 79, 216); 
@@ -280,7 +354,6 @@ const App: React.FC = () => {
     doc.text(`CLIENTE: ${clienteNombre.toUpperCase()}`, 14, 38);
     doc.text(`FECHA: ${fechaStr}`, pageWidth - 14, 38, { align: 'right' });
 
-    // BODY
     const head = [["REFERENCIA", "DETALLES / COLORES", "CANT.", "V. UNITARIO", "V. TOTAL"]];
     const body = itemsToExport.map(it => [
       it.product.name.toUpperCase(),
@@ -292,7 +365,6 @@ const App: React.FC = () => {
       formatCOP(it.results.precioTotal)
     ]);
 
-    // AUTOTABLE (Landscape Distribution: ~269mm total util)
     // @ts-ignore
     doc.autoTable({
       startY: 45,
@@ -302,16 +374,15 @@ const App: React.FC = () => {
       styles: { font: "helvetica", fontSize: 10, cellPadding: 4, valign: "middle" },
       headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
       columnStyles: {
-        0: { cellWidth: 90, halign: "left" },   // REF
-        1: { cellWidth: 100, halign: "left" },  // DETALLES
-        2: { cellWidth: 15, halign: "center" }, // CANT
-        3: { cellWidth: 32, halign: "right" },  // UNIT
-        4: { cellWidth: 32, halign: "right", fontStyle: "bold" } // TOTAL
+        0: { cellWidth: 90, halign: "left" },
+        1: { cellWidth: 100, halign: "left" },
+        2: { cellWidth: 15, halign: "center" },
+        3: { cellWidth: 32, halign: "right" },
+        4: { cellWidth: 32, halign: "right", fontStyle: "bold" }
       },
       margin: { left: 14, right: 14 }
     });
 
-    // TOTALS
     // @ts-ignore
     const finalY = doc.lastAutoTable.finalY || 150;
     const totalGeneral = itemsToExport.reduce<number>((acc, it) => acc + it.results.precioTotal, 0);
@@ -512,133 +583,133 @@ const App: React.FC = () => {
         </section>
 
         <div className="text-center space-y-2">
-           <button onClick={() => fileInputRef.current?.click()} className="text-[10px] text-gray-400 font-bold uppercase tracking-widest hover:text-gray-900 transition-colors flex items-center gap-2 justify-center mx-auto">
-              <FileUp size={14} /> Importar Excel de Precios
-           </button>
-           <p className="text-[8px] text-gray-400 uppercase tracking-tighter">El Excel debe tener columnas: "Referencia" y "Precio_Unitario"</p>
-           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls,.csv" className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} className="text-[10px] text-gray-400 font-bold uppercase tracking-widest hover:text-gray-900 transition-colors flex items-center gap-2 justify-center mx-auto">
+            <FileUp size={14} /> Importar Excel de Precios
+          </button>
+          <p className="text-[8px] text-gray-400 uppercase tracking-tighter">El Excel debe tener columnas: "Referencia" y "Precio_Unitario"</p>
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx,.xls,.csv" className="hidden" />
         </div>
       </div>
 
       <div className="lg:col-span-7 space-y-8">
-         <section className="panel p-12 relative overflow-hidden group bg-black text-white border-none shadow-2xl">
-            <div className="absolute -top-24 -right-24 p-8 opacity-5 group-hover:rotate-12 transition-transform duration-1000">
-               <Zap size={300} strokeWidth={1} className="text-white" />
-            </div>
-            <div className="relative z-10 flex flex-col lg:flex-row gap-16 items-center">
-               <div className="flex-1 text-center lg:text-left">
-                  <p className="text-gray-500 font-bold uppercase tracking-[0.5em] text-[10px] mb-6">Venta Sugerida (Unidad)</p>
-                  <h3 className="text-8xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">
-                     {formatCOP(currentResults.precioUnidad)}
-                  </h3>
-                  <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-                     <div className="bg-white/10 text-white px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest border border-white/10 backdrop-blur-md">TOTAL LOTE: {formatCOP(currentResults.precioTotal)}</div>
-                  </div>
-               </div>
-               <div className="w-full lg:w-80 bg-white/5 backdrop-blur-2xl p-10 rounded-[40px] border border-white/10 shadow-inner">
-                  <h4 className="text-gray-500 font-bold text-[10px] uppercase tracking-[0.3em] mb-8 text-center">Rentabilidad</h4>
-                  <div className="space-y-8">
-                     <div className="flex justify-between items-center">
-                        <span className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">Ganancia Real</span>
-                        <span className="text-white font-bold text-lg">{formatCOP(currentResults.ganancia)}</span>
-                     </div>
-                     <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent w-full"></div>
-                     <div className="flex justify-between items-end">
-                        <span className="text-gray-500 text-[10px] uppercase font-bold pb-2 tracking-widest">Margen</span>
-                        <span className="text-white font-black text-5xl tracking-tighter">{currentResults.margen.toFixed(1)}%</span>
-                     </div>
-                  </div>
-               </div>
-            </div>
-         </section>
-
-         <section className="panel p-10">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
-               <div className="flex items-center gap-4">
-                  <div className="bg-gray-100 p-3 rounded-xl"><ShoppingCart size={20} className="text-gray-900" /></div>
-                  <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Pedido Actual</h2>
-               </div>
-               <div className="flex flex-wrap gap-3 justify-center">
-                <button 
-                  onClick={() => { if(confirm("¿Limpiar toda la cotización?")) setQuoteItems([]); }} 
-                  className="bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all active:scale-95"
-                >
-                  <Trash2 size={16} /> LIMPIAR
-                </button>
-                <button 
-                  onClick={downloadPDF_jsPDF} 
-                  disabled={quoteItems.length === 0 && !inputs.clientName} 
-                  className="bg-black hover:bg-gray-800 text-white font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-20"
-                >
-                  <Download size={16} /> PDF
-                </button>
-                <button 
-                  onClick={handleRegisterSale} 
-                  disabled={quoteItems.length === 0} 
-                  className="bg-black hover:bg-gray-800 text-white font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-20"
-                >
-                  <CheckCircle2 size={16} /> CONVERTIR EN VENTA
-                </button>
-               </div>
-            </div>
-
-            {quoteItems.length === 0 ? (
-              <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl">
-                 <p className="text-gray-400 font-bold uppercase tracking-widest text-[11px]">No hay productos en la cotización.</p>
+        <section className="panel p-12 relative overflow-hidden group bg-black text-white border-none shadow-2xl">
+          <div className="absolute -top-24 -right-24 p-8 opacity-5 group-hover:rotate-12 transition-transform duration-1000">
+            <Zap size={300} strokeWidth={1} className="text-white" />
+          </div>
+          <div className="relative z-10 flex flex-col lg:flex-row gap-16 items-center">
+            <div className="flex-1 text-center lg:text-left">
+              <p className="text-gray-500 font-bold uppercase tracking-[0.5em] text-[10px] mb-6">Venta Sugerida (Unidad)</p>
+              <h3 className="text-8xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">
+                {formatCOP(currentResults.precioUnidad)}
+              </h3>
+              <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+                <div className="bg-white/10 text-white px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest border border-white/10 backdrop-blur-md">TOTAL LOTE: {formatCOP(currentResults.precioTotal)}</div>
               </div>
-            ) : (
-              <div className="space-y-5">
-                {quoteItems.map(item => (
-                  <div key={item.id} className="bg-gray-50 border border-gray-100 p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-6 hover:border-gray-300 transition-all group">
-                     <div className="flex items-center gap-6">
-                        <div className="w-14 h-14 bg-white border border-gray-200 rounded-2xl flex items-center justify-center text-gray-400 font-bold text-lg rotate-3 group-hover:rotate-0 transition-transform">x{item.quantity}</div>
-                        <div className="flex-1">
-                           <h4 className="text-gray-900 font-bold uppercase text-base tracking-tight">{item.product.name}</h4>
-                           <div className="flex flex-wrap gap-2 mt-2">
-                              <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">TALLA {item.talla}</span>
-                              {item.colorCamiseta !== "No aplica" && <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">SUP: {item.colorCamiseta}</span>}
-                              {item.colorInferior && item.colorInferior !== "No aplica" && <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">INF: {item.colorInferior}</span>}
-                           </div>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-8">
-                        <div className="text-right">
-                           <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">Subtotal Item</p>
-                           <p className="text-gray-900 font-bold text-2xl tracking-tighter">{formatCOP(item.results.precioTotal)}</p>
-                        </div>
-                        <button onClick={() => removeItem(item.id)} className="p-4 bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-2xl transition-all border border-gray-200">
-                           <Trash2 size={18} />
-                        </button>
-                     </div>
-                  </div>
-                ))}
-                <div className="mt-12 pt-10 border-t border-gray-100 flex justify-between items-end">
-                   <div>
-                      <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.4em] flex items-center gap-2 mb-2">
-                         <Target size={14} /> VALOR TOTAL COTIZADO
-                      </p>
-                      <p className="text-6xl font-bold text-gray-900 tracking-tighter">
-                        {formatCOP(quoteItems.reduce<number>((acc: number, item: QuoteItem) => acc + item.results.precioTotal, 0))}
-                      </p>
-                   </div>
+            </div>
+            <div className="w-full lg:w-80 bg-white/5 backdrop-blur-2xl p-10 rounded-[40px] border border-white/10 shadow-inner">
+              <h4 className="text-gray-500 font-bold text-[10px] uppercase tracking-[0.3em] mb-8 text-center">Rentabilidad</h4>
+              <div className="space-y-8">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">Ganancia Real</span>
+                  <span className="text-white font-bold text-lg">{formatCOP(currentResults.ganancia)}</span>
+                </div>
+                <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent w-full"></div>
+                <div className="flex justify-between items-end">
+                  <span className="text-gray-500 text-[10px] uppercase font-bold pb-2 tracking-widest">Margen</span>
+                  <span className="text-white font-black text-5xl tracking-tighter">{currentResults.margen.toFixed(1)}%</span>
                 </div>
               </div>
-            )}
-         </section>
-
-         <section className="panel p-10 bg-gray-50">
-            <div className="space-y-4">
-               <label className="flex items-center gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
-                 <MessageSquare size={14} className="text-gray-400" /> Notas Personalizadas para el PDF
-               </label>
-               <textarea 
-                value={observaciones} 
-                onChange={(e) => setObservaciones(e.target.value)} 
-                className="w-full bg-white border border-gray-200 rounded-3xl px-8 py-6 text-gray-900 text-sm font-medium min-h-[120px] resize-none focus:ring-2 focus:ring-black outline-none transition-all" 
-                placeholder="Ej: Lavar a mano, no planchar directamente sobre el estampado. Entrega en 10 días hábiles..." 
-               />
             </div>
-         </section>
+          </div>
+        </section>
+
+        <section className="panel p-10">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10">
+            <div className="flex items-center gap-4">
+              <div className="bg-gray-100 p-3 rounded-xl"><ShoppingCart size={20} className="text-gray-900" /></div>
+              <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Pedido Actual</h2>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <button 
+                onClick={() => { if(confirm("¿Limpiar toda la cotización?")) setQuoteItems([]); }} 
+                className="bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all active:scale-95"
+              >
+                <Trash2 size={16} /> LIMPIAR
+              </button>
+              <button 
+                onClick={downloadPDF_jsPDF} 
+                disabled={quoteItems.length === 0 && !inputs.clientName} 
+                className="bg-black hover:bg-gray-800 text-white font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-20"
+              >
+                <Download size={16} /> PDF
+              </button>
+              <button 
+                onClick={handleRegisterSale} 
+                disabled={quoteItems.length === 0} 
+                className="bg-black hover:bg-gray-800 text-white font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-20"
+              >
+                <CheckCircle2 size={16} /> CONVERTIR EN VENTA
+              </button>
+            </div>
+          </div>
+
+          {quoteItems.length === 0 ? (
+            <div className="py-20 text-center border-2 border-dashed border-gray-100 rounded-3xl">
+              <p className="text-gray-400 font-bold uppercase tracking-widest text-[11px]">No hay productos en la cotización.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {quoteItems.map(item => (
+                <div key={item.id} className="bg-gray-50 border border-gray-100 p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-6 hover:border-gray-300 transition-all group">
+                  <div className="flex items-center gap-6">
+                    <div className="w-14 h-14 bg-white border border-gray-200 rounded-2xl flex items-center justify-center text-gray-400 font-bold text-lg rotate-3 group-hover:rotate-0 transition-transform">x{item.quantity}</div>
+                    <div className="flex-1">
+                      <h4 className="text-gray-900 font-bold uppercase text-base tracking-tight">{item.product.name}</h4>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">TALLA {item.talla}</span>
+                        {item.colorCamiseta !== "No aplica" && <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">SUP: {item.colorCamiseta}</span>}
+                        {item.colorInferior && item.colorInferior !== "No aplica" && <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest">INF: {item.colorInferior}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-8">
+                    <div className="text-right">
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mb-1">Subtotal Item</p>
+                      <p className="text-gray-900 font-bold text-2xl tracking-tighter">{formatCOP(item.results.precioTotal)}</p>
+                    </div>
+                    <button onClick={() => removeItem(item.id)} className="p-4 bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-2xl transition-all border border-gray-200">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="mt-12 pt-10 border-t border-gray-100 flex justify-between items-end">
+                <div>
+                  <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.4em] flex items-center gap-2 mb-2">
+                    <Target size={14} /> VALOR TOTAL COTIZADO
+                  </p>
+                  <p className="text-6xl font-bold text-gray-900 tracking-tighter">
+                    {formatCOP(quoteItems.reduce<number>((acc: number, item: QuoteItem) => acc + item.results.precioTotal, 0))}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="panel p-10 bg-gray-50">
+          <div className="space-y-4">
+            <label className="flex items-center gap-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
+              <MessageSquare size={14} className="text-gray-400" /> Notas Personalizadas para el PDF
+            </label>
+            <textarea 
+              value={observaciones} 
+              onChange={(e) => setObservaciones(e.target.value)} 
+              className="w-full bg-white border border-gray-200 rounded-3xl px-8 py-6 text-gray-900 text-sm font-medium min-h-[120px] resize-none focus:ring-2 focus:ring-black outline-none transition-all" 
+              placeholder="Ej: Lavar a mano, no planchar directamente sobre el estampado. Entrega en 10 días hábiles..." 
+            />
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -672,7 +743,6 @@ const App: React.FC = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 space-y-12">
-        {/* Info Strip */}
         <section className="panel p-0 overflow-hidden bg-black text-white flex flex-col md:flex-row items-stretch justify-between shadow-2xl border-none">
           <div className="flex-1 flex items-center gap-6 p-8 bg-gradient-to-r from-black to-gray-900">
             <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10"><Zap size={24} className="text-white" /></div>
@@ -696,6 +766,7 @@ const App: React.FC = () => {
         </section>
 
         {activeTab === 'cotizador' && renderCotizador()}
+
         {activeTab === 'ventas' && (
           <Ventas 
             sales={sales} 
@@ -704,6 +775,7 @@ const App: React.FC = () => {
             onUpdateSaleStatus={handleUpdateSaleStatus} 
           />
         )}
+
         {activeTab === 'compras' && (
           <Compras 
             purchases={purchases} 
@@ -711,6 +783,7 @@ const App: React.FC = () => {
             onDeletePurchase={handleDeletePurchase} 
           />
         )}
+
         {activeTab === 'dashboard' && (
           <Dashboard 
             sales={sales} 
@@ -718,7 +791,6 @@ const App: React.FC = () => {
           />
         )}
 
-        {/* FAQ Section */}
         <section className="panel p-12 mt-20 bg-gray-50 border-none shadow-sm">
           <div className="flex items-center gap-4 mb-12">
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><HelpCircle size={24} className="text-gray-900" /></div>
@@ -746,15 +818,15 @@ const App: React.FC = () => {
       </div>
 
       <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100 py-5 px-12 z-[60]">
-         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-bold uppercase tracking-[0.5em] text-gray-400">
-            <div className="flex gap-12">
-               <span className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-black"></div> DTG & DTF PRO</span>
-               <span className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-black"></div> CALIDAD PREMIUM</span>
-            </div>
-            <div className="text-gray-900 italic tracking-[0.8em] flex items-center gap-4">
-               FURIA ROCK <div className="w-1 h-1 bg-gray-200 rounded-full"></div> COCO YEMA
-            </div>
-         </div>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-bold uppercase tracking-[0.5em] text-gray-400">
+          <div className="flex gap-12">
+            <span className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-black"></div> DTG & DTF PRO</span>
+            <span className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-black"></div> CALIDAD PREMIUM</span>
+          </div>
+          <div className="text-gray-900 italic tracking-[0.8em] flex items-center gap-4">
+            FURIA ROCK <div className="w-1 h-1 bg-gray-200 rounded-full"></div> COCO YEMA
+          </div>
+        </div>
       </footer>
     </div>
   );
