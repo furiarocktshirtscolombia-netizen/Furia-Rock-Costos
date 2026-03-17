@@ -17,7 +17,8 @@ export interface QuoteItem {
   colorInferior: string;
   gramaje: string;
   diseno: string;
-  tipoImpresion: string;
+  tipoImpresion: '' | 'DTG' | 'DTF';
+  costoImpresion: number;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
@@ -36,7 +37,8 @@ export interface QuoteInputs {
   colorInferior: string;
   gramaje: string;
   diseno: string;
-  tipoImpresion: string;
+  tipoImpresion: '' | 'DTG' | 'DTF';
+  costoImpresion: number;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
@@ -49,6 +51,7 @@ export interface QuoteResults {
   costoCorazon: number;
   costoPlanchado: number;
   costoEmpaque: number;
+  costoImpresion: number;
   costoTotal: number;
   precioUnidad: number;
   precioTotal: number;
@@ -56,9 +59,28 @@ export interface QuoteResults {
   margen: number;
 }
 
+export interface Client {
+  id: string;
+  nombre: string;
+  telefono: string;
+  ciudad: string;
+  direccion: string;
+  notas: string;
+}
+
+export interface Invoice {
+  id: string;
+  numero: string;
+  fecha: string;
+  cliente: string;
+  total: number;
+  estado: 'Pagada' | 'Pendiente' | 'Anulada';
+  pdfUrl?: string;
+}
+
 export interface Sale {
   id: string | number;
-  invoiceNumber?: string;
+  invoiceNumber: string;
   fecha: string;
   cliente: string;
   referencia: string;
@@ -68,7 +90,8 @@ export interface Sale {
   colorInferior: string;
   gramaje?: string;
   diseno?: string;
-  tipoImpresion?: string;
+  tipoImpresion?: '' | 'DTG' | 'DTF';
+  costoImpresion?: number;
   cantidad: number;
   precioVentaUnitario: number;
   costoUnitario: number;

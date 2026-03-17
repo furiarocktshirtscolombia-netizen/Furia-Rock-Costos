@@ -1,5 +1,14 @@
 import React from 'react';
-import { LayoutGrid, ShoppingCart, ShoppingBag, PieChart as PieChartIcon, Package } from 'lucide-react';
+import { 
+  LayoutGrid, 
+  ShoppingCart, 
+  ShoppingBag, 
+  PieChart as PieChartIcon, 
+  Package, 
+  Settings, 
+  Users, 
+  FileText 
+} from 'lucide-react';
 
 interface NavigationProps {
   activeTab: string;
@@ -13,6 +22,9 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
     { id: 'ventas', label: 'Ventas', icon: ShoppingCart },
     { id: 'compras', label: 'Compras', icon: ShoppingBag },
     { id: 'inventarios', label: 'Inventarios', icon: Package },
+    { id: 'clientes', label: 'Clientes', icon: Users },
+    { id: 'facturacion', label: 'Facturación', icon: FileText },
+    { id: 'config', label: 'Config', icon: Settings },
   ];
 
   return (

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Sale, Purchase, InventoryItem } from '../../types';
+import { Sale, Purchase, InventoryItem, Client } from '../../types';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
@@ -10,11 +10,22 @@ interface DashboardProps {
   sales: Sale[];
   purchases: Purchase[];
   inventory: InventoryItem[];
+  clients: Client[];
   onExportExcel: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sales, purchases, inventory, onExportExcel }) => {
+const Dashboard: React.FC<DashboardProps> = ({ sales, purchases, inventory, clients, onExportExcel }) => {
   const formatCOP = (val: number) => "$ " + Math.round(Number(val || 0)).toLocaleString("es-CO");
+
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonth = new Date().toISOString().substring(0, 7);
+
+  // Daily/Monthly stats
+  const salesToday = sales.filter(s => s.fecha === today).reduce((acc, s) => acc + s.totalVenta, 0);
+  const salesThisMonth = sales.filter(s => s.fecha.startsWith(currentMonth)).reduce((acc, s) => acc + s.totalVenta, 0);
+  const purchasesThisMonth = purchases.filter(p => p.fecha.startsWith(currentMonth)).reduce((acc, p) => acc + p.totalCompra, 0);
+  const costOfSalesThisMonth = sales.filter(s => s.fecha.startsWith(currentMonth)).reduce((acc, s) => acc + s.costoTotal, 0);
+  const profitThisMonth = (salesThisMonth - costOfSalesThisMonth) - purchasesThisMonth;
 
   // Basic stats
   const totalSales = sales.reduce((acc, s) => acc + s.totalVenta, 0);
@@ -88,6 +99,16 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases, inventory, onEx
   const monthlyData = Object.entries(salesByMonth)
     .map(([name, value]) => ({ name, value: value as number }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // Top 5 clients
+  const salesByClient = sales.reduce((acc: any, s) => {
+    acc[s.cliente] = (acc[s.cliente] || 0) + s.totalVenta;
+    return acc;
+  }, {});
+  const topClientsData = Object.entries(salesByClient)
+    .map(([name, value]) => ({ name, value: value as number }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
 
   const COLORS = ['#ff7a00', '#ff8f26', '#d96500', '#b9c0cc', '#8f97a6', '#4ade80', '#ef4444'];
 
@@ -178,30 +199,28 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases, inventory, onEx
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
           <div className="absolute top-0 right-0 p-4 opacity-10"><DollarSign size={48} className="text-[#ff7a00]" /></div>
-          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Total Ventas</p>
-          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(totalSales)}</p>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Ventas Hoy</p>
+          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(salesToday)}</p>
         </div>
         <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
-          <div className="absolute top-0 right-0 p-4 opacity-10"><Package size={48} className="text-[#b9c0cc]" /></div>
-          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Costo Producción</p>
-          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(totalCostOfSales)}</p>
+          <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingUp size={48} className="text-[#ff7a00]" /></div>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Ventas Mes</p>
+          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(salesThisMonth)}</p>
         </div>
         <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
           <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingDown size={48} className="text-[#8f97a6]" /></div>
-          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Total Compras</p>
-          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(totalPurchases)}</p>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Compras Mes</p>
+          <p className="text-2xl font-bold text-white tracking-tighter">{formatCOP(purchasesThisMonth)}</p>
         </div>
         <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
           <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingUp size={48} className="text-[#4ade80]" /></div>
-          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Ganancia Bruta</p>
-          <p className="text-2xl font-bold text-[#4ade80] tracking-tighter">{formatCOP(grossProfit)}</p>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Ganancia Mes</p>
+          <p className="text-2xl font-bold text-[#4ade80] tracking-tighter">{formatCOP(profitThisMonth)}</p>
         </div>
         <div className="panel p-8 relative overflow-hidden bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5">
-          <div className="absolute top-0 right-0 p-4 opacity-10"><Star size={48} className="text-[#ff7a00]" /></div>
-          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Ganancia Neta</p>
-          <p className={`text-2xl font-bold tracking-tighter ${netProfit >= 0 ? 'text-[#ff7a00]' : 'text-[#ef4444]'}`}>
-            {formatCOP(netProfit)}
-          </p>
+          <div className="absolute top-0 right-0 p-4 opacity-10"><Package size={48} className="text-[#ff7a00]" /></div>
+          <p className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest mb-2">Valor Inventario</p>
+          <p className="text-2xl font-bold text-[#ff7a00] tracking-tighter">{formatCOP(totalInventoryValue)}</p>
         </div>
       </div>
 
@@ -233,7 +252,7 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases, inventory, onEx
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Top Variants Table */}
         <div className="panel p-8 bg-[#1a1d24] border border-white/5">
           <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-3">
@@ -262,6 +281,21 @@ const Dashboard: React.FC<DashboardProps> = ({ sales, purchases, inventory, onEx
                   <p className="text-[9px] text-[#8f97a6] uppercase font-bold tracking-wider">{item.talla} - {item.color}</p>
                 </div>
                 <p className={`text-sm font-bold ${item.stockActual <= 2 ? 'text-[#ef4444]' : 'text-[#ff7a00]'}`}>{item.stockActual} unds</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top Clients Table */}
+        <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-[#4ade80]"></div> Top 5 Clientes
+          </h3>
+          <div className="space-y-4">
+            {topClientsData.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                <p className="text-xs font-bold text-[#b9c0cc]">{item.name}</p>
+                <p className="text-sm font-bold text-[#4ade80]">{formatCOP(item.value)}</p>
               </div>
             ))}
           </div>

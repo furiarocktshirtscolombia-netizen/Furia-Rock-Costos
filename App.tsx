@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { QuoteInputs, QuoteResults, ProductReference, QuoteItem, Sale, Purchase } from './types';
+import { QuoteInputs, QuoteResults, ProductReference, QuoteItem, Sale, Purchase, Client, Invoice } from './types';
 import { 
   PRODUCT_REFERENCES_INITIAL, 
   TALLAS_NINO, 
@@ -19,6 +19,10 @@ import Ventas from './src/components/Ventas';
 import Compras from './src/components/Compras';
 import Dashboard from './src/components/Dashboard';
 import Inventarios from './src/components/Inventarios';
+import Clientes from './src/components/Clientes';
+import Facturacion from './src/components/Facturacion';
+import DocumentTemplate from './src/components/DocumentTemplate';
+import { getNextNumber, downloadPDF, downloadImage } from './src/services/documentService';
 import { 
   FileUp,
   Download,
@@ -32,14 +36,19 @@ import {
   Zap,
   Info,
   CheckCircle2,
-  HelpCircle
+  HelpCircle,
+  Settings,
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
 
 // URL GOOGLE APPS SCRIPT
 const API_URL = "https://script.google.com/macros/s/AKfycbxGsiFcP3sIWSdHsB3CGG9SanXFTVFHgOSmrQv-6Gx5U-ggHQL9PaS9JOMh6JxwPMMW/exec";
 
-// FUNCIÓN GUARDAR VENTA
-async function guardarVentaEnSheets(venta: any) {
+// FUNCIÓN GENÉRICA PARA SINCRONIZAR CON SHEETS
+async function syncWithSheets(hoja: string, data: any) {
   try {
     await fetch(API_URL, {
       method: "POST",
@@ -47,30 +56,13 @@ async function guardarVentaEnSheets(venta: any) {
         "Content-Type": "text/plain;charset=utf-8"
       },
       body: JSON.stringify({
-        accion: "guardarVenta",
-        ...venta
+        accion: "guardar",
+        hoja: hoja,
+        ...data
       })
     });
   } catch (err) {
-    console.error("Error guardando venta:", err);
-  }
-}
-
-// FUNCIÓN GUARDAR COMPRA
-async function guardarCompraEnSheets(compra: any) {
-  try {
-    await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      },
-      body: JSON.stringify({
-        accion: "guardarCompra",
-        ...compra
-      })
-    });
-  } catch (err) {
-    console.error("Error guardando compra:", err);
+    console.error(`Error guardando en ${hoja}:`, err);
   }
 }
 
@@ -116,216 +108,28 @@ function loadImageAsDataURL(src: string): Promise<string> {
   });
 }
 
-type PdfDocumentoItem = {
-  descripcion: string;
-  cantidad: number;
-  valorUnitario: number;
-  subtotal: number;
-};
-
-function construirDescripcionDocumento(item: {
-  colorCamiseta?: string;
-  talla?: string;
-  product?: { name: string };
-  gramaje?: string;
-  diseno?: string;
-  tipoImpresion?: string;
-}) {
-  const color = item.colorCamiseta && item.colorCamiseta !== "No aplica" ? item.colorCamiseta : "";
-  const gramaje = item.gramaje || "";
-  const talla = item.talla || "";
-  const diseno = item.diseno ? `Diseño ${item.diseno}` : "";
-  const tipo = item.tipoImpresion || "";
-  const nombre = item.product?.name || "";
-  
-  return [color, gramaje, talla, diseno, tipo, nombre].filter(Boolean).join(" ");
-}
-
-async function generarPdfPlantillaExacta(params: {
-  tipo: "cuenta_cobro" | "factura_venta";
-  fecha?: string;
-  cliente?: string;
-  numeroFactura?: string | null;
-  observaciones?: string;
-  items: PdfDocumentoItem[];
-}) {
-  // @ts-ignore
-  const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) {
-    alert("No se detectó jsPDF");
-    return;
-  }
-
-  let bg = "";
-  try {
-    bg = await loadImageAsDataURL(PLANTILLA_CUENTA_COBRO);
-  } catch (e) {
-    console.error("No se pudo cargar la plantilla, usando fondo blanco", e);
-  }
-
-  const doc = new jsPDF("l", "mm", "a4");
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  // Fondo plantilla
-  if (bg) {
-    doc.addImage(bg, "PNG", 0, 0, pageWidth, pageHeight);
-  } else {
-    // Fallback header oscuro si no hay imagen
-    doc.setFillColor(20, 20, 25);
-    doc.rect(0, 0, pageWidth, 50, 'F');
-  }
-
-  const fecha = formatFechaDocumento(params.fecha);
-  const total = params.items.reduce((acc, it) => acc + Number(it.subtotal || 0), 0);
-
-  // ===== DATOS SUPERIORES =====
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-
-  // Fecha izquierda
-  doc.text("Fecha:", 24, 23);
-  doc.setFont("helvetica", "normal");
-  doc.text(fecha, 24, 31);
-
-  // Consignar a izquierda
-  doc.setFont("helvetica", "bold");
-  doc.text("Consignar a:", 24, 44);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Nequi ${DATOS_COBRO.nequi}`, 54, 44);
-
-  // Llave derecha
-  doc.setFont("helvetica", "bold");
-  doc.text("Llave:", 182, 23);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Nequi ${DATOS_COBRO.nequi}`, 182, 31);
-  doc.text(`Llave: ${DATOS_COBRO.llave}`, 182, 44);
-
-  // ===== TÍTULO CENTRAL =====
-  doc.setTextColor(30, 30, 30);
-  doc.setFont("times", "normal");
-  doc.setFontSize(26);
-
-  const titulo = params.tipo === "factura_venta" ? "FACTURA DE VENTA" : "CUENTA DE COBRO";
-  doc.text(titulo, pageWidth / 2, 82, { align: "center" });
-
-  if (params.tipo === "factura_venta" && params.numeroFactura) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text(`Factura N° ${params.numeroFactura}`, 245, 70, { align: "right" });
-  }
-
-  // ===== TABLA MANUAL =====
-  const startX = 22;
-  const startY = 96;
-  const rowH = 12;
-  const colDesc = 126;
-  const colCant = 25;
-  const colUnit = 38;
-  const colSub = 38;
-
-  // Encabezado tabla
-  doc.setFillColor(35, 35, 35);
-  doc.rect(startX, startY, colDesc, rowH, "F");
-  doc.rect(startX + colDesc, startY, colCant, rowH, "F");
-  doc.rect(startX + colDesc + colCant, startY, colUnit, rowH, "F");
-  doc.rect(startX + colDesc + colCant + colUnit, startY, colSub, rowH, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("Descripción", startX + 5, startY + 8);
-  doc.text("Cantidad", startX + colDesc + colCant / 2, startY + 8, { align: "center" });
-  doc.text("Valor Unitario", startX + colDesc + colCant + colUnit / 2, startY + 8, { align: "center" });
-  doc.text("Subtotal", startX + colDesc + colCant + colUnit + colSub / 2, startY + 8, { align: "center" });
-
-  // Filas
-  let y = startY + rowH;
-  doc.setTextColor(30, 30, 30);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-
-  params.items.forEach((item) => {
-    doc.setDrawColor(190, 190, 190);
-    doc.rect(startX, y, colDesc, rowH);
-    doc.rect(startX + colDesc, y, colCant, rowH);
-    doc.rect(startX + colDesc + colCant, y, colUnit, rowH);
-    doc.rect(startX + colDesc + colCant + colUnit, y, colSub, rowH);
-
-    doc.text(item.descripcion, startX + 5, y + 8);
-    doc.text(String(item.cantidad), startX + colDesc + colCant / 2, y + 8, { align: "center" });
-    doc.text(formatCOPDocumento(item.valorUnitario), startX + colDesc + colCant + colUnit - 5, y + 8, { align: "right" });
-    doc.text(formatCOPDocumento(item.subtotal), startX + colDesc + colCant + colUnit + colSub - 5, y + 8, { align: "right" });
-
-    y += rowH;
-  });
-
-  // fila vacía
-  doc.rect(startX, y, colDesc, rowH);
-  doc.rect(startX + colDesc, y, colCant, rowH);
-  doc.rect(startX + colDesc + colCant, y, colUnit, rowH);
-  doc.rect(startX + colDesc + colCant + colUnit, y, colSub, rowH);
-
-  // TOTAL A PAGAR
-  doc.setFillColor(35, 35, 35);
-  doc.rect(startX + colDesc + colCant, y, colUnit, rowH, "F");
-  doc.rect(startX + colDesc + colCant + colUnit, y, colSub, rowH, "F");
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.text("TOTAL A PAGAR", startX + colDesc + colCant + colUnit / 2, y + 8, { align: "center" });
-  doc.text(formatCOPDocumento(total), startX + colDesc + colCant + colUnit + colSub - 5, y + 8, { align: "right" });
-
-  // Observación
-  doc.setTextColor(20, 20, 20);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("Observación:", 22, y + 18);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    params.observaciones?.trim() || "Enviar comprobante de pago una vez realizada la consignación.",
-    50,
-    y + 18
-  );
-
-  // Pie inferior
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Beneficiario: ${DATOS_COBRO.beneficiario}`, 22, 186);
-  doc.text(`Fecha: ${fecha}`, 22, 194);
-
-  doc.text(`Consignar a: ${DATOS_COBRO.nequi}`, 170, 186);
-  doc.text(`Llave: ${DATOS_COBRO.llave}`, 170, 194);
-
-  // QR Code
-  try {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${DATOS_COBRO.nequi}`;
-    doc.addImage(qrUrl, 'PNG', pageWidth / 2 - 15, 175, 30, 30);
-  } catch (e) {
-    console.error("Error adding QR code", e);
-  }
-
-  const nombreArchivo =
-    params.tipo === "factura_venta"
-      ? `Factura_Venta_${(params.cliente || "Cliente").replace(/\s+/g, "_")}.pdf`
-      : `Cuenta_Cobro_${(params.cliente || "Cliente").replace(/\s+/g, "_")}.pdf`;
-
-  doc.save(nombreArchivo);
-}
-
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('cotizador');
-  const [productRefs, setProductRefs] = useState<ProductReference[]>(PRODUCT_REFERENCES_INITIAL);
+  const [productRefs, setProductRefs] = useState<ProductReference[]>(() => {
+    const saved = localStorage.getItem('furia_product_refs');
+    return saved ? JSON.parse(saved) : PRODUCT_REFERENCES_INITIAL;
+  });
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
-  const [sales, setSales] = useState<Sale[]>(() => {
-    const saved = localStorage.getItem('furia_sales');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [purchases, setPurchases] = useState<Purchase[]>(() => {
-    const saved = localStorage.getItem('furia_purchases');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [documentToExport, setDocumentToExport] = useState<{
+    type: 'cotizacion' | 'factura';
+    number: string;
+    date: string;
+    client: string;
+    items: any[];
+    metodoPago?: string;
+    observaciones?: string;
+  } | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [inputs, setInputs] = useState<QuoteInputs>({
     clientName: "",
     quantity: 1,
@@ -336,7 +140,8 @@ const App: React.FC = () => {
     colorInferior: "No aplica",
     gramaje: "200g",
     diseno: "",
-    tipoImpresion: "DTG",
+    tipoImpresion: '',
+    costoImpresion: 0,
     cmEstampado: 0,
     cmCorazon: 0,
     qtyPlanchado: 1,
@@ -411,12 +216,151 @@ const App: React.FC = () => {
   }, [sales, purchases]);
 
   useEffect(() => {
-    localStorage.setItem('furia_sales', JSON.stringify(sales));
-  }, [sales]);
+    const fetchAllData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        
+        if (data.Ventas) setSales(data.Ventas);
+        if (data.Compras) setPurchases(data.Compras);
+        if (data.Clientes) setClients(data.Clientes);
+        if (data.Facturas) setInvoices(data.Facturas);
+        // If you have a Config sheet for refs, you can load it too
+      } catch (err) {
+        console.error("Error cargando datos desde Sheets:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAllData();
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('furia_purchases', JSON.stringify(purchases));
-  }, [purchases]);
+    if (!isLoading) {
+      localStorage.setItem('furia_sales', JSON.stringify(sales));
+    }
+  }, [sales, isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem('furia_purchases', JSON.stringify(purchases));
+    }
+  }, [purchases, isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem('furia_product_refs', JSON.stringify(productRefs));
+    }
+  }, [productRefs, isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem('furia_clients', JSON.stringify(clients));
+    }
+  }, [clients, isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      localStorage.setItem('furia_invoices', JSON.stringify(invoices));
+    }
+  }, [invoices, isLoading]);
+
+  const handleExportData = () => {
+    const data = {
+      sales,
+      purchases,
+      productRefs,
+      exportDate: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `furia_rock_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (data.sales && data.purchases && data.productRefs) {
+          if (window.confirm("¿Estás seguro de importar estos datos? Se sobrescribirá la información actual.")) {
+            setSales(data.sales);
+            setPurchases(data.purchases);
+            setProductRefs(data.productRefs);
+            alert("Datos importados correctamente.");
+          }
+        } else {
+          alert("Archivo de respaldo inválido.");
+        }
+      } catch (err) {
+        alert("Error al leer el archivo.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleClearData = () => {
+    if (window.confirm("¿ESTÁS COMPLETAMENTE SEGURO? Esta acción borrará TODAS las ventas, compras y referencias personalizadas del navegador. Esta acción no se puede deshacer.")) {
+      setSales([]);
+      setPurchases([]);
+      setProductRefs(PRODUCT_REFERENCES_INITIAL);
+      localStorage.clear();
+      alert("Sistema reiniciado.");
+      window.location.reload();
+    }
+  };
+
+  const handleGenerateQuote = () => {
+    if (quoteItems.length === 0) return alert("No hay items para cotizar.");
+    
+    const number = getNextNumber('cotizacion');
+    const date = new Date().toLocaleDateString("es-CO");
+    
+    setDocumentToExport({
+      type: 'cotizacion',
+      number,
+      date,
+      client: inputs.clientName || "Cliente General",
+      items: quoteItems.map(item => ({
+        descripcion: `${item.product.name} (${item.talla} - ${item.colorCamiseta}${item.tipoImpresion ? ` - ${item.tipoImpresion}` : ''})`,
+        cantidad: item.quantity,
+        valor: item.results.precioUnidad,
+        subtotal: item.results.precioTotal
+      })),
+      observaciones: observaciones,
+      paymentInfo: `Bancolombia Ahorros: ${DATOS_COBRO.nequi}\nNequi: ${DATOS_COBRO.nequi}\nTitular: ${DATOS_COBRO.beneficiario}`
+    });
+    setShowExportModal(true);
+  };
+
+  const handleDownloadInvoice = (sale: Sale) => {
+    // Buscar todos los items de esta factura
+    const invoiceItems = sales.filter(s => s.invoiceNumber === sale.invoiceNumber);
+    
+    setDocumentToExport({
+      type: 'factura',
+      number: sale.invoiceNumber.replace('FACT-', ''),
+      date: sale.fecha,
+      client: sale.cliente,
+      items: invoiceItems.map(s => ({
+        descripcion: `${s.referencia} (${s.talla} - ${s.colorCamiseta}${s.tipoImpresion ? ` - ${s.tipoImpresion}` : ''})`,
+        cantidad: s.cantidad,
+        valor: s.precioVentaUnitario,
+        subtotal: s.totalVenta
+      })),
+      metodoPago: sale.metodoPago,
+      observaciones: sale.observaciones
+    });
+    setShowExportModal(true);
+  };
 
   const handleRegisterSale = async () => {
     if (quoteItems.length === 0) return alert("No hay items para vender.");
@@ -434,12 +378,12 @@ const App: React.FC = () => {
       }
     }
 
-    const nextInvoiceNum = (sales.length + 1).toString().padStart(5, '0');
-    const invoiceNumber = `FACT-${nextInvoiceNum}`;
+    const invoiceNumber = getNextNumber('factura');
+    const invoiceNumberFull = `FACT-${invoiceNumber}`;
 
     const newSales: Sale[] = quoteItems.map(item => ({
       id: Date.now() + Math.random(),
-      invoiceNumber,
+      invoiceNumber: invoiceNumberFull,
       fecha: new Date().toISOString().split('T')[0],
       cliente: inputs.clientName || "Cliente General",
       referencia: item.product.name,
@@ -450,6 +394,7 @@ const App: React.FC = () => {
       gramaje: item.gramaje,
       diseno: item.diseno,
       tipoImpresion: item.tipoImpresion,
+      costoImpresion: item.costoImpresion,
       cantidad: item.quantity,
       precioVentaUnitario: item.results.precioUnidad,
       costoUnitario: item.results.costoTotal,
@@ -463,53 +408,63 @@ const App: React.FC = () => {
 
     setSales(prev => [...prev, ...newSales]);
 
-    for (const sale of newSales) {
-      await guardarVentaEnSheets({
-        id: sale.id,
-        invoiceNumber: sale.invoiceNumber,
-        fecha: sale.fecha,
-        cliente: sale.cliente,
-        referencia: sale.referencia,
-        categoria: sale.categoria,
-        talla: sale.talla,
-        colorSuperior: sale.colorCamiseta,
-        colorInferior: sale.colorInferior || "No aplica",
-        gramaje: sale.gramaje,
-        diseno: sale.diseno,
-        tipoImpresion: sale.tipoImpresion,
-        cantidad: sale.cantidad,
-        costoUnitario: sale.costoUnitario,
-        precioVentaUnitario: sale.precioVentaUnitario,
-        totalVenta: sale.totalVenta,
-        costoTotal: sale.costoTotal,
-        ganancia: sale.ganancia,
-        metodoPago: sale.metodoPago,
-        estado: sale.estado,
-        observaciones: sale.observaciones
-      });
+    // Crear Factura
+    const newInvoice: Invoice = {
+      id: Date.now().toString(),
+      numero: invoiceNumberFull,
+      fecha: new Date().toISOString().split('T')[0],
+      cliente: inputs.clientName || "Cliente General",
+      total: newSales.reduce((acc, s) => acc + s.totalVenta, 0),
+      estado: 'Pendiente'
+    };
+    setInvoices(prev => [...prev, newInvoice]);
+
+    // Crear/Actualizar Cliente
+    const existingClient = clients.find(c => c.nombre === (inputs.clientName || "Cliente General"));
+    if (!existingClient) {
+      const newClient: Client = {
+        id: Date.now().toString(),
+        nombre: inputs.clientName || "Cliente General",
+        telefono: "",
+        ciudad: "",
+        direccion: "",
+        notas: ""
+      };
+      setClients(prev => [...prev, newClient]);
+      await syncWithSheets("Clientes", newClient);
     }
 
-    const itemsFactura: PdfDocumentoItem[] = quoteItems.map((it) => ({
-      descripcion: construirDescripcionDocumento(it),
-      cantidad: it.quantity,
-      valorUnitario: it.results.precioUnidad,
-      subtotal: it.results.precioTotal
-    }));
+    // Sincronizar Ventas y Factura
+    for (const sale of newSales) {
+      await syncWithSheets("Ventas", {
+        ...sale,
+        colorSuperior: sale.colorCamiseta
+      });
+    }
+    await syncWithSheets("Facturas", newInvoice);
 
-    await generarPdfPlantillaExacta({
-      tipo: "factura_venta",
-      fecha: new Date().toISOString(),
-      cliente: inputs.clientName || "CLIENTE",
-      numeroFactura: invoiceNumber,
-      observaciones,
-      items: itemsFactura
+    // Preparar Factura para Exportar
+    setDocumentToExport({
+      type: 'factura',
+      number: invoiceNumber,
+      date: new Date().toLocaleDateString("es-CO"),
+      client: inputs.clientName || "Cliente General",
+      items: quoteItems.map(item => ({
+        descripcion: `${item.product.name} (${item.talla} - ${item.colorCamiseta}${item.tipoImpresion ? ` - ${item.tipoImpresion}` : ''})`,
+        cantidad: item.quantity,
+        valor: item.results.precioUnidad,
+        subtotal: item.results.precioTotal
+      })),
+      metodoPago: "Pendiente",
+      observaciones: observaciones
     });
+    setShowExportModal(true);
 
     setQuoteItems([]);
     setInputs(prev => ({ ...prev, clientName: "" }));
     setObservaciones("");
     setActiveTab('ventas');
-    alert("¡Venta registrada, guardada en Google Sheets y factura generada!");
+    alert("¡Venta registrada y factura generada!");
   };
 
   const handleAddSale = (sale: Sale) => {
@@ -542,22 +497,7 @@ const App: React.FC = () => {
 
   const handleAddPurchase = async (purchase: Purchase) => {
     setPurchases(prev => [...prev, purchase]);
-
-    await guardarCompraEnSheets({
-      id: purchase.id,
-      fecha: purchase.fecha,
-      proveedor: purchase.proveedor,
-      referencia: purchase.referencia,
-      producto: purchase.producto,
-      categoria: purchase.categoria,
-      talla: purchase.talla,
-      color: purchase.color,
-      cantidad: purchase.cantidad,
-      valorUnitarioCompra: purchase.valorUnitario,
-      totalCompra: purchase.totalCompra,
-      metodoPago: (purchase as any).metodoPago || "",
-      observaciones: (purchase as any).observaciones || ""
-    });
+    await syncWithSheets("Compras", purchase);
   };
 
   const handleDeletePurchase = (id: string) => {
@@ -781,8 +721,9 @@ const App: React.FC = () => {
     const estampadoCorazon = (Number(inputs.cmCorazon) || 0) * COSTO_CM2;
     const costoPlanchado = (Number(inputs.qtyPlanchado) || 0) * COSTO_PLANCHADO;
     const empaque = Number(inputs.costoEmpaque) || 0;
+    const costoImpresion = Number(inputs.costoImpresion) || 0;
     
-    const costoTotalUnidad = base + estampadoPrincipal + estampadoCorazon + costoPlanchado + empaque;
+    const costoTotalUnidad = base + estampadoPrincipal + estampadoCorazon + costoPlanchado + empaque + costoImpresion;
     
     const ganancia = (inputs.categoria === 'Niño' && isConjuntoItem) ? GANANCIA_NINO : GANANCIA_ADULTO;
     const precioUnidad = Math.round(costoTotalUnidad + ganancia);
@@ -793,6 +734,7 @@ const App: React.FC = () => {
       costoCorazon: estampadoCorazon,
       costoPlanchado: costoPlanchado,
       costoEmpaque: empaque,
+      costoImpresion,
       costoTotal: costoTotalUnidad,
       precioUnidad,
       precioTotal: precioUnidad * inputs.quantity,
@@ -812,6 +754,7 @@ const App: React.FC = () => {
       gramaje: inputs.gramaje,
       diseno: inputs.diseno,
       tipoImpresion: inputs.tipoImpresion,
+      costoImpresion: inputs.costoImpresion,
       cmEstampado: inputs.cmEstampado,
       cmCorazon: inputs.cmCorazon,
       qtyPlanchado: inputs.qtyPlanchado,
@@ -823,50 +766,6 @@ const App: React.FC = () => {
   };
 
   const removeItem = (id: string) => setQuoteItems(prev => prev.filter(it => it.id !== id));
-
-  const downloadPDF_jsPDF = async (
-    items?: QuoteItem[] | Sale[], 
-    customClientName?: string, 
-    isInvoice: boolean = false,
-    invoiceNum?: string
-  ) => {
-    const itemsToExport = items || (quoteItems.length > 0 ? quoteItems : [{
-      id: 'preview',
-      product: { name: currentProduct.name } as any,
-      categoria: inputs.categoria,
-      talla: inputs.talla,
-      colorCamiseta: inputs.colorCamiseta,
-      colorInferior: showBermudaSelector ? inputs.colorInferior : "No aplica",
-      gramaje: inputs.gramaje,
-      diseno: inputs.diseno,
-      tipoImpresion: inputs.tipoImpresion,
-      quantity: inputs.quantity,
-      results: currentResults
-    } as any]);
-
-    const itemsPdf: PdfDocumentoItem[] = itemsToExport.map((it: any) => {
-      const isSale = 'precioVentaUnitario' in it;
-      const qty = isSale ? it.cantidad : it.quantity;
-      const unitPrice = isSale ? it.precioVentaUnitario : it.results.precioUnidad;
-      const subtotal = isSale ? it.totalVenta : it.results.precioTotal;
-      
-      return {
-        descripcion: construirDescripcionDocumento(it),
-        cantidad: qty,
-        valorUnitario: unitPrice,
-        subtotal: subtotal
-      };
-    });
-
-    await generarPdfPlantillaExacta({
-      tipo: isInvoice ? "factura_venta" : "cuenta_cobro",
-      fecha: new Date().toISOString(),
-      cliente: customClientName || inputs.clientName || "CLIENTE",
-      numeroFactura: invoiceNum,
-      observaciones,
-      items: itemsPdf
-    });
-  };
 
   const renderCotizador = () => (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -963,7 +862,7 @@ const App: React.FC = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Gramaje</label>
                 <select 
@@ -987,20 +886,50 @@ const App: React.FC = () => {
                   placeholder="Ej: Rosa, Calavera..."
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Tipo Impresión</label>
-                <select 
-                  value={inputs.tipoImpresion} 
-                  onChange={(e) => setInputs({...inputs, tipoImpresion: e.target.value})} 
+                <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">
+                  Tipo de Impresión
+                </label>
+                <select
+                  value={inputs.tipoImpresion}
+                  onChange={(e) =>
+                    setInputs({
+                      ...inputs,
+                      tipoImpresion: e.target.value as '' | 'DTG' | 'DTF',
+                      costoImpresion: 0
+                    })
+                  }
                   className="w-full bg-[#0b0b0d] border border-white/10 rounded-xl px-4 py-3.5 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none transition-all"
                 >
+                  <option value="">Seleccionar...</option>
                   <option value="DTG">DTG</option>
                   <option value="DTF">DTF</option>
-                  <option value="Serigrafía">Serigrafía</option>
-                  <option value="Sublimación">Sublimación</option>
-                  <option value="Bordado">Bordado</option>
                 </select>
               </div>
+
+              {inputs.tipoImpresion && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                  <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">
+                    Costo {inputs.tipoImpresion}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.costoImpresion}
+                    onChange={(e) =>
+                      setInputs({
+                        ...inputs,
+                        costoImpresion: Number(e.target.value)
+                      })
+                    }
+                    placeholder={`Ej: ${inputs.tipoImpresion === 'DTG' ? '38000' : '18000'}`}
+                    className="w-full bg-[#0b0b0d] border border-white/10 rounded-xl px-4 py-3.5 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none transition-all"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1072,6 +1001,8 @@ const App: React.FC = () => {
                 talla: TALLAS_NINO[3],
                 colorCamiseta: COLORES_CAMISETA[2],
                 colorInferior: "No aplica",
+                tipoImpresion: '',
+                costoImpresion: 0,
                 cmEstampado: 0,
                 cmCorazon: 0,
                 qtyPlanchado: 1,
@@ -1115,6 +1046,12 @@ const App: React.FC = () => {
                   <span className="text-[#8f97a6] text-[10px] uppercase font-bold tracking-widest">Ganancia Real</span>
                   <span className="text-[#4ade80] font-bold text-lg">{formatCOP(currentResults.ganancia)}</span>
                 </div>
+                {currentResults.costoImpresion > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#8f97a6] text-[10px] uppercase font-bold tracking-widest">Costo {inputs.tipoImpresion}</span>
+                    <span className="text-white font-bold">{formatCOP(currentResults.costoImpresion)}</span>
+                  </div>
+                )}
                 <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent w-full"></div>
                 <div className="flex justify-between items-end">
                   <span className="text-[#8f97a6] text-[10px] uppercase font-bold pb-2 tracking-widest">Margen</span>
@@ -1139,11 +1076,11 @@ const App: React.FC = () => {
                 <Trash2 size={16} /> LIMPIAR
               </button>
               <button 
-                onClick={downloadPDF_jsPDF} 
+                onClick={handleGenerateQuote} 
                 disabled={quoteItems.length === 0 && !inputs.clientName} 
                 className="bg-[#ff7a00] hover:bg-[#ff8f26] text-white font-bold px-6 py-3 rounded-xl flex items-center gap-3 text-[10px] tracking-widest transition-all shadow-lg shadow-[#ff7a00]/20 active:scale-95 disabled:opacity-20"
               >
-                <Download size={16} /> PDF
+                <FileText size={16} /> GENERAR COTIZACIÓN
               </button>
               <button 
                 onClick={handleRegisterSale} 
@@ -1232,6 +1169,82 @@ const App: React.FC = () => {
           
           <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
+          {/* Modal de Exportación */}
+      {showExportModal && documentToExport && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#1a1d24] w-full max-w-5xl rounded-[40px] border border-white/10 overflow-hidden shadow-2xl">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+              <div>
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter">Vista Previa del Documento</h2>
+                <p className="text-[10px] text-[#ff7a00] font-bold uppercase tracking-widest mt-1">
+                  {documentToExport.type === 'factura' ? 'Factura de Venta' : 'Cotización'} #{documentToExport.number}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowExportModal(false)}
+                className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[#8f97a6] hover:text-white transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-10 flex flex-col lg:flex-row gap-10">
+              {/* Preview Area */}
+              <div className="flex-1 bg-zinc-900 rounded-3xl p-8 border border-white/5 overflow-auto max-h-[600px] flex justify-center">
+                <div className="origin-top scale-[0.6] sm:scale-[0.8] lg:scale-[1]">
+                  <DocumentTemplate 
+                    {...documentToExport}
+                    logoUrl={LOGO_FURIA}
+                    paymentInfo={documentToExport.type === 'cotizacion' ? `Bancolombia Ahorros: ${DATOS_COBRO.nequi}\nNequi: ${DATOS_COBRO.nequi}\nTitular: ${DATOS_COBRO.beneficiario}` : undefined}
+                  />
+                </div>
+              </div>
+
+              {/* Actions Area */}
+              <div className="w-full lg:w-80 space-y-6">
+                <div className="panel p-8 bg-white/5 border-white/10">
+                  <h3 className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-[0.3em] mb-6">Opciones de Descarga</h3>
+                  
+                  <div className="space-y-4">
+                    <button 
+                      onClick={() => downloadPDF(`document-to-export-${documentToExport.type}`, `FuriaRock_${documentToExport.type}_${documentToExport.number}.pdf`)}
+                      className="w-full bg-[#ff7a00] hover:bg-[#ff8f26] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 text-xs tracking-widest transition-all shadow-lg shadow-[#ff7a00]/20"
+                    >
+                      <FileText size={20} /> DESCARGAR PDF
+                    </button>
+
+                    <button 
+                      onClick={() => downloadImage(`document-to-export-${documentToExport.type}`, `FuriaRock_${documentToExport.type}_${documentToExport.number}.png`)}
+                      className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 text-xs tracking-widest transition-all"
+                    >
+                      <ImageIcon size={20} /> DESCARGAR IMAGEN
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+                  <div className="flex gap-3">
+                    <Info size={18} className="text-[#ff7a00] shrink-0" />
+                    <p className="text-[10px] text-[#b9c0cc] leading-relaxed">
+                      El documento se generará con alta resolución. Asegúrate de que los datos sean correctos antes de descargar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLoading && (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]">
+              <div className="bg-zinc-900 p-6 rounded-2xl border border-orange-500/20 flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+                <p className="text-white font-bold text-xs uppercase tracking-widest">Sincronizando con Sheets...</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-6 text-right hidden lg:flex">
             <div>
               <h1 className="text-xl font-black tracking-tighter uppercase text-white">COCO YEMA</h1>
@@ -1275,7 +1288,7 @@ const App: React.FC = () => {
             onAddSale={handleAddSale}
             onDeleteSale={handleDeleteSale} 
             onUpdateSaleStatus={handleUpdateSaleStatus} 
-            onDownloadInvoice={(sale) => downloadPDF_jsPDF([sale], sale.cliente, true, sale.invoiceNumber)}
+            onDownloadInvoice={handleDownloadInvoice}
           />
         )}
 
@@ -1293,12 +1306,100 @@ const App: React.FC = () => {
             sales={sales} 
             purchases={purchases} 
             inventory={inventoryData}
+            clients={clients}
             onExportExcel={handleExportExcel}
           />
         )}
 
         {activeTab === 'inventarios' && (
           <Inventarios inventory={inventoryData} />
+        )}
+
+        {activeTab === 'clientes' && (
+          <Clientes 
+            clients={clients} 
+            onAddClient={async (client) => {
+              setClients(prev => [...prev, client]);
+              await syncWithSheets("Clientes", client);
+            }} 
+          />
+        )}
+
+        {activeTab === 'facturacion' && (
+          <Facturacion 
+            invoices={invoices} 
+            onUpdateStatus={async (id, status) => {
+              setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, estado: status } : inv));
+              // Sincronizar actualización de estado si es necesario
+            }} 
+          />
+        )}
+
+        {activeTab === 'config' && (
+          <div className="space-y-10">
+            <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Configuración y Datos</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+                <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[#ff7a00]"></div> Respaldo de Información
+                </h3>
+                <p className="text-xs text-[#8f97a6] mb-8 leading-relaxed">
+                  Descarga una copia de seguridad de toda tu base de datos (ventas, compras y productos). 
+                  Puedes guardar este archivo en tu computador o en la nube para restaurarlo en cualquier momento.
+                </p>
+                <div className="flex flex-col gap-4">
+                  <button 
+                    onClick={handleExportData}
+                    className="bg-white/5 hover:bg-white/10 text-white font-bold px-6 py-4 rounded-xl flex items-center justify-center gap-3 text-[10px] tracking-widest transition-all border border-white/10"
+                  >
+                    <Download size={16} /> EXPORTAR RESPALDO (.JSON)
+                  </button>
+                  
+                  <label className="bg-[#ff7a00] hover:bg-[#ff8f26] text-white font-bold px-6 py-4 rounded-xl flex items-center justify-center gap-3 text-[10px] tracking-widest transition-all shadow-lg shadow-[#ff7a00]/20 cursor-pointer">
+                    <Upload size={16} /> IMPORTAR RESPALDO (.JSON)
+                    <input type="file" accept=".json" onChange={handleImportData} className="hidden" />
+                  </label>
+                </div>
+              </div>
+
+              <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+                <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[#ef4444]"></div> Zona de Peligro
+                </h3>
+                <p className="text-xs text-[#8f97a6] mb-8 leading-relaxed">
+                  Estas acciones son irreversibles. Ten cuidado al ejecutarlas. 
+                  Se recomienda realizar un respaldo antes de proceder.
+                </p>
+                <button 
+                  onClick={handleClearData}
+                  className="w-full bg-transparent hover:bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30 font-bold px-6 py-4 rounded-xl flex items-center justify-center gap-3 text-[10px] tracking-widest transition-all"
+                >
+                  <Trash2 size={16} /> REINICIAR TODO EL SISTEMA
+                </button>
+              </div>
+            </div>
+
+            <div className="panel p-8 bg-[#1a1d24] border border-white/5">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[#b9c0cc]"></div> Información del Sistema
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                  <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Ventas Registradas</p>
+                  <p className="text-xl font-bold text-white">{sales.length}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                  <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Compras Registradas</p>
+                  <p className="text-xl font-bold text-white">{purchases.length}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                  <p className="text-[9px] font-bold text-[#8f97a6] uppercase tracking-widest mb-1">Referencias de Producto</p>
+                  <p className="text-xl font-bold text-white">{productRefs.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         <section className="panel p-12 mt-20 bg-gradient-to-br from-[#1a1d24] to-[#20242d] border border-white/5 shadow-2xl">
