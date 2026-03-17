@@ -8,9 +8,10 @@ interface VentasProps {
   onAddSale: (sale: Sale) => void;
   onDeleteSale: (id: string) => void;
   onUpdateSaleStatus: (id: string, status: Sale['estado']) => void;
+  onDownloadInvoice: (sale: Sale) => void;
 }
 
-const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdateSaleStatus }) => {
+const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdateSaleStatus, onDownloadInvoice }) => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
@@ -22,6 +23,9 @@ const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdat
     talla: '',
     colorCamiseta: '',
     colorInferior: '',
+    gramaje: '200g',
+    diseno: '',
+    tipoImpresion: 'DTG',
     cantidad: 1,
     precioVentaUnitario: 0,
     costoUnitario: 0,
@@ -50,6 +54,9 @@ const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdat
       talla: '',
       colorCamiseta: '',
       colorInferior: '',
+      gramaje: '200g',
+      diseno: '',
+      tipoImpresion: 'DTG',
       cantidad: 1,
       precioVentaUnitario: 0,
       costoUnitario: 0,
@@ -168,6 +175,18 @@ const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdat
               <input type="text" value={newSale.colorInferior} onChange={e => setNewSale({...newSale, colorInferior: e.target.value})} className="w-full bg-[#121317] border border-white/5 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none" placeholder="Color bermuda / No aplica..." />
             </div>
             <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Gramaje</label>
+              <input type="text" value={newSale.gramaje} onChange={e => setNewSale({...newSale, gramaje: e.target.value})} className="w-full bg-[#121317] border border-white/5 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none" placeholder="Ej: 200g..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Diseño</label>
+              <input type="text" value={newSale.diseno} onChange={e => setNewSale({...newSale, diseno: e.target.value})} className="w-full bg-[#121317] border border-white/5 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none" placeholder="Ej: Rosa..." />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Tipo Impresión</label>
+              <input type="text" value={newSale.tipoImpresion} onChange={e => setNewSale({...newSale, tipoImpresion: e.target.value})} className="w-full bg-[#121317] border border-white/5 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none" placeholder="Ej: DTG..." />
+            </div>
+            <div className="space-y-2">
               <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Cantidad</label>
               <input required type="number" min="1" value={newSale.cantidad} onChange={e => setNewSale({...newSale, cantidad: Number(e.target.value)})} className="w-full bg-[#121317] border border-white/5 rounded-xl px-4 py-3 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none" />
             </div>
@@ -236,6 +255,7 @@ const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdat
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/5">
+                <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest">Factura</th>
                 <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest">Fecha</th>
                 <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest">Cliente</th>
                 <th className="py-4 px-4 text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest">Referencia</th>
@@ -253,6 +273,7 @@ const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdat
             <tbody className="divide-y divide-white/5">
               {filteredSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="py-4 px-4 text-xs font-bold text-[#ff7a00] whitespace-nowrap">{sale.invoiceNumber || "---"}</td>
                   <td className="py-4 px-4 text-xs font-medium text-[#8f97a6] whitespace-nowrap">{sale.fecha}</td>
                   <td className="py-4 px-4 text-sm font-bold text-white">{sale.cliente}</td>
                   <td className="py-4 px-4 text-xs font-bold text-[#b9c0cc]">{sale.referencia}</td>
@@ -276,12 +297,22 @@ const Ventas: React.FC<VentasProps> = ({ sales, onAddSale, onDeleteSale, onUpdat
                     </select>
                   </td>
                   <td className="py-4 px-4 text-right">
-                    <button 
-                      onClick={() => onDeleteSale(sale.id)}
-                      className="p-2 text-[#8f97a6] hover:text-[#ef4444] transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => onDownloadInvoice(sale)}
+                        className="p-2 text-[#8f97a6] hover:text-[#4ade80] transition-colors"
+                        title="Descargar Factura"
+                      >
+                        <Download size={16} />
+                      </button>
+                      <button 
+                        onClick={() => onDeleteSale(sale.id)}
+                        className="p-2 text-[#8f97a6] hover:text-[#ef4444] transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

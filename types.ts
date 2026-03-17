@@ -15,6 +15,9 @@ export interface QuoteItem {
   talla: string;
   colorCamiseta: string;
   colorInferior: string;
+  gramaje: string;
+  diseno: string;
+  tipoImpresion: string;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
@@ -31,6 +34,9 @@ export interface QuoteInputs {
   talla: string;
   colorCamiseta: string;
   colorInferior: string;
+  gramaje: string;
+  diseno: string;
+  tipoImpresion: string;
   cmEstampado: number;
   cmCorazon: number;
   qtyPlanchado: number;
@@ -52,6 +58,7 @@ export interface QuoteResults {
 
 export interface Sale {
   id: string | number;
+  invoiceNumber?: string;
   fecha: string;
   cliente: string;
   referencia: string;
@@ -59,6 +66,9 @@ export interface Sale {
   talla: string;
   colorCamiseta: string;
   colorInferior: string;
+  gramaje?: string;
+  diseno?: string;
+  tipoImpresion?: string;
   cantidad: number;
   precioVentaUnitario: number;
   costoUnitario: number;

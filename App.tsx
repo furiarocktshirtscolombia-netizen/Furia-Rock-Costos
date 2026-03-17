@@ -77,6 +77,243 @@ async function guardarCompraEnSheets(compra: any) {
 const LOGO_FURIA = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E";
 const LOGO_COCO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M8 14s1.5 2 4 2 4-2 4-2'/%3E%3Cline x1='9' y1='9' x2='9.01' y2='9'/%3E%3Cline x1='15' y1='9' x2='15.01' y2='9'/%3E%3C/svg%3E";
 
+const PLANTILLA_CUENTA_COBRO = "/plantilla-cuenta-cobro.png";
+
+const DATOS_COBRO = {
+  empresa: "FURIA ROCK T-SHIRTS",
+  beneficiario: "Sebastian Crimson",
+  nequi: "31285854503",
+  llave: "31285854503"
+};
+
+function formatCOPDocumento(value: number) {
+  return "$" + Math.round(Number(value || 0)).toLocaleString("es-CO");
+}
+
+function formatFechaDocumento(fecha?: string) {
+  const d = fecha ? new Date(fecha) : new Date();
+  return d.toLocaleDateString("es-CO");
+}
+
+function loadImageAsDataURL(src: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("No se pudo crear canvas"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+type PdfDocumentoItem = {
+  descripcion: string;
+  cantidad: number;
+  valorUnitario: number;
+  subtotal: number;
+};
+
+function construirDescripcionDocumento(item: {
+  colorCamiseta?: string;
+  talla?: string;
+  product?: { name: string };
+  gramaje?: string;
+  diseno?: string;
+  tipoImpresion?: string;
+}) {
+  const color = item.colorCamiseta && item.colorCamiseta !== "No aplica" ? item.colorCamiseta : "";
+  const gramaje = item.gramaje || "";
+  const talla = item.talla || "";
+  const diseno = item.diseno ? `Diseño ${item.diseno}` : "";
+  const tipo = item.tipoImpresion || "";
+  const nombre = item.product?.name || "";
+  
+  return [color, gramaje, talla, diseno, tipo, nombre].filter(Boolean).join(" ");
+}
+
+async function generarPdfPlantillaExacta(params: {
+  tipo: "cuenta_cobro" | "factura_venta";
+  fecha?: string;
+  cliente?: string;
+  numeroFactura?: string | null;
+  observaciones?: string;
+  items: PdfDocumentoItem[];
+}) {
+  // @ts-ignore
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) {
+    alert("No se detectó jsPDF");
+    return;
+  }
+
+  let bg = "";
+  try {
+    bg = await loadImageAsDataURL(PLANTILLA_CUENTA_COBRO);
+  } catch (e) {
+    console.error("No se pudo cargar la plantilla, usando fondo blanco", e);
+  }
+
+  const doc = new jsPDF("l", "mm", "a4");
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  // Fondo plantilla
+  if (bg) {
+    doc.addImage(bg, "PNG", 0, 0, pageWidth, pageHeight);
+  } else {
+    // Fallback header oscuro si no hay imagen
+    doc.setFillColor(20, 20, 25);
+    doc.rect(0, 0, pageWidth, 50, 'F');
+  }
+
+  const fecha = formatFechaDocumento(params.fecha);
+  const total = params.items.reduce((acc, it) => acc + Number(it.subtotal || 0), 0);
+
+  // ===== DATOS SUPERIORES =====
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+
+  // Fecha izquierda
+  doc.text("Fecha:", 24, 23);
+  doc.setFont("helvetica", "normal");
+  doc.text(fecha, 24, 31);
+
+  // Consignar a izquierda
+  doc.setFont("helvetica", "bold");
+  doc.text("Consignar a:", 24, 44);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Nequi ${DATOS_COBRO.nequi}`, 54, 44);
+
+  // Llave derecha
+  doc.setFont("helvetica", "bold");
+  doc.text("Llave:", 182, 23);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Nequi ${DATOS_COBRO.nequi}`, 182, 31);
+  doc.text(`Llave: ${DATOS_COBRO.llave}`, 182, 44);
+
+  // ===== TÍTULO CENTRAL =====
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("times", "normal");
+  doc.setFontSize(26);
+
+  const titulo = params.tipo === "factura_venta" ? "FACTURA DE VENTA" : "CUENTA DE COBRO";
+  doc.text(titulo, pageWidth / 2, 82, { align: "center" });
+
+  if (params.tipo === "factura_venta" && params.numeroFactura) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(`Factura N° ${params.numeroFactura}`, 245, 70, { align: "right" });
+  }
+
+  // ===== TABLA MANUAL =====
+  const startX = 22;
+  const startY = 96;
+  const rowH = 12;
+  const colDesc = 126;
+  const colCant = 25;
+  const colUnit = 38;
+  const colSub = 38;
+
+  // Encabezado tabla
+  doc.setFillColor(35, 35, 35);
+  doc.rect(startX, startY, colDesc, rowH, "F");
+  doc.rect(startX + colDesc, startY, colCant, rowH, "F");
+  doc.rect(startX + colDesc + colCant, startY, colUnit, rowH, "F");
+  doc.rect(startX + colDesc + colCant + colUnit, startY, colSub, rowH, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Descripción", startX + 5, startY + 8);
+  doc.text("Cantidad", startX + colDesc + colCant / 2, startY + 8, { align: "center" });
+  doc.text("Valor Unitario", startX + colDesc + colCant + colUnit / 2, startY + 8, { align: "center" });
+  doc.text("Subtotal", startX + colDesc + colCant + colUnit + colSub / 2, startY + 8, { align: "center" });
+
+  // Filas
+  let y = startY + rowH;
+  doc.setTextColor(30, 30, 30);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+
+  params.items.forEach((item) => {
+    doc.setDrawColor(190, 190, 190);
+    doc.rect(startX, y, colDesc, rowH);
+    doc.rect(startX + colDesc, y, colCant, rowH);
+    doc.rect(startX + colDesc + colCant, y, colUnit, rowH);
+    doc.rect(startX + colDesc + colCant + colUnit, y, colSub, rowH);
+
+    doc.text(item.descripcion, startX + 5, y + 8);
+    doc.text(String(item.cantidad), startX + colDesc + colCant / 2, y + 8, { align: "center" });
+    doc.text(formatCOPDocumento(item.valorUnitario), startX + colDesc + colCant + colUnit - 5, y + 8, { align: "right" });
+    doc.text(formatCOPDocumento(item.subtotal), startX + colDesc + colCant + colUnit + colSub - 5, y + 8, { align: "right" });
+
+    y += rowH;
+  });
+
+  // fila vacía
+  doc.rect(startX, y, colDesc, rowH);
+  doc.rect(startX + colDesc, y, colCant, rowH);
+  doc.rect(startX + colDesc + colCant, y, colUnit, rowH);
+  doc.rect(startX + colDesc + colCant + colUnit, y, colSub, rowH);
+
+  // TOTAL A PAGAR
+  doc.setFillColor(35, 35, 35);
+  doc.rect(startX + colDesc + colCant, y, colUnit, rowH, "F");
+  doc.rect(startX + colDesc + colCant + colUnit, y, colSub, rowH, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text("TOTAL A PAGAR", startX + colDesc + colCant + colUnit / 2, y + 8, { align: "center" });
+  doc.text(formatCOPDocumento(total), startX + colDesc + colCant + colUnit + colSub - 5, y + 8, { align: "right" });
+
+  // Observación
+  doc.setTextColor(20, 20, 20);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Observación:", 22, y + 18);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    params.observaciones?.trim() || "Enviar comprobante de pago una vez realizada la consignación.",
+    50,
+    y + 18
+  );
+
+  // Pie inferior
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Beneficiario: ${DATOS_COBRO.beneficiario}`, 22, 186);
+  doc.text(`Fecha: ${fecha}`, 22, 194);
+
+  doc.text(`Consignar a: ${DATOS_COBRO.nequi}`, 170, 186);
+  doc.text(`Llave: ${DATOS_COBRO.llave}`, 170, 194);
+
+  // QR Code
+  try {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${DATOS_COBRO.nequi}`;
+    doc.addImage(qrUrl, 'PNG', pageWidth / 2 - 15, 175, 30, 30);
+  } catch (e) {
+    console.error("Error adding QR code", e);
+  }
+
+  const nombreArchivo =
+    params.tipo === "factura_venta"
+      ? `Factura_Venta_${(params.cliente || "Cliente").replace(/\s+/g, "_")}.pdf`
+      : `Cuenta_Cobro_${(params.cliente || "Cliente").replace(/\s+/g, "_")}.pdf`;
+
+  doc.save(nombreArchivo);
+}
+
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('cotizador');
   const [productRefs, setProductRefs] = useState<ProductReference[]>(PRODUCT_REFERENCES_INITIAL);
@@ -97,6 +334,9 @@ const App: React.FC = () => {
     talla: TALLAS_NINO[3],
     colorCamiseta: COLORES_CAMISETA[2],
     colorInferior: "No aplica",
+    gramaje: "200g",
+    diseno: "",
+    tipoImpresion: "DTG",
     cmEstampado: 0,
     cmCorazon: 0,
     qtyPlanchado: 1,
@@ -194,8 +434,12 @@ const App: React.FC = () => {
       }
     }
 
+    const nextInvoiceNum = (sales.length + 1).toString().padStart(5, '0');
+    const invoiceNumber = `FACT-${nextInvoiceNum}`;
+
     const newSales: Sale[] = quoteItems.map(item => ({
       id: Date.now() + Math.random(),
+      invoiceNumber,
       fecha: new Date().toISOString().split('T')[0],
       cliente: inputs.clientName || "Cliente General",
       referencia: item.product.name,
@@ -203,6 +447,9 @@ const App: React.FC = () => {
       talla: item.talla,
       colorCamiseta: item.colorCamiseta,
       colorInferior: item.colorInferior,
+      gramaje: item.gramaje,
+      diseno: item.diseno,
+      tipoImpresion: item.tipoImpresion,
       cantidad: item.quantity,
       precioVentaUnitario: item.results.precioUnidad,
       costoUnitario: item.results.costoTotal,
@@ -219,6 +466,7 @@ const App: React.FC = () => {
     for (const sale of newSales) {
       await guardarVentaEnSheets({
         id: sale.id,
+        invoiceNumber: sale.invoiceNumber,
         fecha: sale.fecha,
         cliente: sale.cliente,
         referencia: sale.referencia,
@@ -226,6 +474,9 @@ const App: React.FC = () => {
         talla: sale.talla,
         colorSuperior: sale.colorCamiseta,
         colorInferior: sale.colorInferior || "No aplica",
+        gramaje: sale.gramaje,
+        diseno: sale.diseno,
+        tipoImpresion: sale.tipoImpresion,
         cantidad: sale.cantidad,
         costoUnitario: sale.costoUnitario,
         precioVentaUnitario: sale.precioVentaUnitario,
@@ -238,11 +489,27 @@ const App: React.FC = () => {
       });
     }
 
+    const itemsFactura: PdfDocumentoItem[] = quoteItems.map((it) => ({
+      descripcion: construirDescripcionDocumento(it),
+      cantidad: it.quantity,
+      valorUnitario: it.results.precioUnidad,
+      subtotal: it.results.precioTotal
+    }));
+
+    await generarPdfPlantillaExacta({
+      tipo: "factura_venta",
+      fecha: new Date().toISOString(),
+      cliente: inputs.clientName || "CLIENTE",
+      numeroFactura: invoiceNumber,
+      observaciones,
+      items: itemsFactura
+    });
+
     setQuoteItems([]);
     setInputs(prev => ({ ...prev, clientName: "" }));
     setObservaciones("");
     setActiveTab('ventas');
-    alert("¡Venta registrada y guardada en Google Sheets!");
+    alert("¡Venta registrada, guardada en Google Sheets y factura generada!");
   };
 
   const handleAddSale = (sale: Sale) => {
@@ -256,7 +523,11 @@ const App: React.FC = () => {
     if (sale.cantidad > stock) {
       return alert(`Inventario insuficiente para: ${sale.referencia} (${sale.talla} - ${sale.colorCamiseta}). Stock actual: ${stock}`);
     }
-    setSales(prev => [...prev, sale]);
+
+    const nextInvoiceNum = (sales.length + 1).toString().padStart(5, '0');
+    const invoiceNumber = `FACT-${nextInvoiceNum}`;
+    
+    setSales(prev => [...prev, { ...sale, invoiceNumber }]);
   };
 
   const handleDeleteSale = (id: string) => {
@@ -538,6 +809,9 @@ const App: React.FC = () => {
       talla: inputs.talla,
       colorCamiseta: inputs.colorCamiseta,
       colorInferior: showBermudaSelector ? inputs.colorInferior : "No aplica",
+      gramaje: inputs.gramaje,
+      diseno: inputs.diseno,
+      tipoImpresion: inputs.tipoImpresion,
       cmEstampado: inputs.cmEstampado,
       cmCorazon: inputs.cmCorazon,
       qtyPlanchado: inputs.qtyPlanchado,
@@ -550,93 +824,48 @@ const App: React.FC = () => {
 
   const removeItem = (id: string) => setQuoteItems(prev => prev.filter(it => it.id !== id));
 
-  const downloadPDF_jsPDF = () => {
-    const itemsToExport: QuoteItem[] = quoteItems.length > 0 ? quoteItems : [{
+  const downloadPDF_jsPDF = async (
+    items?: QuoteItem[] | Sale[], 
+    customClientName?: string, 
+    isInvoice: boolean = false,
+    invoiceNum?: string
+  ) => {
+    const itemsToExport = items || (quoteItems.length > 0 ? quoteItems : [{
       id: 'preview',
-      product: currentProduct,
+      product: { name: currentProduct.name } as any,
       categoria: inputs.categoria,
       talla: inputs.talla,
       colorCamiseta: inputs.colorCamiseta,
       colorInferior: showBermudaSelector ? inputs.colorInferior : "No aplica",
-      cmEstampado: inputs.cmEstampado,
-      cmCorazon: inputs.cmCorazon,
-      qtyPlanchado: inputs.qtyPlanchado,
-      costoEmpaque: inputs.costoEmpaque,
+      gramaje: inputs.gramaje,
+      diseno: inputs.diseno,
+      tipoImpresion: inputs.tipoImpresion,
       quantity: inputs.quantity,
       results: currentResults
-    } as QuoteItem];
+    } as any]);
 
-    // @ts-ignore
-    const { jsPDF } = window.jspdf || {};
-    if (!jsPDF) return alert("Error: jsPDF no detectado.");
-
-    const doc = new jsPDF("l", "mm", "a4"); 
-    const clienteNombre = inputs.clientName || "CLIENTE";
-    const fechaStr = new Date().toLocaleDateString("es-CO");
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(255, 79, 216); 
-    doc.text("FURIA ROCK KIDS", 14, 20);
-    doc.setFontSize(10);
-    doc.setTextColor(120, 120, 120);
-    doc.text("ESTILO REBELDE • CALIDAD PREMIUM • DTG & DTF", 14, 26);
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`CLIENTE: ${clienteNombre.toUpperCase()}`, 14, 38);
-    doc.text(`FECHA: ${fechaStr}`, pageWidth - 14, 38, { align: 'right' });
-
-    const head = [["REFERENCIA", "DETALLES / COLORES", "CANT.", "V. UNITARIO", "V. TOTAL"]];
-    const body = itemsToExport.map(it => [
-      it.product.name.toUpperCase(),
-      `Talla: ${it.talla || "-"}\n` +
-      (it.colorCamiseta !== "No aplica" ? `Superior: ${it.colorCamiseta}\n` : "") +
-      (it.colorInferior !== "No aplica" ? `Bermuda/Jogger: ${it.colorInferior}` : ""),
-      String(it.quantity),
-      formatCOP(it.results.precioUnidad),
-      formatCOP(it.results.precioTotal)
-    ]);
-
-    // @ts-ignore
-    doc.autoTable({
-      startY: 45,
-      head,
-      body,
-      theme: 'grid',
-      styles: { font: "helvetica", fontSize: 10, cellPadding: 4, valign: "middle" },
-      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
-      columnStyles: {
-        0: { cellWidth: 90, halign: "left" },
-        1: { cellWidth: 100, halign: "left" },
-        2: { cellWidth: 15, halign: "center" },
-        3: { cellWidth: 32, halign: "right" },
-        4: { cellWidth: 32, halign: "right", fontStyle: "bold" }
-      },
-      margin: { left: 14, right: 14 }
+    const itemsPdf: PdfDocumentoItem[] = itemsToExport.map((it: any) => {
+      const isSale = 'precioVentaUnitario' in it;
+      const qty = isSale ? it.cantidad : it.quantity;
+      const unitPrice = isSale ? it.precioVentaUnitario : it.results.precioUnidad;
+      const subtotal = isSale ? it.totalVenta : it.results.precioTotal;
+      
+      return {
+        descripcion: construirDescripcionDocumento(it),
+        cantidad: qty,
+        valorUnitario: unitPrice,
+        subtotal: subtotal
+      };
     });
 
-    // @ts-ignore
-    const finalY = doc.lastAutoTable.finalY || 150;
-    const totalGeneral = itemsToExport.reduce<number>((acc, it) => acc + it.results.precioTotal, 0);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(`TOTAL COTIZADO: ${formatCOP(totalGeneral)} COP`, pageWidth - 14, finalY + 12, { align: "right" });
-
-    if (observaciones) {
-      doc.setFontSize(11);
-      doc.text("Observaciones:", 14, finalY + 22);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(60, 60, 60);
-      const lines = doc.splitTextToSize(observaciones, pageWidth - 28);
-      doc.text(lines, 14, finalY + 28);
-    }
-
-    doc.setFontSize(8);
-    doc.setTextColor(180, 180, 180);
-    doc.text("Furia Rock Kids - Pasión por el diseño infantil con alma rockera.", pageWidth / 2, 200, { align: "center" });
-    doc.save(`Cotizacion_FuriaRock_${clienteNombre.replace(/\s+/g, '_')}.pdf`);
+    await generarPdfPlantillaExacta({
+      tipo: isInvoice ? "factura_venta" : "cuenta_cobro",
+      fecha: new Date().toISOString(),
+      cliente: customClientName || inputs.clientName || "CLIENTE",
+      numeroFactura: invoiceNum,
+      observaciones,
+      items: itemsPdf
+    });
   };
 
   const renderCotizador = () => (
@@ -732,6 +961,46 @@ const App: React.FC = () => {
                   </select>
                 </div>
               )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Gramaje</label>
+                <select 
+                  value={inputs.gramaje} 
+                  onChange={(e) => setInputs({...inputs, gramaje: e.target.value})} 
+                  className="w-full bg-[#0b0b0d] border border-white/10 rounded-xl px-4 py-3.5 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none transition-all"
+                >
+                  <option value="160g">160g</option>
+                  <option value="180g">180g</option>
+                  <option value="200g">200g</option>
+                  <option value="220g">220g</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Diseño</label>
+                <input 
+                  type="text" 
+                  value={inputs.diseno} 
+                  onChange={(e) => setInputs({...inputs, diseno: e.target.value})} 
+                  className="w-full bg-[#0b0b0d] border border-white/10 rounded-xl px-4 py-3.5 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none transition-all" 
+                  placeholder="Ej: Rosa, Calavera..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-widest px-1">Tipo Impresión</label>
+                <select 
+                  value={inputs.tipoImpresion} 
+                  onChange={(e) => setInputs({...inputs, tipoImpresion: e.target.value})} 
+                  className="w-full bg-[#0b0b0d] border border-white/10 rounded-xl px-4 py-3.5 text-white font-bold focus:ring-2 focus:ring-[#ff7a00] outline-none transition-all"
+                >
+                  <option value="DTG">DTG</option>
+                  <option value="DTF">DTF</option>
+                  <option value="Serigrafía">Serigrafía</option>
+                  <option value="Sublimación">Sublimación</option>
+                  <option value="Bordado">Bordado</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1006,6 +1275,7 @@ const App: React.FC = () => {
             onAddSale={handleAddSale}
             onDeleteSale={handleDeleteSale} 
             onUpdateSaleStatus={handleUpdateSaleStatus} 
+            onDownloadInvoice={(sale) => downloadPDF_jsPDF([sale], sale.cliente, true, sale.invoiceNumber)}
           />
         )}
 
