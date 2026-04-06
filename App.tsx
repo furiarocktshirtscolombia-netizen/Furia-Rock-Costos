@@ -91,21 +91,178 @@ function loadImageAsDataURL(src: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
+
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("No se pudo crear canvas"));
-        return;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("No se pudo crear el canvas"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL("image/png");
+        resolve(dataUrl);
+      } catch (err) {
+        reject(err);
       }
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
     };
-    img.onerror = reject;
+
+    img.onerror = () => {
+      reject(new Error(`No se pudo cargar la imagen: ${src}`));
+    };
+
     img.src = src;
   });
+}
+
+interface PdfDocumentoItem {
+  descripcion: string;
+  cantidad: number;
+  valorUnitario: number;
+  subtotal: number;
+}
+
+function construirDescripcionDocumento(item: QuoteItem | Sale): string {
+  const colors = [];
+  if (item.colorCamiseta) colors.push(`Camiseta: ${item.colorCamiseta}`);
+  if (item.colorInferior) colors.push(`Inferior: ${item.colorInferior}`);
+  const colorStr = colors.length > 0 ? ` - ${colors.join(', ')}` : '';
+  const tallaStr = item.talla ? ` (${item.talla})` : '';
+  const impresionStr = item.tipoImpresion ? ` - ${item.tipoImpresion}` : '';
+  
+  // Si es un Sale, item.referencia es el nombre del producto
+  // Si es un QuoteItem, item.product es un objeto ProductReference
+  const productName = 'referencia' in item ? item.referencia : item.product.name;
+  
+  return `${productName}${tallaStr}${colorStr}${impresionStr}`;
+}
+
+async function generarPdfPlantillaExacta(params: {
+  tipo: "cuenta_cobro" | "factura_venta";
+  fecha?: string;
+  cliente?: string;
+  numeroFactura?: string | null;
+  observaciones?: string;
+  items: PdfDocumentoItem[];
+}) {
+  try {
+    // @ts-ignore
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      throw new Error("No se detectó jsPDF");
+    }
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Header
+    doc.setFillColor(26, 29, 36);
+    doc.rect(0, 0, pageWidth, 40, "F");
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("FURIA ROCK", 15, 20);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("T-SHIRTS & PREMIUM APPAREL", 15, 28);
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    const titulo = params.tipo === "factura_venta" ? "FACTURA DE VENTA" : "COTIZACIÓN / CUENTA DE COBRO";
+    doc.text(titulo, pageWidth - 15, 20, { align: "right" });
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    if (params.numeroFactura) {
+      doc.text(`N° ${params.numeroFactura}`, pageWidth - 15, 28, { align: "right" });
+    }
+
+    // Info Section
+    doc.setTextColor(30, 30, 30);
+    doc.setFont("helvetica", "bold");
+    doc.text("CLIENTE:", 15, 55);
+    doc.setFont("helvetica", "normal");
+    doc.text(params.cliente || "CLIENTE GENERAL", 45, 55);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("FECHA:", 15, 62);
+    doc.setFont("helvetica", "normal");
+    doc.text(formatFechaDocumento(params.fecha), 45, 62);
+
+    // Table using autoTable
+    const tableData = params.items.map(item => [
+      item.descripcion,
+      item.cantidad,
+      formatCOPDocumento(item.valorUnitario),
+      formatCOPDocumento(item.subtotal)
+    ]);
+
+    // @ts-ignore
+    doc.autoTable({
+      startY: 75,
+      head: [['DESCRIPCIÓN / DETALLES', 'CANT.', 'UNITARIO', 'SUBTOTAL']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [26, 29, 36], 
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { cellWidth: 'auto' },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 35, halign: 'right' },
+        3: { cellWidth: 35, halign: 'right' }
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 4
+      }
+    });
+
+    // @ts-ignore
+    const finalY = doc.lastAutoTable.finalY || 150;
+    const total = params.items.reduce((acc, it) => acc + Number(it.subtotal || 0), 0);
+
+    // Totals
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL A PAGAR:", pageWidth - 85, finalY + 15);
+    doc.text(formatCOPDocumento(total), pageWidth - 15, finalY + 15, { align: "right" });
+
+    // Footer / Payment Info
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("INFORMACIÓN DE PAGO:", 15, finalY + 30);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Beneficiario: ${DATOS_COBRO.beneficiario}`, 15, finalY + 37);
+    doc.text(`Nequi: ${DATOS_COBRO.nequi}`, 15, finalY + 44);
+    doc.text(`Llave: ${DATOS_COBRO.llave}`, 15, finalY + 51);
+
+    if (params.observaciones) {
+      doc.setFont("helvetica", "bold");
+      doc.text("OBSERVACIONES:", 15, finalY + 65);
+      doc.setFont("helvetica", "normal");
+      const splitObs = doc.splitTextToSize(params.observaciones, pageWidth - 30);
+      doc.text(splitObs, 15, finalY + 72);
+    }
+
+    const nombreArchivo = params.tipo === "factura_venta" 
+      ? `Factura_${(params.cliente || "Cliente").replace(/\s+/g, "_")}.pdf`
+      : `Cotizacion_${(params.cliente || "Cliente").replace(/\s+/g, "_")}.pdf`;
+
+    doc.save(nombreArchivo);
+  } catch (error) {
+    console.error("Error generando PDF:", error);
+    throw error;
+  }
 }
 
 const App: React.FC = () => {
@@ -115,10 +272,22 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : PRODUCT_REFERENCES_INITIAL;
   });
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [sales, setSales] = useState<Sale[]>(() => {
+    const saved = localStorage.getItem('furia_sales');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [purchases, setPurchases] = useState<Purchase[]>(() => {
+    const saved = localStorage.getItem('furia_purchases');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [clients, setClients] = useState<Client[]>(() => {
+    const saved = localStorage.getItem('furia_clients');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [invoices, setInvoices] = useState<Invoice[]>(() => {
+    const saved = localStorage.getItem('furia_invoices');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [documentToExport, setDocumentToExport] = useState<{
     type: 'cotizacion' | 'factura';
@@ -219,16 +388,48 @@ const App: React.FC = () => {
     const fetchAllData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(API_URL);
-        const data = await response.json();
+        console.log("Iniciando carga de datos desde Sheets...");
+        
+        let response;
+        try {
+          // Intentar con GET primero (estándar para lectura)
+          response = await fetch(API_URL, {
+            method: 'GET',
+            redirect: 'follow'
+          });
+        } catch (getErr) {
+          console.warn("GET falló (posible error de CORS), intentando con POST...", getErr);
+          // Fallback a POST (a veces evita problemas de CORS en GAS si se usa text/plain)
+          response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify({ accion: "leer" })
+          });
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonErr) {
+          console.error("Error al parsear JSON de Sheets:", jsonErr);
+          throw new Error("La respuesta del servidor no es un JSON válido.");
+        }
+        
+        console.log("Datos recibidos exitosamente:", Object.keys(data));
         
         if (data.Ventas) setSales(data.Ventas);
         if (data.Compras) setPurchases(data.Compras);
         if (data.Clientes) setClients(data.Clientes);
         if (data.Facturas) setInvoices(data.Facturas);
-        // If you have a Config sheet for refs, you can load it too
       } catch (err) {
         console.error("Error cargando datos desde Sheets:", err);
+        console.warn("Usando datos locales debido al error de conexión.");
       } finally {
         setIsLoading(false);
       }
@@ -318,48 +519,81 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGenerateQuote = () => {
-    if (quoteItems.length === 0) return alert("No hay items para cotizar.");
-    
-    const number = getNextNumber('cotizacion');
-    const date = new Date().toLocaleDateString("es-CO");
-    
-    setDocumentToExport({
-      type: 'cotizacion',
-      number,
-      date,
-      client: inputs.clientName || "Cliente General",
-      items: quoteItems.map(item => ({
-        descripcion: `${item.product.name} (${item.talla} - ${item.colorCamiseta}${item.tipoImpresion ? ` - ${item.tipoImpresion}` : ''})`,
-        cantidad: item.quantity,
-        valor: item.results.precioUnidad,
-        subtotal: item.results.precioTotal
-      })),
-      observaciones: observaciones,
-      paymentInfo: `Bancolombia Ahorros: ${DATOS_COBRO.nequi}\nNequi: ${DATOS_COBRO.nequi}\nTitular: ${DATOS_COBRO.beneficiario}`
-    });
-    setShowExportModal(true);
+  const downloadPDF_jsPDF = async () => {
+    try {
+      const itemsToExport: QuoteItem[] = quoteItems.length > 0
+        ? quoteItems
+        : [{
+            id: 'preview',
+            product: currentProduct,
+            categoria: inputs.categoria,
+            talla: inputs.talla,
+            colorCamiseta: inputs.colorCamiseta,
+            colorInferior: inputs.colorInferior,
+            gramaje: inputs.gramaje,
+            diseno: inputs.diseno,
+            cmEstampado: inputs.cmEstampado,
+            cmCorazon: inputs.cmCorazon,
+            qtyPlanchado: inputs.qtyPlanchado,
+            costoEmpaque: inputs.costoEmpaque,
+            quantity: inputs.quantity,
+            results: currentResults,
+            tipoImpresion: inputs.tipoImpresion,
+            costoImpresion: inputs.costoImpresion
+          } as QuoteItem];
+
+      const itemsPdf: PdfDocumentoItem[] = itemsToExport.map((it) => ({
+        descripcion: construirDescripcionDocumento(it),
+        cantidad: it.quantity,
+        valorUnitario: it.results.precioUnidad,
+        subtotal: it.results.precioTotal
+      }));
+
+      await generarPdfPlantillaExacta({
+        tipo: "cuenta_cobro",
+        fecha: new Date().toISOString(),
+        cliente: inputs.clientName || "CLIENTE",
+        observaciones,
+        items: itemsPdf
+      });
+    } catch (error) {
+      console.error("Error descargando cotización:", error);
+      alert("No se pudo descargar la cotización. Revisa que la plantilla esté en public/plantilla-cuenta-cobro.png");
+    }
   };
 
-  const handleDownloadInvoice = (sale: Sale) => {
-    // Buscar todos los items de esta factura
-    const invoiceItems = sales.filter(s => s.invoiceNumber === sale.invoiceNumber);
-    
-    setDocumentToExport({
-      type: 'factura',
-      number: sale.invoiceNumber.replace('FACT-', ''),
-      date: sale.fecha,
-      client: sale.cliente,
-      items: invoiceItems.map(s => ({
-        descripcion: `${s.referencia} (${s.talla} - ${s.colorCamiseta}${s.tipoImpresion ? ` - ${s.tipoImpresion}` : ''})`,
+  const handleGenerateQuote = () => {
+    if (quoteItems.length === 0 && !inputs.clientName) return alert("Ingresa al menos el nombre del cliente.");
+    downloadPDF_jsPDF();
+  };
+
+  const handleDownloadInvoice = async (sale: Sale) => {
+    try {
+      setIsLoading(true);
+      // Buscar todos los items de esta factura
+      const invoiceItems = sales.filter(s => s.invoiceNumber === sale.invoiceNumber);
+      
+      const itemsPdf: PdfDocumentoItem[] = invoiceItems.map(s => ({
+        descripcion: construirDescripcionDocumento(s),
         cantidad: s.cantidad,
-        valor: s.precioVentaUnitario,
+        valorUnitario: s.precioVentaUnitario,
         subtotal: s.totalVenta
-      })),
-      metodoPago: sale.metodoPago,
-      observaciones: sale.observaciones
-    });
-    setShowExportModal(true);
+      }));
+
+      await generarPdfPlantillaExacta({
+        tipo: "factura_venta",
+        fecha: sale.fecha,
+        cliente: sale.cliente,
+        numeroFactura: sale.invoiceNumber.replace('FACT-', ''),
+        observaciones: sale.observaciones,
+        items: itemsPdf
+      });
+    } catch (error) {
+      console.error("Error descargando factura:", error);
+      alert("No se pudo descargar la factura. Revisa que la plantilla esté en public/plantilla-cuenta-cobro.png");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRegisterSale = async () => {
@@ -725,8 +959,13 @@ const App: React.FC = () => {
     
     const costoTotalUnidad = base + estampadoPrincipal + estampadoCorazon + costoPlanchado + empaque + costoImpresion;
     
-    const ganancia = (inputs.categoria === 'Niño' && isConjuntoItem) ? GANANCIA_NINO : GANANCIA_ADULTO;
-    const precioUnidad = Math.round(costoTotalUnidad + ganancia);
+    const gananciaBase = (inputs.categoria === 'Niño' && isConjuntoItem) ? GANANCIA_NINO : GANANCIA_ADULTO;
+    const precioSugerido = costoTotalUnidad + gananciaBase;
+    
+    // siempre redondea hacia arriba al siguiente 500
+    const precioUnidad = Math.ceil(precioSugerido / 500) * 500;
+    
+    const gananciaReal = precioUnidad - costoTotalUnidad;
     
     return {
       costoBase: base,
@@ -738,8 +977,8 @@ const App: React.FC = () => {
       costoTotal: costoTotalUnidad,
       precioUnidad,
       precioTotal: precioUnidad * inputs.quantity,
-      ganancia,
-      margen: (ganancia / precioUnidad) * 100
+      ganancia: gananciaReal,
+      margen: (gananciaReal / precioUnidad) * 100
     };
   }, [inputs, currentProduct, isConjuntoItem]);
 
@@ -1207,7 +1446,31 @@ const App: React.FC = () => {
                   
                   <div className="space-y-4">
                     <button 
-                      onClick={() => downloadPDF(`document-to-export-${documentToExport.type}`, `FuriaRock_${documentToExport.type}_${documentToExport.number}.pdf`)}
+                      onClick={async () => {
+                        if (!documentToExport) return;
+                        try {
+                          setIsLoading(true);
+                          const itemsPdf: PdfDocumentoItem[] = documentToExport.items.map(it => ({
+                            descripcion: it.descripcion,
+                            cantidad: it.cantidad,
+                            valorUnitario: it.valor,
+                            subtotal: it.subtotal
+                          }));
+
+                          await generarPdfPlantillaExacta({
+                            tipo: documentToExport.type === 'cotizacion' ? 'cuenta_cobro' : 'factura_venta',
+                            fecha: documentToExport.date,
+                            cliente: documentToExport.client,
+                            numeroFactura: documentToExport.type === 'factura' ? documentToExport.number : null,
+                            observaciones: documentToExport.observaciones,
+                            items: itemsPdf
+                          });
+                        } catch (err) {
+                          alert("Error al generar el PDF.");
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
                       className="w-full bg-[#ff7a00] hover:bg-[#ff8f26] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 text-xs tracking-widest transition-all shadow-lg shadow-[#ff7a00]/20"
                     >
                       <FileText size={20} /> DESCARGAR PDF
@@ -1272,10 +1535,10 @@ const App: React.FC = () => {
               <p className="text-xs font-bold tracking-widest text-white">2.5.0 PRO</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] text-[#8f97a6] uppercase font-bold mb-1 tracking-widest">Estado</p>
-              <p className="text-xs font-bold text-[#4ade80] flex items-center gap-2">
+              <div className="text-[10px] text-[#8f97a6] uppercase font-bold mb-1 tracking-widest">Estado</div>
+              <div className="text-xs font-bold text-[#4ade80] flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse"></div> EN LÍNEA
-              </p>
+              </div>
             </div>
           </div>
         </section>
