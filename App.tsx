@@ -45,14 +45,13 @@ import {
 } from 'lucide-react';
 
 // URL GOOGLE APPS SCRIPT
-const API_URL = "https://script.google.com/macros/s/AKfycbwPF3Bw4SGZ2hPd-CyZBM7k-HsagO3wMFBzX8kzuvLV4qxoIFGG1bX2hSvlemN7nvIOeA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxGsiFcP3sIWSdHsB3CGG9SanXFTVFHgOSmrQv-6Gx5U-ggHQL9PaS9JOMh6JxwPMMW/exec";
 
 // FUNCIÓN GENÉRICA PARA SINCRONIZAR CON SHEETS
 async function syncWithSheets(hoja: string, data: any) {
   try {
     await fetch(API_URL, {
       method: "POST",
-      mode: "no-cors",
       headers: {
         "Content-Type": "text/plain;charset=utf-8"
       },
@@ -66,6 +65,7 @@ async function syncWithSheets(hoja: string, data: any) {
     console.error(`Error guardando en ${hoja}:`, err);
   }
 }
+
 const LOGO_FURIA = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/%3E%3C/svg%3E";
 const LOGO_COCO = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M8 14s1.5 2 4 2 4-2 4-2'/%3E%3Cline x1='9' y1='9' x2='9.01' y2='9'/%3E%3Cline x1='15' y1='9' x2='15.01' y2='9'/%3E%3C/svg%3E";
 
@@ -135,6 +135,8 @@ function construirDescripcionDocumento(item: QuoteItem | Sale): string {
   const tallaStr = item.talla ? ` (${item.talla})` : '';
   const impresionStr = item.tipoImpresion ? ` - ${item.tipoImpresion}` : '';
   
+  // Si es un Sale, item.referencia es el nombre del producto
+  // Si es un QuoteItem, item.product es un objeto ProductReference
   const productName = 'referencia' in item ? item.referencia : item.product.name;
   
   return `${productName}${tallaStr}${colorStr}${impresionStr}`;
@@ -159,6 +161,7 @@ async function generarPdfPlantillaExacta(params: {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
+    // Header
     doc.setFillColor(26, 29, 36);
     doc.rect(0, 0, pageWidth, 40, "F");
     
@@ -181,6 +184,7 @@ async function generarPdfPlantillaExacta(params: {
       doc.text(`N° ${params.numeroFactura}`, pageWidth - 15, 28, { align: "right" });
     }
 
+    // Info Section
     doc.setTextColor(30, 30, 30);
     doc.setFont("helvetica", "bold");
     doc.text("CLIENTE:", 15, 55);
@@ -192,6 +196,7 @@ async function generarPdfPlantillaExacta(params: {
     doc.setFont("helvetica", "normal");
     doc.text(formatFechaDocumento(params.fecha), 45, 62);
 
+    // Table using autoTable
     const tableData = params.items.map(item => [
       item.descripcion,
       item.cantidad,
@@ -227,10 +232,12 @@ async function generarPdfPlantillaExacta(params: {
     const finalY = doc.lastAutoTable.finalY || 150;
     const total = params.items.reduce((acc, it) => acc + Number(it.subtotal || 0), 0);
 
+    // Totals
     doc.setFont("helvetica", "bold");
     doc.text("TOTAL A PAGAR:", pageWidth - 85, finalY + 15);
     doc.text(formatCOPDocumento(total), pageWidth - 15, finalY + 15, { align: "right" });
 
+    // Footer / Payment Info
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.text("INFORMACIÓN DE PAGO:", 15, finalY + 30);
@@ -316,6 +323,7 @@ const App: React.FC = () => {
   const inventoryData = useMemo(() => {
     const map: Record<string, any> = {};
 
+    // Process Purchases
     purchases.forEach(p => {
       const ref = p.referencia || p.producto || "Sin Referencia";
       const prod = p.producto || ref;
@@ -336,6 +344,7 @@ const App: React.FC = () => {
       map[key].totalInvertido += p.totalCompra;
     });
 
+    // Process Sales
     sales.forEach(s => {
       const ref = s.referencia || "Sin Referencia";
       const key = `${ref}__${s.talla}__${s.colorCamiseta}`;
@@ -383,12 +392,14 @@ const App: React.FC = () => {
         
         let response;
         try {
+          // Intentar con GET primero (estándar para lectura)
           response = await fetch(API_URL, {
             method: 'GET',
             redirect: 'follow'
           });
         } catch (getErr) {
           console.warn("GET falló (posible error de CORS), intentando con POST...", getErr);
+          // Fallback a POST (a veces evita problemas de CORS en GAS si se usa text/plain)
           response = await fetch(API_URL, {
             method: 'POST',
             headers: {
@@ -559,6 +570,7 @@ const App: React.FC = () => {
   const handleDownloadInvoice = async (sale: Sale) => {
     try {
       setIsLoading(true);
+      // Buscar todos los items de esta factura
       const invoiceItems = sales.filter(s => s.invoiceNumber === sale.invoiceNumber);
       
       const itemsPdf: PdfDocumentoItem[] = invoiceItems.map(s => ({
@@ -587,6 +599,7 @@ const App: React.FC = () => {
   const handleRegisterSale = async () => {
     if (quoteItems.length === 0) return alert("No hay items para vender.");
     
+    // Check stock
     for (const item of quoteItems) {
       const invItem = inventoryData.find(i => 
         i.referencia === item.product.name && 
@@ -629,6 +642,7 @@ const App: React.FC = () => {
 
     setSales(prev => [...prev, ...newSales]);
 
+    // Crear Factura
     const newInvoice: Invoice = {
       id: Date.now().toString(),
       numero: invoiceNumberFull,
@@ -639,6 +653,7 @@ const App: React.FC = () => {
     };
     setInvoices(prev => [...prev, newInvoice]);
 
+    // Crear/Actualizar Cliente
     const existingClient = clients.find(c => c.nombre === (inputs.clientName || "Cliente General"));
     if (!existingClient) {
       const newClient: Client = {
@@ -653,6 +668,7 @@ const App: React.FC = () => {
       await syncWithSheets("Clientes", newClient);
     }
 
+    // Sincronizar Ventas y Factura
     for (const sale of newSales) {
       await syncWithSheets("Ventas", {
         ...sale,
@@ -661,6 +677,7 @@ const App: React.FC = () => {
     }
     await syncWithSheets("Facturas", newInvoice);
 
+    // Preparar Factura para Exportar
     setDocumentToExport({
       type: 'factura',
       number: invoiceNumber,
@@ -684,8 +701,8 @@ const App: React.FC = () => {
     alert("¡Venta registrada y factura generada!");
   };
 
-  // ── CAMBIO 1: handleAddSale ahora sincroniza con Sheets ──────────────────
-  const handleAddSale = async (sale: Sale) => {
+  const handleAddSale = (sale: Sale) => {
+    // Check stock
     const invItem = inventoryData.find(i => 
       i.referencia === sale.referencia && 
       i.talla === sale.talla && 
@@ -698,10 +715,8 @@ const App: React.FC = () => {
 
     const nextInvoiceNum = (sales.length + 1).toString().padStart(5, '0');
     const invoiceNumber = `FACT-${nextInvoiceNum}`;
-    const saleWithInvoice = { ...sale, invoiceNumber };
-
-    setSales(prev => [...prev, saleWithInvoice]);
-    await syncWithSheets("Ventas", saleWithInvoice); // ← NUEVO
+    
+    setSales(prev => [...prev, { ...sale, invoiceNumber }]);
   };
 
   const handleDeleteSale = (id: string) => {
@@ -730,6 +745,7 @@ const App: React.FC = () => {
       return alert("No hay datos para exportar.");
     }
 
+    // HOJA 1: VENTAS
     const wsVentas = XLSX.utils.json_to_sheet(sales.map(s => ({
       ID: s.id,
       Fecha: s.fecha,
@@ -750,6 +766,7 @@ const App: React.FC = () => {
       Observaciones: s.observaciones
     })));
 
+    // HOJA 2: COMPRAS
     const wsCompras = XLSX.utils.json_to_sheet(purchases.map(p => ({
       ID: p.id,
       Fecha: p.fecha,
@@ -763,6 +780,7 @@ const App: React.FC = () => {
       Observaciones: (p as any).observaciones || ""
     })));
 
+    // HOJA 3: RESUMEN
     const totalVentas = sales.reduce((acc, s) => acc + s.totalVenta, 0);
     const totalCostoVentas = sales.reduce((acc, s) => acc + s.costoTotal, 0);
     const totalCompras = purchases.reduce((acc, p) => acc + p.totalCompra, 0);
@@ -778,6 +796,7 @@ const App: React.FC = () => {
     ];
     const wsResumen = XLSX.utils.json_to_sheet(resumenData);
 
+    // HOJA 4: COSTOS Y RENTABILIDAD (Por referencia)
     const mapaRent: any = {};
     sales.forEach(v => {
       const ref = v.referencia;
@@ -804,6 +823,7 @@ const App: React.FC = () => {
     });
     const wsRent = XLSX.utils.json_to_sheet(rentData);
 
+    // HOJA 5: INVENTARIO GENERAL
     const generalInvMap: Record<string, any> = {};
     inventoryData.forEach(i => {
       if (!generalInvMap[i.referencia]) {
@@ -824,6 +844,7 @@ const App: React.FC = () => {
     });
     const wsGeneralInv = XLSX.utils.json_to_sheet(Object.values(generalInvMap));
 
+    // HOJA 6: INVENTARIO DETALLADO
     const wsDetailedInv = XLSX.utils.json_to_sheet(inventoryData.map(i => ({
       Referencia: i.referencia,
       Producto: i.producto,
@@ -837,6 +858,7 @@ const App: React.FC = () => {
       'Valor Total Inventario': i.valorTotalInventario
     })));
 
+    // HOJA 7: ALERTAS DE REPOSICIÓN
     const alertsData = inventoryData
       .filter(i => i.stockActual <= 5)
       .map(i => ({
@@ -940,6 +962,7 @@ const App: React.FC = () => {
     const gananciaBase = (inputs.categoria === 'Niño' && isConjuntoItem) ? GANANCIA_NINO : GANANCIA_ADULTO;
     const precioSugerido = costoTotalUnidad + gananciaBase;
     
+    // siempre redondea hacia arriba al siguiente 500
     const precioUnidad = Math.ceil(precioSugerido / 500) * 500;
     
     const gananciaReal = precioUnidad - costoTotalUnidad;
@@ -1222,9 +1245,7 @@ const App: React.FC = () => {
                 cmEstampado: 0,
                 cmCorazon: 0,
                 qtyPlanchado: 1,
-                costoEmpaque: COSTO_EMPAQUE,
-                gramaje: "200g",
-                diseno: ""
+                costoEmpaque: COSTO_EMPAQUE
               })} 
               className="w-full text-[10px] text-[#8f97a6] hover:text-white uppercase font-bold tracking-widest mt-4 transition-colors"
             >
@@ -1387,95 +1408,6 @@ const App: React.FC = () => {
           
           <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
-          {/* Modal de Exportación */}
-      {showExportModal && documentToExport && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#1a1d24] w-full max-w-5xl rounded-[40px] border border-white/10 overflow-hidden shadow-2xl">
-            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
-              <div>
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter">Vista Previa del Documento</h2>
-                <p className="text-[10px] text-[#ff7a00] font-bold uppercase tracking-widest mt-1">
-                  {documentToExport.type === 'factura' ? 'Factura de Venta' : 'Cotización'} #{documentToExport.number}
-                </p>
-              </div>
-              <button 
-                onClick={() => setShowExportModal(false)}
-                className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[#8f97a6] hover:text-white transition-all"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="p-10 flex flex-col lg:flex-row gap-10">
-              <div className="flex-1 bg-zinc-900 rounded-3xl p-8 border border-white/5 overflow-auto max-h-[600px] flex justify-center">
-                <div className="origin-top scale-[0.6] sm:scale-[0.8] lg:scale-[1]">
-                  <DocumentTemplate 
-                    {...documentToExport}
-                    logoUrl={LOGO_FURIA}
-                    paymentInfo={documentToExport.type === 'cotizacion' ? `Bancolombia Ahorros: ${DATOS_COBRO.nequi}\nNequi: ${DATOS_COBRO.nequi}\nTitular: ${DATOS_COBRO.beneficiario}` : undefined}
-                  />
-                </div>
-              </div>
-
-              <div className="w-full lg:w-80 space-y-6">
-                <div className="panel p-8 bg-white/5 border-white/10">
-                  <h3 className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-[0.3em] mb-6">Opciones de Descarga</h3>
-                  
-                  <div className="space-y-4">
-                    <button 
-                      onClick={async () => {
-                        if (!documentToExport) return;
-                        try {
-                          setIsLoading(true);
-                          const itemsPdf: PdfDocumentoItem[] = documentToExport.items.map(it => ({
-                            descripcion: it.descripcion,
-                            cantidad: it.cantidad,
-                            valorUnitario: it.valor,
-                            subtotal: it.subtotal
-                          }));
-
-                          await generarPdfPlantillaExacta({
-                            tipo: documentToExport.type === 'cotizacion' ? 'cuenta_cobro' : 'factura_venta',
-                            fecha: documentToExport.date,
-                            cliente: documentToExport.client,
-                            numeroFactura: documentToExport.type === 'factura' ? documentToExport.number : null,
-                            observaciones: documentToExport.observaciones,
-                            items: itemsPdf
-                          });
-                        } catch (err) {
-                          alert("Error al generar el PDF.");
-                        } finally {
-                          setIsLoading(false);
-                        }
-                      }}
-                      className="w-full bg-[#ff7a00] hover:bg-[#ff8f26] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 text-xs tracking-widest transition-all shadow-lg shadow-[#ff7a00]/20"
-                    >
-                      <FileText size={20} /> DESCARGAR PDF
-                    </button>
-
-                    <button 
-                      onClick={() => downloadImage(`document-to-export-${documentToExport.type}`, `FuriaRock_${documentToExport.type}_${documentToExport.number}.png`)}
-                      className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 text-xs tracking-widest transition-all"
-                    >
-                      <ImageIcon size={20} /> DESCARGAR IMAGEN
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-6 bg-orange-500/10 rounded-2xl border border-orange-500/20">
-                  <div className="flex gap-3">
-                    <Info size={18} className="text-[#ff7a00] shrink-0" />
-                    <p className="text-[10px] text-[#b9c0cc] leading-relaxed">
-                      El documento se generará con alta resolución. Asegúrate de que los datos sean correctos antes de descargar.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {isLoading && (
             <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100]">
               <div className="bg-zinc-900 p-6 rounded-2xl border border-orange-500/20 flex flex-col items-center gap-4">
@@ -1560,7 +1492,7 @@ const App: React.FC = () => {
             clients={clients} 
             onAddClient={async (client) => {
               setClients(prev => [...prev, client]);
-              await syncWithSheets("Clientes", client); // ← CAMBIO 2
+              await syncWithSheets("Clientes", client);
             }} 
           />
         )}
@@ -1570,7 +1502,29 @@ const App: React.FC = () => {
             invoices={invoices} 
             onUpdateStatus={async (id, status) => {
               setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, estado: status } : inv));
-            }} 
+            }}
+            onViewInvoice={(inv) => {
+              const saleItems = sales.filter(s => s.invoiceNumber === inv.numero);
+              setDocumentToExport({
+                type: 'factura',
+                number: inv.numero.replace('FACT-', ''),
+                date: inv.fecha,
+                client: inv.cliente,
+                items: saleItems.map(s => ({
+                  descripcion: s.referencia + (s.talla ? ` (${s.talla})` : ''),
+                  cantidad: s.cantidad,
+                  valor: s.precioVentaUnitario,
+                  subtotal: s.totalVenta
+                })),
+                metodoPago: saleItems[0]?.metodoPago || '',
+                observaciones: saleItems[0]?.observaciones || ''
+              });
+              setShowExportModal(true);
+            }}
+            onDownloadInvoice={(inv) => {
+              const saleItems = sales.filter(s => s.invoiceNumber === inv.numero);
+              if (saleItems.length > 0) handleDownloadInvoice(saleItems[0]);
+            }}
           />
         )}
 
@@ -1678,6 +1632,98 @@ const App: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* Modal de Exportación */}
+      {showExportModal && documentToExport && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[200] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#1a1d24] w-full max-w-5xl rounded-[40px] border border-white/10 overflow-hidden shadow-2xl">
+            <div className="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+              <div>
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter">Vista Previa del Documento</h2>
+                <p className="text-[10px] text-[#ff7a00] font-bold uppercase tracking-widest mt-1">
+                  {documentToExport.type === 'factura' ? 'Factura de Venta' : 'Cotización'} #{documentToExport.number}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowExportModal(false)}
+                className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-[#8f97a6] hover:text-white transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-10 flex flex-col lg:flex-row gap-10">
+              {/* Preview Area */}
+              <div className="flex-1 bg-zinc-900 rounded-3xl p-8 border border-white/5 overflow-auto max-h-[600px] flex justify-center">
+                <div className="origin-top scale-[0.6] sm:scale-[0.8] lg:scale-[1]">
+                  <DocumentTemplate 
+                    {...documentToExport}
+                    logoUrl={LOGO_FURIA}
+                    paymentInfo={documentToExport.type === 'cotizacion' ? `Bancolombia Ahorros: ${DATOS_COBRO.nequi}\nNequi: ${DATOS_COBRO.nequi}\nTitular: ${DATOS_COBRO.beneficiario}` : undefined}
+                  />
+                </div>
+              </div>
+
+              {/* Actions Area */}
+              <div className="w-full lg:w-80 space-y-6">
+                <div className="panel p-8 bg-white/5 border-white/10">
+                  <h3 className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-[0.3em] mb-6">Opciones de Descarga</h3>
+                  
+                  <div className="space-y-4">
+                    <button 
+                      onClick={async () => {
+                        if (!documentToExport) return;
+                        try {
+                          setIsLoading(true);
+                          const itemsPdf: PdfDocumentoItem[] = documentToExport.items.map(it => ({
+                            descripcion: it.descripcion,
+                            cantidad: it.cantidad,
+                            valorUnitario: it.valor,
+                            subtotal: it.subtotal
+                          }));
+
+                          await generarPdfPlantillaExacta({
+                            tipo: documentToExport.type === 'cotizacion' ? 'cuenta_cobro' : 'factura_venta',
+                            fecha: documentToExport.date,
+                            cliente: documentToExport.client,
+                            numeroFactura: documentToExport.type === 'factura' ? documentToExport.number : null,
+                            observaciones: documentToExport.observaciones,
+                            items: itemsPdf
+                          });
+                        } catch (err) {
+                          alert("Error al generar el PDF.");
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }}
+                      className="w-full bg-[#ff7a00] hover:bg-[#ff8f26] text-white font-bold py-5 rounded-2xl flex items-center justify-center gap-3 text-xs tracking-widest transition-all shadow-lg shadow-[#ff7a00]/20"
+                    >
+                      <FileText size={20} /> DESCARGAR PDF
+                    </button>
+
+                    <button 
+                      onClick={() => downloadImage(`document-to-export-${documentToExport.type}`, `FuriaRock_${documentToExport.type}_${documentToExport.number}.png`)}
+                      className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 text-xs tracking-widest transition-all"
+                    >
+                      <ImageIcon size={20} /> DESCARGAR IMAGEN
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+                  <div className="flex gap-3">
+                    <Info size={18} className="text-[#ff7a00] shrink-0" />
+                    <p className="text-[10px] text-[#b9c0cc] leading-relaxed">
+                      El documento se generará con alta resolución. Asegúrate de que los datos sean correctos antes de descargar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

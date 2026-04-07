@@ -5,9 +5,11 @@ import { Search, FileText, Download, Eye, CheckCircle, Clock, XCircle } from 'lu
 interface FacturacionProps {
   invoices: Invoice[];
   onUpdateStatus: (id: string, status: Invoice['estado']) => void;
+  onViewInvoice: (inv: Invoice) => void;
+  onDownloadInvoice: (inv: Invoice) => void;
 }
 
-const Facturacion: React.FC<FacturacionProps> = ({ invoices, onUpdateStatus }) => {
+const Facturacion: React.FC<FacturacionProps> = ({ invoices, onUpdateStatus, onViewInvoice, onDownloadInvoice }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredInvoices = invoices.filter(inv => 
@@ -82,10 +84,18 @@ const Facturacion: React.FC<FacturacionProps> = ({ invoices, onUpdateStatus }) =
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" title="Ver PDF">
+                        <button 
+                          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" 
+                          title="Ver PDF"
+                          onClick={() => onViewInvoice(inv)}
+                        >
                           <Eye size={18} />
                         </button>
-                        <button className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" title="Descargar">
+                        <button 
+                          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-lg transition-colors" 
+                          title="Descargar"
+                          onClick={() => onDownloadInvoice(inv)}
+                        >
                           <Download size={18} />
                         </button>
                         <select
