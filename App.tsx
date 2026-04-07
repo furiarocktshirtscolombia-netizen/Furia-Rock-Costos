@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 
 // URL GOOGLE APPS SCRIPT
-const API_URL = "https://script.google.com/macros/s/AKfycbzu1BUCdjqqH5uLR-5c2xq_ZPZQ7i5F34Vaetx-A2rr0GTPODRm_HmnJQuaSrG0k26r8A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwPF3Bw4SGZ2hPd-CyZBM7k-HsagO3wMFBzX8kzuvLV4qxoIFGG1bX2hSvlemN7nvIOeA/exec";
 
 // FUNCIÓN GENÉRICA PARA SINCRONIZAR CON SHEETS
 async function syncWithSheets(hoja: string, data: any) {
