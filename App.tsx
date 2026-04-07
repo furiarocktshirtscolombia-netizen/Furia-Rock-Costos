@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 
 // URL GOOGLE APPS SCRIPT
-const API_URL = "https://script.google.com/macros/s/AKfycbxGsiFcP3sIWSdHsB3CGG9SanXFTVFHgOSmrQv-6Gx5U-ggHQL9PaS9JOMh6JxwPMMW/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxe5y8mkupeU5x5whboWLW-L20cv91zrbF0QUYAOrvi4CzhoLzU3qcBHPbkTFJHUBAT/exec";
 
 // FUNCIÓN GENÉRICA PARA SINCRONIZAR CON SHEETS
 async function syncWithSheets(hoja: string, data: any) {
@@ -135,8 +135,6 @@ function construirDescripcionDocumento(item: QuoteItem | Sale): string {
   const tallaStr = item.talla ? ` (${item.talla})` : '';
   const impresionStr = item.tipoImpresion ? ` - ${item.tipoImpresion}` : '';
   
-  // Si es un Sale, item.referencia es el nombre del producto
-  // Si es un QuoteItem, item.product es un objeto ProductReference
   const productName = 'referencia' in item ? item.referencia : item.product.name;
   
   return `${productName}${tallaStr}${colorStr}${impresionStr}`;
@@ -161,7 +159,6 @@ async function generarPdfPlantillaExacta(params: {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Header
     doc.setFillColor(26, 29, 36);
     doc.rect(0, 0, pageWidth, 40, "F");
     
@@ -184,7 +181,6 @@ async function generarPdfPlantillaExacta(params: {
       doc.text(`N° ${params.numeroFactura}`, pageWidth - 15, 28, { align: "right" });
     }
 
-    // Info Section
     doc.setTextColor(30, 30, 30);
     doc.setFont("helvetica", "bold");
     doc.text("CLIENTE:", 15, 55);
@@ -196,7 +192,6 @@ async function generarPdfPlantillaExacta(params: {
     doc.setFont("helvetica", "normal");
     doc.text(formatFechaDocumento(params.fecha), 45, 62);
 
-    // Table using autoTable
     const tableData = params.items.map(item => [
       item.descripcion,
       item.cantidad,
@@ -232,12 +227,10 @@ async function generarPdfPlantillaExacta(params: {
     const finalY = doc.lastAutoTable.finalY || 150;
     const total = params.items.reduce((acc, it) => acc + Number(it.subtotal || 0), 0);
 
-    // Totals
     doc.setFont("helvetica", "bold");
     doc.text("TOTAL A PAGAR:", pageWidth - 85, finalY + 15);
     doc.text(formatCOPDocumento(total), pageWidth - 15, finalY + 15, { align: "right" });
 
-    // Footer / Payment Info
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.text("INFORMACIÓN DE PAGO:", 15, finalY + 30);
@@ -323,7 +316,6 @@ const App: React.FC = () => {
   const inventoryData = useMemo(() => {
     const map: Record<string, any> = {};
 
-    // Process Purchases
     purchases.forEach(p => {
       const ref = p.referencia || p.producto || "Sin Referencia";
       const prod = p.producto || ref;
@@ -344,7 +336,6 @@ const App: React.FC = () => {
       map[key].totalInvertido += p.totalCompra;
     });
 
-    // Process Sales
     sales.forEach(s => {
       const ref = s.referencia || "Sin Referencia";
       const key = `${ref}__${s.talla}__${s.colorCamiseta}`;
@@ -392,14 +383,12 @@ const App: React.FC = () => {
         
         let response;
         try {
-          // Intentar con GET primero (estándar para lectura)
           response = await fetch(API_URL, {
             method: 'GET',
             redirect: 'follow'
           });
         } catch (getErr) {
           console.warn("GET falló (posible error de CORS), intentando con POST...", getErr);
-          // Fallback a POST (a veces evita problemas de CORS en GAS si se usa text/plain)
           response = await fetch(API_URL, {
             method: 'POST',
             headers: {
@@ -570,7 +559,6 @@ const App: React.FC = () => {
   const handleDownloadInvoice = async (sale: Sale) => {
     try {
       setIsLoading(true);
-      // Buscar todos los items de esta factura
       const invoiceItems = sales.filter(s => s.invoiceNumber === sale.invoiceNumber);
       
       const itemsPdf: PdfDocumentoItem[] = invoiceItems.map(s => ({
@@ -599,7 +587,6 @@ const App: React.FC = () => {
   const handleRegisterSale = async () => {
     if (quoteItems.length === 0) return alert("No hay items para vender.");
     
-    // Check stock
     for (const item of quoteItems) {
       const invItem = inventoryData.find(i => 
         i.referencia === item.product.name && 
@@ -642,7 +629,6 @@ const App: React.FC = () => {
 
     setSales(prev => [...prev, ...newSales]);
 
-    // Crear Factura
     const newInvoice: Invoice = {
       id: Date.now().toString(),
       numero: invoiceNumberFull,
@@ -653,7 +639,6 @@ const App: React.FC = () => {
     };
     setInvoices(prev => [...prev, newInvoice]);
 
-    // Crear/Actualizar Cliente
     const existingClient = clients.find(c => c.nombre === (inputs.clientName || "Cliente General"));
     if (!existingClient) {
       const newClient: Client = {
@@ -668,7 +653,6 @@ const App: React.FC = () => {
       await syncWithSheets("Clientes", newClient);
     }
 
-    // Sincronizar Ventas y Factura
     for (const sale of newSales) {
       await syncWithSheets("Ventas", {
         ...sale,
@@ -677,7 +661,6 @@ const App: React.FC = () => {
     }
     await syncWithSheets("Facturas", newInvoice);
 
-    // Preparar Factura para Exportar
     setDocumentToExport({
       type: 'factura',
       number: invoiceNumber,
@@ -701,8 +684,8 @@ const App: React.FC = () => {
     alert("¡Venta registrada y factura generada!");
   };
 
-  const handleAddSale = (sale: Sale) => {
-    // Check stock
+  // ── CAMBIO 1: handleAddSale ahora sincroniza con Sheets ──────────────────
+  const handleAddSale = async (sale: Sale) => {
     const invItem = inventoryData.find(i => 
       i.referencia === sale.referencia && 
       i.talla === sale.talla && 
@@ -715,8 +698,10 @@ const App: React.FC = () => {
 
     const nextInvoiceNum = (sales.length + 1).toString().padStart(5, '0');
     const invoiceNumber = `FACT-${nextInvoiceNum}`;
-    
-    setSales(prev => [...prev, { ...sale, invoiceNumber }]);
+    const saleWithInvoice = { ...sale, invoiceNumber };
+
+    setSales(prev => [...prev, saleWithInvoice]);
+    await syncWithSheets("Ventas", saleWithInvoice); // ← NUEVO
   };
 
   const handleDeleteSale = (id: string) => {
@@ -745,7 +730,6 @@ const App: React.FC = () => {
       return alert("No hay datos para exportar.");
     }
 
-    // HOJA 1: VENTAS
     const wsVentas = XLSX.utils.json_to_sheet(sales.map(s => ({
       ID: s.id,
       Fecha: s.fecha,
@@ -766,7 +750,6 @@ const App: React.FC = () => {
       Observaciones: s.observaciones
     })));
 
-    // HOJA 2: COMPRAS
     const wsCompras = XLSX.utils.json_to_sheet(purchases.map(p => ({
       ID: p.id,
       Fecha: p.fecha,
@@ -780,7 +763,6 @@ const App: React.FC = () => {
       Observaciones: (p as any).observaciones || ""
     })));
 
-    // HOJA 3: RESUMEN
     const totalVentas = sales.reduce((acc, s) => acc + s.totalVenta, 0);
     const totalCostoVentas = sales.reduce((acc, s) => acc + s.costoTotal, 0);
     const totalCompras = purchases.reduce((acc, p) => acc + p.totalCompra, 0);
@@ -796,7 +778,6 @@ const App: React.FC = () => {
     ];
     const wsResumen = XLSX.utils.json_to_sheet(resumenData);
 
-    // HOJA 4: COSTOS Y RENTABILIDAD (Por referencia)
     const mapaRent: any = {};
     sales.forEach(v => {
       const ref = v.referencia;
@@ -823,7 +804,6 @@ const App: React.FC = () => {
     });
     const wsRent = XLSX.utils.json_to_sheet(rentData);
 
-    // HOJA 5: INVENTARIO GENERAL
     const generalInvMap: Record<string, any> = {};
     inventoryData.forEach(i => {
       if (!generalInvMap[i.referencia]) {
@@ -844,7 +824,6 @@ const App: React.FC = () => {
     });
     const wsGeneralInv = XLSX.utils.json_to_sheet(Object.values(generalInvMap));
 
-    // HOJA 6: INVENTARIO DETALLADO
     const wsDetailedInv = XLSX.utils.json_to_sheet(inventoryData.map(i => ({
       Referencia: i.referencia,
       Producto: i.producto,
@@ -858,7 +837,6 @@ const App: React.FC = () => {
       'Valor Total Inventario': i.valorTotalInventario
     })));
 
-    // HOJA 7: ALERTAS DE REPOSICIÓN
     const alertsData = inventoryData
       .filter(i => i.stockActual <= 5)
       .map(i => ({
@@ -962,7 +940,6 @@ const App: React.FC = () => {
     const gananciaBase = (inputs.categoria === 'Niño' && isConjuntoItem) ? GANANCIA_NINO : GANANCIA_ADULTO;
     const precioSugerido = costoTotalUnidad + gananciaBase;
     
-    // siempre redondea hacia arriba al siguiente 500
     const precioUnidad = Math.ceil(precioSugerido / 500) * 500;
     
     const gananciaReal = precioUnidad - costoTotalUnidad;
@@ -1245,7 +1222,9 @@ const App: React.FC = () => {
                 cmEstampado: 0,
                 cmCorazon: 0,
                 qtyPlanchado: 1,
-                costoEmpaque: COSTO_EMPAQUE
+                costoEmpaque: COSTO_EMPAQUE,
+                gramaje: "200g",
+                diseno: ""
               })} 
               className="w-full text-[10px] text-[#8f97a6] hover:text-white uppercase font-bold tracking-widest mt-4 transition-colors"
             >
@@ -1428,7 +1407,6 @@ const App: React.FC = () => {
             </div>
 
             <div className="p-10 flex flex-col lg:flex-row gap-10">
-              {/* Preview Area */}
               <div className="flex-1 bg-zinc-900 rounded-3xl p-8 border border-white/5 overflow-auto max-h-[600px] flex justify-center">
                 <div className="origin-top scale-[0.6] sm:scale-[0.8] lg:scale-[1]">
                   <DocumentTemplate 
@@ -1439,7 +1417,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Actions Area */}
               <div className="w-full lg:w-80 space-y-6">
                 <div className="panel p-8 bg-white/5 border-white/10">
                   <h3 className="text-[10px] font-bold text-[#8f97a6] uppercase tracking-[0.3em] mb-6">Opciones de Descarga</h3>
@@ -1583,7 +1560,7 @@ const App: React.FC = () => {
             clients={clients} 
             onAddClient={async (client) => {
               setClients(prev => [...prev, client]);
-              await syncWithSheets("Clientes", client);
+              await syncWithSheets("Clientes", client); // ← CAMBIO 2
             }} 
           />
         )}
@@ -1593,7 +1570,6 @@ const App: React.FC = () => {
             invoices={invoices} 
             onUpdateStatus={async (id, status) => {
               setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, estado: status } : inv));
-              // Sincronizar actualización de estado si es necesario
             }} 
           />
         )}
