@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // âââ DATOS REALES DEL SPREADSHEET FURIA ROCK ââââââââââââââââââââââââââââââââ
 const REFS_DEFAULT: Ref[] = [
