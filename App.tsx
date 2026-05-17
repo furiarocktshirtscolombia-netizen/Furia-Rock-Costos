@@ -46,8 +46,13 @@ function calcInventario(v: any[], c: any[]) {
     if (!map[k]) map[k] = { refId: vi.refId, ref: vi.ref, talla: vi.talla, color: vi.color, cat: vi.cat, comprado: 0, vendido: 0 };
     map[k].vendido += vi.cantidad;
   });
-  return Object.values(map).map((i: any) => ({ ...i, stock: i.comprado - i.vendido }));
+  return Object.values(map).map((i: any) => {
+    const stock = i.comprado - i.vendido;
+    const estado = stock > 5 ? 'OK' : stock > 2 ? 'Bajo' : 'Critico';
+    return { ...i, stock, estado };
+  });
 }
+
 
 
 // âââ TIPOS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
@@ -228,7 +233,7 @@ export default function App() {
     }));
     saveVentas([...ventas,...nuevas]);
     nuevas.forEach((v: Venta) => sendToGAS('guardarVenta', v as unknown as Record<string, unknown>));
-    calcInventario([...ventas, ...nuevas], compras).forEach((row: any) => sendToGAS('sincronizarInventario', row as unknown as Record<string, unknown>));
+    sendToGAS('sincronizarInventarioBatch', { rows: calcInventario([...ventas, ...nuevas], compras) } as unknown as Record<string, unknown>);
     setQuote([]); setCliente("");
     setTab("ventas");
     showAlert(`â Venta registrada â ${quote.length} item(s). Inventario actualizado.`);
@@ -240,7 +245,7 @@ export default function App() {
     const nueva:Compra = {id:uid(),fecha:cFecha,refId:cRefId,ref:cRef.name,cat:cRef.cat,color:cColor,talla:cTalla,cantidad:cQty,precio:cPrecio,total:cPrecio*cQty,proveedor:cProv,notas:cNotas};
     saveCompras([...compras,nueva]);
     sendToGAS('guardarCompra', nueva as unknown as Record<string, unknown>);
-    calcInventario(ventas, [...compras, nueva]).forEach((row: any) => sendToGAS('sincronizarInventario', row as unknown as Record<string, unknown>));
+    sendToGAS('sincronizarInventarioBatch', { rows: calcInventario(ventas, [...compras, nueva]) } as unknown as Record<string, unknown>);
     setCQty(10); setCProv(""); setCNotas("");
     showAlert(`â Compra registrada: ${cQty} u. de "${cRef.name}" ingresadas al inventario.`);
   };
