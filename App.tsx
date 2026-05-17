@@ -1,25 +1,25 @@
 import { useState, useMemo } from 'react';
 
 // âââ DATOS REALES DEL SPREADSHEET FURIA ROCK ââââââââââââââââââââââââââââââââ
-const REFS = [
-  { id:"r1",  name:"CAMISETA ALGODÃN PERUANO 178G",           cost:18000, cat:"Adulto" },
-  { id:"r2",  name:"CAMISETA ALGODÃN PERUANO 320G",           cost:37000, cat:"Adulto" },
-  { id:"r3",  name:"CAMISETA ALGODÃN PERUANO 270G",           cost:33000, cat:"Adulto" },
-  { id:"r4",  name:"CAMISETA CATAR",                          cost:37000, cat:"Adulto" },
-  { id:"r5",  name:"CAMISETA C4 ALGODÃN NACIONAL 200G",       cost:19000, cat:"Adulto" },
-  { id:"r6",  name:"HOODIE PERUANO 400G",                     cost:82000, cat:"Adulto" },
-  { id:"r7",  name:"CAMISETA NIÃO ALGODÃN PERUANO 200G",      cost:24000, cat:"NiÃ±o"   },
-  { id:"r8",  name:"CAMISETA NIÃO NACIONAL 200G",             cost:14000, cat:"NiÃ±o"   },
-  { id:"r9",  name:"CAMISETA ACID WASH NIÃO",                 cost:18000, cat:"NiÃ±o"   },
-  { id:"r10", name:"BERMUDA NIÃO ALGODÃN PERCHADO",           cost:13500, cat:"NiÃ±o"   },
-  { id:"r11", name:"SUDADERA NIÃOS ALGODÃN PERCHADO",         cost:19000, cat:"NiÃ±o"   },
-  { id:"r12", name:"CONJUNTO NIÃO PERUANO + BERMUDA",         cost:37500, cat:"NiÃ±o"   },
-  { id:"r13", name:"CONJUNTO NIÃO NACIONAL + BERMUDA",        cost:27500, cat:"NiÃ±o"   },
-  { id:"r14", name:"CONJUNTO NIÃO PERUANO + JOGGER",          cost:43000, cat:"NiÃ±o"   },
-  { id:"r15", name:"CONJUNTO NIÃO NACIONAL + JOGGER",         cost:33000, cat:"NiÃ±o"   },
-];
+const REFS_DEFAULT: Ref[] = [
+  { id:"r1",  name:"CAMISETA ALGODÓN PERUANO 178G",       cost:18000, cat:"Adulto" },
+  { id:"r2",  name:"CAMISETA ALGODÓN PERUANO 320G",       cost:37000, cat:"Adulto" },
+  { id:"r3",  name:"CAMISETA ALGODÓN PERUANO 270G",       cost:33000, cat:"Adulto" },
+  { id:"r4",  name:"CAMISETA CATAR",                      cost:37000, cat:"Adulto" },
+  { id:"r5",  name:"CAMISETA C4 ALGODÓN NACIONAL 200G",   cost:19000, cat:"Adulto" },
+  { id:"r6",  name:"HOODIE PERUANO 400G",                 cost:82000, cat:"Adulto" },
+  { id:"r7",  name:"CAMISETA NIÑO ALGODÓN PERUANO 200G",  cost:24000, cat:"Niño"  },
+  { id:"r8",  name:"CAMISETA NIÑO NACIONAL 200G",         cost:14000, cat:"Niño"  },
+  { id:"r9",  name:"CAMISETA ACID WASH NIÑO",             cost:18000, cat:"Niño"  },
+  { id:"r10", name:"BERMUDA NIÑO ALGODÓN PERCHADO",       cost:13500, cat:"Niño"  },
+  { id:"r11", name:"SUDADERA NIÑOS ALGODÓN PERCHADO",     cost:19000, cat:"Niño"  },
+  { id:"r12", name:"CONJUNTO NIÑO CAMISETA PERUANO + BERMUDA",  cost:37500, cat:"Niño"  },
+  { id:"r13", name:"CONJUNTO NIÑO CAMISETA NACIONAL + BERMUDA", cost:27500, cat:"Niño"  },
+  { id:"r14", name:"CONJUNTO NIÑO CAMISETA PERUANO + JOGGER",   cost:43000, cat:"Niño"  },
+  { id:"r15", name:"CONJUNTO NIÑO CAMISETA NACIONAL + JOGGER",  cost:33000, cat:"Niño"  },
+]
 
-const COLORES       = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL CIELO","ROJO","GRIS","AZUL MARINO","ROSADO","MOSTAZA"];
+const COLORES_DEFAULT = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL CIELO","ROJO","GRIS","AZUL MARINO","ROSADO","MOSTAZA"]
 const TALLAS_ADULTO = ["XS","S","M","L","XL","XXL"];
 const TALLAS_NINO   = ["2","4","6","8","10","12","14","16"];
 const TIPOS_IMP     = ["Ninguna","SerigrafÃ­a","DTF","SublimaciÃ³n","Bordado"];
@@ -151,6 +151,35 @@ const Btn = ({children,onClick,variant="red",sm=false,disabled=false}:{children:
 
 // âââ APP PRINCIPAL âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function App() {
+  // ── CARGA DE DATOS DESDE GOOGLE DRIVE ─────────────────────────────────────
+  const [REFS, setREFS] = useState<Ref[]>(REFS_DEFAULT);
+  const [COLORES, setCOLORES] = useState<string[]>(COLORES_DEFAULT);
+  const [coloresPorRef, setColoresPorRef] = useState<Record<string,string[]>>({});
+
+  useEffect(() => {
+    fetch(GAS_URL)
+      .then(r => r.json())
+      .then((data: any) => {
+        if (data.refs && data.refs.length > 0) {
+          setREFS(data.refs.map((r: any) => ({
+            id: String(r.id),
+            name: String(r.name),
+            cost: Number(r.cost) || 0,
+            cat: String(r.cat || 'Adulto')
+          } as Ref)));
+        }
+        if (data.colores) {
+          setColoresPorRef(data.colores as Record<string,string[]>);
+          const all: string[] = [];
+          Object.values(data.colores as Record<string,string[]>).forEach((arr: string[]) => {
+            arr.forEach((c: string) => { if (!all.includes(c)) all.push(c); });
+          });
+          if (all.length > 0) setCOLORES(all);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [tab,   setTab]    = useState<Tab>("cotizador");
   const [ventas,setVentas] = useState<Venta[]>(()=>loadLS("fr_ventas",[]));
   const [compras,setCompras]= useState<Compra[]>(()=>loadLS("fr_compras",[]));
@@ -237,7 +266,19 @@ export default function App() {
     setQuote([]); setCliente("");
     setTab("ventas");
     showAlert(`â Venta registrada â ${quote.length} item(s). Inventario actualizado.`);
-  };
+  
+    // ── RESULTADOS GOOGLE DRIVE ──────────────────────────────────────────────
+    const _vUpdated = [...ventas, ...nuevas];
+    sendToGAS('sincronizarResultados', {
+      totalVentasUnidades: _vUpdated.reduce((s: number, v: any) => s + v.cantidad, 0),
+      totalIngresos: _vUpdated.reduce((s: number, v: any) => s + v.totalVenta, 0),
+      totalCostoVentas: _vUpdated.reduce((s: number, v: any) => s + (v.costo * v.cantidad), 0),
+      totalGanancia: _vUpdated.reduce((s: number, v: any) => s + v.ganancia, 0),
+      totalComprasUnidades: compras.reduce((s: number, c: any) => s + c.cantidad, 0),
+      totalInvertido: compras.reduce((s: number, c: any) => s + c.total, 0),
+      totalStock: calcInventario(_vUpdated, compras).reduce((s: number, i: any) => s + (i.stock > 0 ? i.stock : 0), 0),
+      itemsNegativos: calcInventario(_vUpdated, compras).filter((i: any) => i.stock < 0).length,
+    } as unknown as Record<string, unknown>);};
 
   const registrarCompra = () => {
     if(!cQty||cQty<=0){ showAlert("Ingresa una cantidad vÃ¡lida.","red"); return; }
@@ -248,7 +289,19 @@ export default function App() {
     sendToGAS('sincronizarInventarioBatch', { rows: calcInventario(ventas, [...compras, nueva]) } as unknown as Record<string, unknown>);
     setCQty(10); setCProv(""); setCNotas("");
     showAlert(`â Compra registrada: ${cQty} u. de "${cRef.name}" ingresadas al inventario.`);
-  };
+  
+    // ── RESULTADOS GOOGLE DRIVE ──────────────────────────────────────────────
+    const _cUpdated = [...compras, nueva];
+    sendToGAS('sincronizarResultados', {
+      totalVentasUnidades: ventas.reduce((s: number, v: any) => s + v.cantidad, 0),
+      totalIngresos: ventas.reduce((s: number, v: any) => s + v.totalVenta, 0),
+      totalCostoVentas: ventas.reduce((s: number, v: any) => s + (v.costo * v.cantidad), 0),
+      totalGanancia: ventas.reduce((s: number, v: any) => s + v.ganancia, 0),
+      totalComprasUnidades: _cUpdated.reduce((s: number, c: any) => s + c.cantidad, 0),
+      totalInvertido: _cUpdated.reduce((s: number, c: any) => s + c.total, 0),
+      totalStock: calcInventario(ventas, _cUpdated).reduce((s: number, i: any) => s + (i.stock > 0 ? i.stock : 0), 0),
+      itemsNegativos: calcInventario(ventas, _cUpdated).filter((i: any) => i.stock < 0).length,
+    } as unknown as Record<string, unknown>);};
 
   // ââ TABS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
   const nav = [
