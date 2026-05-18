@@ -209,10 +209,35 @@ export default function App() {
     fetch(GAS_URL)
       .then(r => r.json())
       .then(d => {
-        if (d.refs && d.refs.length) {
-          setRefs(d.refs);
-          localStorage.setItem('refs', JSON.stringify(d.refs));
+        // ── REFS: normalize any column naming convention from Drive ──
+        if (d.refs && Array.isArray(d.refs) && d.refs.length > 0) {
+          const normalizedRefs = d.refs
+            .map((r: any, i: number) => {
+              const name = String(
+                r.name || r.REFERENCIAS || r.Referencia || r.referencia ||
+                r.Nombre || r.nombre || r.Name || r.REF || r.ref || ''
+              ).trim();
+              const cost = Number(
+                String(r.cost || r.PRECIOS || r.Precio || r.precio || r.costo || r.Costo || 0)
+                  .replace(/[^0-9.]/g, '')
+              ) || 0;
+              const cat = String(
+                r.cat || r.Categoria || r.categoria || r.CAT || 'Adulto'
+              ).trim();
+              const id = String(
+                r.id || r.ID || r.codigo || r.Codigo || ('r' + (i + 1))
+              ).trim();
+              return name ? { id, name, cost, cat } : null;
+            })
+            .filter(Boolean) as Ref[];
+
+          if (normalizedRefs.length > 0) {
+            setRefs(normalizedRefs);
+            localStorage.setItem('refs', JSON.stringify(normalizedRefs));
+          }
+          // If all names were empty, keep REFS_DEFAULT (don't overwrite)
         }
+
         if (d.colorMap) {
           setColorMap(d.colorMap);
           localStorage.setItem('colorMap', JSON.stringify(d.colorMap));
@@ -243,6 +268,10 @@ export default function App() {
     : TODAS_TALLAS;
   const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG) : null;
   const inventario   = useMemo(() => calcInventario(ventas, compras, refs), [ventas, compras, refs]);
+
+  // Compras: ref seleccionada y sus colores disponibles
+  const cCurrentRef = refs.find(r => r.id === cRef);
+  const cColoresDisp = cCurrentRef ? (colorMap[cCurrentRef.name] || COLORES_DEFAULT) : COLORES_DEFAULT;
 
 
   // Use Drive inventario when available, fall back to computed
@@ -863,14 +892,14 @@ export default function App() {
                 <FG label="Referencia">
                   <Sel options={refs.map(r => r.name)} value={refs.find(r=>r.id===cRef)?.name ?? ''} onChange={e => {
                     const r = refs.find(x => x.name === e.target.value);
-                    setCRef(r?.id ?? ''); setCColor(''); setCTalla('');
+                    setCRef(r?.id ?? ''); setCColor(''); setCTalla('');; if (r?.cost) setCPrecio(r.cost);
                   }} />
                 </FG>
         {refs.length === 0 && (
           <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
         )}
                 <div className="grid grid-cols-2 gap-3">
-                  <FG label="Color"><Sel options={COLORES_DEFAULT} value={cColor} onChange={e => setCColor(e.target.value)} /></FG>
+                  <FG label="Color"><Sel options={cColoresDisp} value={cColor} onChange={e => setCColor(e.target.value)} /></FG>
                   <FG label="Talla"><Sel options={TODAS_TALLAS} value={cTalla} onChange={e => setCTalla(e.target.value)} /></FG>
                 </div>
                 <FG label="Forma de la camiseta">
