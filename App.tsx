@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 // ══ DATOS REALES DEL SPREADSHEET FURIA ROCK ══════════════════════════
 const REFS_DEFAULT: Ref[] = [
@@ -148,10 +150,10 @@ const Badge = ({text,color}:{text:string;color:'green'|'yellow'|'red'}) => {
 // ─── Main App ─────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab]           = useState<Tab>('cotizador');
-  const [refs, setRefs]         = useState<Ref[]>(() => loadLS('refs', REFS_DEFAULT));
+  const [refs, setRefs]         = useState<Ref[]>(REFS_DEFAULT);
   const [colorMap, setColorMap] = useState<Record<string,string[]>>(() => loadLS('colorMap', {}));
-  const [ventas, setVentas]     = useState<Venta[]>(() => loadLS('ventas', []));
-  const [compras, setCompras]   = useState<Compra[]>(() => loadLS('compras', []));
+  const [ventas, setVentas]     = useState<Venta[]>([]);
+  const [compras, setCompras]   = useState<Compra[]>([]);
   const [loading, setLoading]   = useState(false);
   const [toast, setToast]       = useState('');
 
@@ -200,6 +202,8 @@ export default function App() {
         if (d.refs  && d.refs.length)    { setRefs(d.refs);      localStorage.setItem('refs',     JSON.stringify(d.refs)); }
         if (d.colorMap)                  { setColorMap(d.colorMap); localStorage.setItem('colorMap', JSON.stringify(d.colorMap)); }
         if (d.inventario && d.inventario.length) localStorage.setItem('invDrive', JSON.stringify(d.inventario));
+        if (d.ventas   && d.ventas.length)   { setVentas(d.ventas);   localStorage.setItem('ventas',   JSON.stringify(d.ventas)); }
+        if (d.compras  && d.compras.length)  { setCompras(d.compras); localStorage.setItem('compras',  JSON.stringify(d.compras)); }
       })
       .catch(() => {});
   }, []);
@@ -246,6 +250,74 @@ export default function App() {
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0);
     setSelForma('');
     showToast('Ítem agregado ✓');
+  };
+
+  const generarCotizacionPDF = () => {
+    if (cartItems.length === 0) { showToast('Agrega al menos un ítem para generar el PDF'); return; }
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    doc.setFillColor(30, 30, 46);
+    doc.rect(0, 0, pageW, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FURIA ROCK', margin, 13);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Cotización de Pedido', margin, 20);
+    const fecha = new Date().toLocaleDateString('es-CO', { year:'numeric', month:'long', day:'numeric' });
+    doc.text(fecha, pageW - margin, 20, { align: 'right' });
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Datos del Cliente', margin, 40);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Cliente: ' + (clienteNombre || 'Sin nombre'), margin, 47);
+    if (clienteTel) doc.text('Teléfono: ' + clienteTel, margin, 53);
+    if (clienteDoc) doc.text('Documento: ' + clienteDoc, margin, 59);
+    if (clienteDireccion) doc.text('Dirección: ' + clienteDireccion, margin + 70, 47);
+    if (clienteSede) doc.text('Sede: ' + clienteSede, margin + 70, 53);
+    if (clienteOrden) doc.text('Orden: ' + clienteOrden, margin + 70, 59);
+    const tableData = cartItems.map((item, i) => [
+      String(i + 1), item.ref, item.color, item.talla,
+      item.forma || '-', String(item.qty),
+      cop(item.precio / item.qty), cop(item.precio)
+    ]);
+    const total = cartItems.reduce((s, i) => s + i.precio, 0);
+    (doc as any).autoTable({
+      startY: 68,
+      head: [['#', 'Referencia', 'Color', 'Talla', 'Forma', 'Cant.', 'P. Unitario', 'Total']],
+      body: tableData,
+      foot: [['', '', '', '', '', '', 'TOTAL PEDIDO', cop(total)]],
+      theme: 'striped',
+      headStyles: { fillColor: [30, 30, 46], textColor: [255,255,255], fontSize: 9, fontStyle: 'bold' },
+      footStyles: { fillColor: [240, 240, 240], textColor: [30,30,46], fontSize: 10, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 8 },
+        1: { cellWidth: 50 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 12, halign: 'center' },
+        6: { cellWidth: 24, halign: 'right' },
+        7: { cellWidth: 24, halign: 'right' },
+      },
+      margin: { left: margin, right: margin },
+      didDrawPage: (data: any) => {
+        doc.setFontSize(8);
+        doc.setTextColor(150,150,150);
+        doc.text('Furia Rock • Cotización Pág. ' + data.pageNumber, pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+      }
+    });
+    const finalY = (doc as any).lastAutoTable.finalY + 8;
+    doc.setFontSize(8);
+    doc.setTextColor(120,120,120);
+    doc.text('Este documento es una cotización y no constituye una factura. Precios en COP.', margin, finalY);
+    doc.save('Cotizacion_FuriaRock_' + (clienteNombre || 'cliente').replace(/\s+/g,'_') + '_' + today() + '.pdf');
+    showToast('PDF descargado ✓');
   };
 
   const registrarVenta = async () => {
@@ -463,9 +535,12 @@ export default function App() {
                     </table>
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Btn onClick={agregarItem} disabled={loading || !currentRef || !selColor || !selTalla} variant="secondary">
                     + Agregar ítem
+                  </Btn>
+                  <Btn onClick={generarCotizacionPDF} disabled={cartItems.length === 0} variant="secondary">
+                    📄 Descargar PDF
                   </Btn>
                   <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
                     {loading ? 'Guardando…' : `✓ Registrar Pedido (${cartItems.length})`}
