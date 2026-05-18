@@ -752,8 +752,8 @@ export default function App() {
   };
 
     // ── Cotizaciones ─────────────────────────────────────────────────
-  const [cotizaciones, setCotizaciones] = React.useState<any[]>([]);
-  const [loadingCot, setLoadingCot] = React.useState(false);
+  const [cotizaciones, setCotizaciones] = useState<any[]>([]);
+  const [loadingCot, setLoadingCot] = useState(false);
 
   const guardarCotizacion = async () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un item al carrito'); return; }
