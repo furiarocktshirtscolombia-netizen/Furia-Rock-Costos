@@ -57,7 +57,7 @@ interface Compra {
   proveedor:string; notas:string; forma:string;
 }
 interface Calc { costo:number; precio:number }
-type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta';
+type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 const sendToGAS = async (body: object) => {
@@ -751,7 +751,82 @@ export default function App() {
     setLoading(false);
   };
 
-    // Helper to resolve reference name from refs array
+    // ── Cotizaciones ─────────────────────────────────────────────────
+  const [cotizaciones, setCotizaciones] = React.useState<any[]>([]);
+  const [loadingCot, setLoadingCot] = React.useState(false);
+
+  const guardarCotizacion = async () => {
+    if (cartItems.length === 0) { showToast('Agrega al menos un item al carrito'); return; }
+    setLoadingCot(true);
+    try {
+      const cotData = {
+        fecha: new Date().toISOString().split('T')[0],
+        cliente: clienteNombre || 'Sin nombre',
+        telefono: clienteTelefono || '',
+        documento: clienteDocumento || '',
+        total: cartItems.reduce((s, i) => s + i.precio * i.cantidad, 0),
+        observaciones: '',
+        usuario: 'App',
+        items: cartItems.map(i => ({
+          refId: i.refId, refName: i.refName, nombre: i.refName,
+          color: i.color, talla: i.talla, forma: i.forma,
+          cantidad: i.cantidad, precio: i.precio, precioUnit: i.precio,
+          categoria: i.categoria, costo: i.costo || 0
+        }))
+      };
+      const resp = await sendToGAS({ action: 'guardarCotizacion', cotizacion: cotData });
+      if (resp.status === 'ok') {
+        showToast('Cotizacion guardada: ' + resp.id);
+        cargarCotizaciones();
+      } else { showToast('Error: ' + (resp.msg || 'desconocido')); }
+    } catch (e: any) { showToast('Error al guardar: ' + e.message); }
+    setLoadingCot(false);
+  };
+
+  const cargarCotizaciones = async () => {
+    try {
+      const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZylNyGjsrWW_EkqSCcRFX3Y63p4mmO8XK6-c2vw24VT8TRH5VnWF5CA/exec';
+      const resp = await fetch(GAS_URL + '?action=getCotizaciones&t=' + Date.now());
+      const d = await resp.json();
+      if (d.cotizaciones) setCotizaciones(d.cotizaciones);
+    } catch (_e) { /* ignore */ }
+  };
+
+  const convertirEnVenta = async (cot: any, cotId: string) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const cantArr = String(cot['Cantidades'] || '1').split(' / ');
+      const precioArr = String(cot['Precio Unitario'] || '0').split(' / ');
+      const items = String(cot['Referencias (detalle)'] || '').split(' / ').map((det: string, idx: number) => {
+        const parts = det.split(' | ');
+        return {
+          refName: parts[0] || '', nombre: parts[0] || '', color: parts[1] || '',
+          talla: parts[2] || '', forma: parts[3] || '',
+          cantidad: Number(cantArr[idx] || 1),
+          precio: Number(precioArr[idx] || 0),
+          refId: '', categoria: '', costo: 0
+        };
+      });
+      const resp = await sendToGAS({
+        action: 'convertirCotizacion',
+        cotizacionId: cotId,
+        cotizacion: {
+          fecha: cot['Fecha'] || new Date().toISOString().split('T')[0],
+          cliente: cot['Cliente'] || '', telefono: cot['Telefono'] || '',
+          documento: cot['Documento'] || '', total: cot['Total'] || 0,
+          items
+        }
+      });
+      if (resp.status === 'ok') {
+        showToast('Convertida en venta exitosamente');
+        cargarCotizaciones();
+      } else { showToast('Error: ' + (resp.msg || 'desconocido')); }
+    } catch (e: any) { showToast('Error: ' + e.message); }
+    setLoading(false);
+  };
+
+  // Helper to resolve reference name from refs array
   const resolveRefName = (refId: string): string => {
     const found = refs.find(r => r.id === refId || r.name === refId);
     return found ? found.name : (refId || '—');
@@ -812,6 +887,7 @@ export default function App() {
     {id:'inventario',label:'📊 Inventario'},
     {id:'dashboard', label:'📈 Dashboard'},
     {id:'cuenta',    label:'🧾 Cuenta de Cobro'},
+    {id:'cotizaciones', label:'📋 Cotizaciones'},
   ];
 
   return (
@@ -955,6 +1031,9 @@ export default function App() {
                   </Btn>
                   <Btn onClick={generarCotizacionPDF} disabled={cartItems.length === 0} variant="secondary">
                     📄 Descargar PDF
+                  </Btn>
+                  <Btn onClick={guardarCotizacion} disabled={loadingCot || cartItems.length === 0} variant="secondary">
+                    💾 Guardar Cotización
                   </Btn>
                   <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
                     {loading ? 'Guardando…' : `✓ Registrar Pedido (${cartItems.length})`}
@@ -1293,6 +1372,67 @@ export default function App() {
           </div>
         )}
 
+      {/* ── COTIZACIONES ──────────────────────────────────────── */}
+      {tab === 'cotizaciones' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-white">📋 REGISTRO DE COTIZACIONES</h2>
+            <button onClick={cargarCotizaciones} className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-500">
+              🔄 Actualizar
+            </button>
+          </div>
+          {cotizaciones.length === 0 ? (
+            <div className="text-slate-400 text-center py-12">No hay cotizaciones registradas. Guarda una desde el Cotizador.</div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-700">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-800">
+                  <tr className="text-left text-slate-400">
+                    <th className="px-3 py-2">ID</th>
+                    <th className="px-3 py-2">Fecha</th>
+                    <th className="px-3 py-2">Cliente</th>
+                    <th className="px-3 py-2">Referencias</th>
+                    <th className="px-3 py-2 text-right">Total</th>
+                    <th className="px-3 py-2 text-center">Estado</th>
+                    <th className="px-3 py-2 text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cotizaciones.map((cot: any, idx: number) => (
+                    <tr key={idx} className="border-t border-slate-700 hover:bg-slate-800/40">
+                      <td className="px-3 py-2 text-indigo-400 font-mono text-xs">{String(cot['ID'] || '-')}</td>
+                      <td className="px-3 py-2 text-slate-300">{String(cot['Fecha'] || '-')}</td>
+                      <td className="px-3 py-2 text-white font-medium">{String(cot['Cliente'] || '-')}</td>
+                      <td className="px-3 py-2 text-slate-400 text-xs max-w-xs">{String(cot['Referencias (detalle)'] || '-').slice(0, 60)}</td>
+                      <td className="px-3 py-2 text-emerald-400 font-bold text-right">
+                        {'$' + (Number(cot['Total']) || 0).toLocaleString('es-CO')}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <span className={String(cot['Estado']) === 'Convertida en Venta'
+                          ? 'px-2 py-0.5 rounded-full text-xs bg-emerald-900 text-emerald-300'
+                          : 'px-2 py-0.5 rounded-full text-xs bg-indigo-900 text-indigo-300'}>
+                          {String(cot['Estado'] || 'Cotización')}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {String(cot['Estado']) !== 'Convertida en Venta' && (
+                          <button
+                            onClick={() => convertirEnVenta(cot, String(cot['ID']))}
+                            disabled={loading}
+                            className="px-3 py-1 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-500 disabled:opacity-50"
+                          >
+                            ✅ Convertir en Venta
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
       </div>
     </div>
   );
