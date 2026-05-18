@@ -22,7 +22,7 @@ const REFS_DEFAULT: Ref[] = [
 const COLORES_DEFAULT = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL CIELO","ROJO","GRIS","AZUL MARINO","ROSADO","MOSTAZA"]
 const TALLAS_ADULTO  = ["XS","S","M","L","XL","XXL"];
 const TALLAS_NINO    = ["2","4","6","8","10","12","14","16"];
-const TIPOS_IMP      = ["Ninguna","Serigrafia","DTF","Sublimacion","Bordado"];
+const TIPOS_IMP      = ["DTF","DTG"];
 const SEDES          = ["Medellin","Bogota","Cali","Online","Otra"];
 
 // COSTOS FIJOS DE PRODUCCION
@@ -61,10 +61,10 @@ function calcInventario(v: any[], c: any[]) {
 
 // ═══ TIPOS ════════════════════════════════════════════════════════════════
 interface Ref  { id:string; name:string; cost:number; cat:string }
-interface Item { id:string; ref:Ref; talla:string; color:string; qty:number; calc:Calc; diseno:string; tipoImp:string; sede:string; cliente:string; cmDTF:number; numPlanchadas:number }
+interface Item { id:string; ref:Ref; talla:string; color:string; qty:number; calc:Calc; diseno:string; tipoImp:string; sede:string; cliente:string; cmDTF:number; numPlanchadas:number; costoDTG:number }
 interface Venta { id:string; fecha:string; cliente:string; ref:string; refId:string; talla:string; color:string; cantidad:number; cat:string; precio:number; totalVenta:number; costo:number; ganancia:number; tipoImp:string; diseno:string; sede:string }
 interface Compra { id:string; fecha:string; refId:string; ref:string; cat:string; color:string; talla:string; cantidad:number; precio:number; total:number; proveedor:string; notas:string }
-interface Calc { costoBase:number; costoDTF:number; costoEmpaque:number; costoPlanchadas:number; costoTotal:number; precio:number; precioTotal:number; ganancia:number; margen:string }
+interface Calc { costoBase:number; costoImp:number; costoEmpaque:number; costoPlanchadas:number; costoTotal:number; precio:number; precioTotal:number; ganancia:number; margen:string; labelImp:string }
 type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard';
 
 // ═══ HELPERS ══════════════════════════════════════════════════════════════
@@ -72,17 +72,26 @@ const cop    = (v:number) => "$ "+Math.round(v||0).toLocaleString("es-CO");
 const today  = () => new Date().toISOString().split("T")[0];
 const uid    = () => Date.now()+"-"+Math.random().toString(36).slice(2,6);
 
-function calcPrice(ref:Ref, qty:number, cmDTF:number, numPlanchadas:number): Calc {
-  const costoBase      = ref.cost;
-  const costoDTF       = Math.round((cmDTF || 0) * DTF_POR_CM2);
-  const costoEmpaque   = COSTO_EMPAQUE;
-  const costoPlanchadas= Math.round((numPlanchadas || 0) * COSTO_PLANCHADA);
-  const costoTotal     = costoBase + costoDTF + costoEmpaque + costoPlanchadas;
-  const sugerido       = costoTotal + GANANCIA_NETA_FIJA;
-  const precio         = Math.ceil(sugerido / 500) * 500;
-  const ganancia       = precio - costoTotal;
-  const margen         = costoTotal > 0 ? ((ganancia / precio) * 100).toFixed(1) : "0.0";
-  return { costoBase, costoDTF, costoEmpaque, costoPlanchadas, costoTotal, precio, precioTotal: precio * (qty || 1), ganancia, margen };
+// tipoImp: "DTF" usa cmDTF*170, "DTG" usa costoDTG manual, otro = 0
+function calcPrice(ref:Ref, qty:number, tipoImp:string, cmDTF:number, numPlanchadas:number, costoDTG:number): Calc {
+  const costoBase       = ref.cost;
+  let   costoImp        = 0;
+  let   labelImp        = "Sin impresion";
+  if (tipoImp === 'DTF') {
+    costoImp  = Math.round((cmDTF || 0) * DTF_POR_CM2);
+    labelImp  = `DTF ${cmDTF}cm²`;
+  } else if (tipoImp === 'DTG') {
+    costoImp  = Math.round(costoDTG || 0);
+    labelImp  = "DTG";
+  }
+  const costoEmpaque    = COSTO_EMPAQUE;
+  const costoPlanchadas = Math.round((numPlanchadas || 0) * COSTO_PLANCHADA);
+  const costoTotal      = costoBase + costoImp + costoEmpaque + costoPlanchadas;
+  const sugerido        = costoTotal + GANANCIA_NETA_FIJA;
+  const precio          = Math.ceil(sugerido / 500) * 500;
+  const ganancia        = precio - costoTotal;
+  const margen          = costoTotal > 0 ? ((ganancia / precio) * 100).toFixed(1) : "0.0";
+  return { costoBase, costoImp, costoEmpaque, costoPlanchadas, costoTotal, precio, precioTotal: precio * (qty || 1), ganancia, margen, labelImp };
 }
 
 function loadLS<T>(key:string, def:T): T {
@@ -196,6 +205,7 @@ export default function App() {
   const [selDiseno, setSelDiseno] = useState('');
   const [cmDTF, setCmDTF] = useState(0);
   const [numPlanchadas, setNumPlanchadas] = useState(0);
+  const [costoDTG, setCostoDTG] = useState(0);
 
   // Estado formulario compras
   const [cRef, setCRef] = useState('');
@@ -221,18 +231,18 @@ export default function App() {
   };
 
   // Cotizacion: calculo reactivo
-  const refObj  = REFS.find(r => r.id === selRef) || null;
-  const tallas  = refObj ? (refObj.cat === 'Nino' ? TALLAS_NINO : TALLAS_ADULTO) : TALLAS_ADULTO;
+  const refObj      = REFS.find(r => r.id === selRef) || null;
+  const tallas      = refObj ? (refObj.cat === 'Nino' ? TALLAS_NINO : TALLAS_ADULTO) : TALLAS_ADULTO;
   const coloresDisp = refObj && coloresPorRef[refObj.name] ? coloresPorRef[refObj.name] : COLORES;
-  const calc    = refObj ? calcPrice(refObj, selQty, cmDTF, numPlanchadas) : null;
+  const calc        = refObj ? calcPrice(refObj, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG) : null;
 
   const addToQuote = () => {
     if (!refObj || !selTalla || !selColor) { showAlert('Completa referencia, talla y color','err'); return; }
-    const c = calcPrice(refObj, selQty, cmDTF, numPlanchadas);
+    const c = calcPrice(refObj, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG);
     const item: Item = {
       id: uid(), ref: refObj, talla: selTalla, color: selColor,
       qty: selQty, calc: c, diseno: selDiseno, tipoImp: selTipoImp,
-      sede: selSede, cliente: selCliente, cmDTF, numPlanchadas
+      sede: selSede, cliente: selCliente, cmDTF, numPlanchadas, costoDTG
     };
     setQuote([...quote, item]);
     showAlert('Agregado a la cotizacion');
@@ -245,7 +255,6 @@ export default function App() {
 
   const sincronizarResultados = (v: Venta[], c: Compra[]) => {
     const inv = calcInventario(v, c);
-    const totalVentasUnidades = v.reduce((s, vi) => s + vi.cantidad, 0);
     const totalVentasPesos    = v.reduce((s, vi) => s + vi.totalVenta, 0);
     const costoVendido        = v.reduce((s, vi) => s + vi.costo * vi.cantidad, 0);
     const gananciaBruta       = totalVentasPesos - costoVendido;
@@ -256,7 +265,7 @@ export default function App() {
     const margen              = totalVentasPesos > 0 ? ((gananciaBruta / totalVentasPesos) * 100).toFixed(2) : '0.00';
     const roi                 = costoVendido > 0 ? ((gananciaBruta / costoVendido) * 100).toFixed(2) : '0.00';
     sendToGAS('sincronizarResultados', {
-      ventas: { unidades: totalVentasUnidades, ingresos: totalVentasPesos, costo: costoVendido, ganancia: gananciaBruta },
+      ventas: { unidades: v.reduce((s,vi)=>s+vi.cantidad,0), ingresos: totalVentasPesos, costo: costoVendido, ganancia: gananciaBruta },
       compras: { unidades: totalComprasUnidades, invertido: totalComprasPesos },
       inventario: { enStock, enNegativo },
       margen: { pct: margen, roi },
@@ -382,24 +391,36 @@ export default function App() {
               {/* Costos de produccion */}
               <Card>
                 <CardTitle>Costos de produccion</CardTitle>
+
+                {/* Tipo de impresion: solo DTF y DTG */}
                 <FG label="Tipo de impresion">
-                  <select value={selTipoImp} onChange={e=>setSelTipoImp(e.target.value)}>
+                  <select value={selTipoImp} onChange={e=>{ setSelTipoImp(e.target.value); setCmDTF(0); setNumPlanchadas(0); setCostoDTG(0); }}>
                     {TIPOS_IMP.map(t=><option key={t}>{t}</option>)}
                   </select>
                 </FG>
+
                 <FG label="Descripcion del diseno" hint="Nombre o referencia del arte">
                   <input value={selDiseno} onChange={e=>setSelDiseno(e.target.value)} placeholder="Ej: Logo Furia Rock frontal" />
                 </FG>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem"}}>
-                  <FG label="Area DTF (cm²)" hint={`${DTF_POR_CM2} COP/cm²`}>
-                    <input type="number" min={0} value={cmDTF} onChange={e=>setCmDTF(Number(e.target.value)||0)}
-                      placeholder="0" />
+
+                {/* Campos DTF: area en cm2 + planchadas */}
+                {selTipoImp === 'DTF' && (
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem"}}>
+                    <FG label="Area DTF (cm²)" hint={`${DTF_POR_CM2} COP/cm²`}>
+                      <input type="number" min={0} value={cmDTF} onChange={e=>setCmDTF(Number(e.target.value)||0)} placeholder="0" />
+                    </FG>
+                    <FG label="Num. planchadas" hint={`${COSTO_PLANCHADA.toLocaleString()} COP c/u`}>
+                      <input type="number" min={0} value={numPlanchadas} onChange={e=>setNumPlanchadas(Number(e.target.value)||0)} placeholder="0" />
+                    </FG>
+                  </div>
+                )}
+
+                {/* Campo DTG: precio manual de la impresion */}
+                {selTipoImp === 'DTG' && (
+                  <FG label="Costo de impresion DTG (COP)" hint="Ingresa el valor cobrado por la impresora DTG">
+                    <input type="number" min={0} value={costoDTG} onChange={e=>setCostoDTG(Number(e.target.value)||0)} placeholder="Ej: 15000" />
                   </FG>
-                  <FG label="Num. planchadas" hint={`${COSTO_PLANCHADA.toLocaleString()} COP c/u`}>
-                    <input type="number" min={0} value={numPlanchadas} onChange={e=>setNumPlanchadas(Number(e.target.value)||0)}
-                      placeholder="0" />
-                  </FG>
-                </div>
+                )}
 
                 {/* Desglose de costos */}
                 {calc && (
@@ -409,14 +430,16 @@ export default function App() {
                       <span style={{color:"#aaa"}}>Costo base prenda</span><span>{cop(calc.costoBase)}</span>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #1e2029"}}>
-                      <span style={{color:"#aaa"}}>DTF ({cmDTF} cm²)</span><span>{cop(calc.costoDTF)}</span>
+                      <span style={{color:"#aaa"}}>{calc.labelImp}</span><span>{cop(calc.costoImp)}</span>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #1e2029"}}>
                       <span style={{color:"#aaa"}}>Empaque</span><span>{cop(calc.costoEmpaque)}</span>
                     </div>
-                    <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #2a2d3a"}}>
-                      <span style={{color:"#aaa"}}>Planchadas ({numPlanchadas})</span><span>{cop(calc.costoPlanchadas)}</span>
-                    </div>
+                    {selTipoImp === 'DTF' && (
+                      <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #2a2d3a"}}>
+                        <span style={{color:"#aaa"}}>Planchadas ({numPlanchadas})</span><span>{cop(calc.costoPlanchadas)}</span>
+                      </div>
+                    )}
                     <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontWeight:700}}>
                       <span>Costo total</span><span style={{color:"#f59e0b"}}>{cop(calc.costoTotal)}</span>
                     </div>
@@ -454,10 +477,13 @@ export default function App() {
                         <div>
                           <div style={{fontWeight:600,fontSize:13}}>{item.ref.name}</div>
                           <div style={{fontSize:12,color:"#888"}}>{item.talla} | {item.color} | x{item.qty}</div>
-                          {item.tipoImp !== 'Ninguna' && <div style={{fontSize:11,color:"#666"}}>{item.tipoImp}{item.diseno ? ': ' + item.diseno : ''}</div>}
-                          <div style={{fontSize:11,color:"#555",marginTop:2}}>
-                            DTF:{item.cmDTF}cm² | Planchadas:{item.numPlanchadas}
-                          </div>
+                          <div style={{fontSize:11,color:"#666"}}>{item.tipoImp}{item.diseno ? ': ' + item.diseno : ''}</div>
+                          {item.tipoImp === 'DTF' && (
+                            <div style={{fontSize:11,color:"#555"}}>DTF: {item.cmDTF}cm² | Planchadas: {item.numPlanchadas}</div>
+                          )}
+                          {item.tipoImp === 'DTG' && (
+                            <div style={{fontSize:11,color:"#555"}}>DTG: {cop(item.costoDTG)}</div>
+                          )}
                         </div>
                         <div style={{textAlign:"right"}}>
                           <div style={{color:"#e63d3d",fontWeight:700}}>{cop(item.calc.precioTotal)}</div>
@@ -627,14 +653,15 @@ export default function App() {
             </Card>
           </div>
         )}
+
         {/* ═══ INVENTARIO ═══════════════════════════════════════════════════ */}
         {tab==='inventario' && (
           <div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"1rem",marginBottom:"1.5rem"}}>
               {[
-                {label:"En stock",    val:inv.filter(i=>i.stock>0).reduce((s,i)=>s+i.stock,0), color:"#f0f0f0"},
-                {label:"OK (>5)",     val:inv.filter(i=>i.stock>5).length,  color:"#22c55e"},
-                {label:"Bajo (<=5)",  val:inv.filter(i=>i.stock>2&&i.stock<=5).length, color:"#f59e0b"},
+                {label:"En stock",     val:inv.filter(i=>i.stock>0).reduce((s,i)=>s+i.stock,0), color:"#f0f0f0"},
+                {label:"OK (>5)",      val:inv.filter(i=>i.stock>5).length,  color:"#22c55e"},
+                {label:"Bajo (<=5)",   val:inv.filter(i=>i.stock>2&&i.stock<=5).length, color:"#f59e0b"},
                 {label:"Critico (<=2)",val:inv.filter(i=>i.stock<=2).length, color:"#ef4444"},
               ].map(({label,val,color})=>(
                 <Card key={label} style={{textAlign:"center",marginBottom:0}}>
@@ -739,4 +766,4 @@ export default function App() {
       </div>
     </>
   );
-            }
+    }
