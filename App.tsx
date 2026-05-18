@@ -173,6 +173,7 @@ export default function App() {
   const [clienteDiseno, setClienteDiseno] = useState('');
   const [clienteOrden,  setClienteOrden]  = useState('');
   const [gasErr,        setGasErr]        = useState('');
+  const [cartItems, setCartItems] = useState<{ref:string; refId:string; cat:string; color:string; talla:string; forma:string; qty:number; precio:number; costo:number}[]>([]);
 
   // Compras
   const [cRef,    setCRef]    = useState('');
@@ -232,37 +233,55 @@ export default function App() {
     });
   };
 
-  const registrarVenta = async () => {
-    if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos'); return; }
-    setLoading(true); setGasErr('');
-    const v: Venta = {
-      id: uid(), fecha: today(), cliente: clienteNombre,
-      ref: currentRef.name, refId: currentRef.id,
-      talla: selTalla, color: selColor, cantidad: selQty,
-      cat: currentRef.cat, precio: calc!.precio / selQty,
-      totalVenta: calc!.precio, costo: calc!.costo,
-      ganancia: calc!.precio - calc!.costo,
-      tipoImp: selTipoImp, diseno: clienteDiseno, sede: clienteSede,
-      forma: selForma,
-      telefono: clienteTel, documento: clienteDoc,
-      direccion: clienteDireccion, ordenInterna: clienteOrden
+  const agregarItem = () => {
+    if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos del ítem'); return; }
+    if (!calc) { showToast('No hay precio calculado'); return; }
+    const item = {
+      ref: currentRef.name, refId: currentRef.id, cat: currentRef.cat,
+      color: selColor, talla: selTalla, forma: selForma,
+      qty: selQty, precio: calc!.precio, costo: calc!.costo,
     };
-    const nuevasVentas  = [v, ...ventas];
-    const nuevoInv      = calcInventario(nuevasVentas, compras);
-    try {
-      const res = await sendToGAS({ accion:'guardarVenta', ...v });
-      if (res.status !== 'ok') { setGasErr('Error Drive: ' + res.msg); }
-      await sendToGAS({ accion:'sincronizarInventarioBatch', rows: nuevoInv });
-      await sincrResultados(nuevasVentas, compras, nuevoInv);
-    } catch(e) { setGasErr('Sin conexion Drive'); }
-    setVentas(nuevasVentas);
-    localStorage.setItem('ventas', JSON.stringify(nuevasVentas));
+    setCartItems(prev => [...prev, item]);
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0);
     setSelForma('');
+    showToast('Ítem agregado ✓');
+  };
+
+  const registrarVenta = async () => {
+    if (cartItems.length === 0) { showToast('Agrega al menos un ítem al pedido'); return; }
+    setLoading(true); setGasErr('');
+    const nuevasVentas = [...ventas];
+    for (const item of cartItems) {
+      const v: Venta = {
+        id: uid(), fecha: today(), cliente: clienteNombre,
+        ref: item.ref, refId: item.refId,
+        talla: item.talla, color: item.color, cantidad: item.qty,
+        cat: item.cat, precio: item.precio / item.qty,
+        totalVenta: item.precio, costo: item.costo,
+        ganancia: item.precio - item.costo,
+        tipoImp: selTipoImp, diseno: clienteDiseno, sede: clienteSede,
+        forma: item.forma,
+        telefono: clienteTel, documento: clienteDoc,
+        direccion: clienteDireccion, ordenInterna: clienteOrden
+      };
+      nuevasVentas.unshift(v);
+      try {
+        const res = await sendToGAS({ accion:'guardarVenta', ...v });
+        if (res.status !== 'ok') { setGasErr('Error Drive: ' + res.msg); }
+      } catch(e) { setGasErr('Sin conexion Drive'); }
+    }
+    const nuevoInv = calcInventario(nuevasVentas, compras);
+    try {
+      await sendToGAS({ accion:'sincronizarInventarioBatch', rows: nuevoInv });
+      await sincrResultados(nuevasVentas, compras, nuevoInv);
+    } catch {}
+    setVentas(nuevasVentas);
+    localStorage.setItem('ventas', JSON.stringify(nuevasVentas));
+    setCartItems([]);
     setClienteNombre(''); setClienteTel(''); setClienteDoc('');
     setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden('');
-    showToast('Venta registrada ✓');
+    showToast('Pedido registrado ✓');
     setLoading(false);
   };
 
@@ -408,10 +427,50 @@ export default function App() {
                 <FG label="Orden interna"><Inp value={clienteOrden} onChange={e => setClienteOrden(e.target.value)} placeholder="Ej: ORD-001" /></FG>
               </div>
               {gasErr && <p className="text-red-400 text-xs mt-2">{gasErr}</p>}
-              <div className="mt-4">
-                <Btn onClick={registrarVenta} disabled={loading || !currentRef || !selColor || !selTalla}>
-                  {loading ? 'Guardando…' : '✓ Registrar Venta'}
-                </Btn>
+              <div className="mt-4 space-y-3">
+                {cartItems.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead><tr className="text-gray-400 border-b border-gray-700">
+                        <th className="text-left py-1 pr-2">Ref</th>
+                        <th className="text-left py-1 pr-2">Color</th>
+                        <th className="text-left py-1 pr-2">Talla</th>
+                        <th className="text-left py-1 pr-2">Forma</th>
+                        <th className="text-right py-1 pr-2">Cant</th>
+                        <th className="text-right py-1 pr-2">Precio</th>
+                        <th className="text-right py-1">Acción</th>
+                      </tr></thead>
+                      <tbody>
+                        {cartItems.map((item, idx) => (
+                          <tr key={idx} className="border-b border-gray-700/50">
+                            <td className="py-1 pr-2 text-gray-300 text-xs">{item.ref.split(' ').slice(0,3).join(' ')}</td>
+                            <td className="py-1 pr-2 text-gray-300">{item.color}</td>
+                            <td className="py-1 pr-2 text-gray-300">{item.talla}</td>
+                            <td className="py-1 pr-2 text-gray-300">{item.forma || '-'}</td>
+                            <td className="py-1 pr-2 text-right text-gray-300">{item.qty}</td>
+                            <td className="py-1 pr-2 text-right text-green-400">{cop(item.precio)}</td>
+                            <td className="py-1 text-right">
+                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">✕</button>
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-gray-600">
+                          <td colSpan={5} className="py-1 text-gray-400 text-xs font-semibold">TOTAL PEDIDO</td>
+                          <td className="py-1 text-right text-green-400 font-semibold text-xs">{cop(cartItems.reduce((s,i) => s + i.precio, 0))}</td>
+                          <td></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Btn onClick={agregarItem} disabled={loading || !currentRef || !selColor || !selTalla} variant="secondary">
+                    + Agregar ítem
+                  </Btn>
+                  <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
+                    {loading ? 'Guardando…' : `✓ Registrar Pedido (${cartItems.length})`}
+                  </Btn>
+                </div>
               </div>
             </Card>
           </div>
