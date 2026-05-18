@@ -41,7 +41,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW
 
 // ─── Types ────────────────────────────────────────────────────────────
 interface Ref  { id:string; name:string; cost:number; cat:string }
-interface Item { ref:string; refId:string; cat:string; talla:string; color:string; comprado:number; vendido:number; stock:number; estado:string }
+interface Item { ref:string; refId:string; cat:string; talla:string; color:string; forma:string; comprado:number; vendido:number; stock:number; estado:string }
 interface Venta {
   id:string; fecha:string; cliente:string; ref:string; refId:string;
   talla:string; color:string; cantidad:number; cat:string;
@@ -69,13 +69,13 @@ const sendToGAS = async (body: object) => {
 const calcInventario = (ventas: Venta[], compras: Compra[]) => {
   const map: Record<string,Item> = {};
   compras.forEach(c => {
-    const k = c.refId+'|'+c.talla+'|'+c.color;
-    if (!map[k]) map[k] = { ref:c.ref, refId:c.refId, cat:c.cat, talla:c.talla, color:c.color, comprado:0, vendido:0, stock:0, estado:'' };
+    const k = c.refId+'|'+c.talla+'|'+c.color+'|'+(c.forma||'_');
+    if (!map[k]) map[k] = { ref:c.ref, refId:c.refId, cat:c.cat, talla:c.talla, color:c.color, forma:c.forma||'_', comprado:0, vendido:0, stock:0, estado:'' };
     map[k].comprado += c.cantidad;
   });
   ventas.forEach(v => {
-    const k = v.refId+'|'+v.talla+'|'+v.color;
-    if (!map[k]) map[k] = { ref:v.ref, refId:v.refId, cat:v.cat, talla:v.talla, color:v.color, comprado:0, vendido:0, stock:0, estado:'' };
+    const k = v.refId+'|'+v.talla+'|'+v.color+'|'+(v.forma||'_');
+    if (!map[k]) map[k] = { ref:v.ref, refId:v.refId, cat:v.cat, talla:v.talla, color:v.color, forma:v.forma||'_', comprado:0, vendido:0, stock:0, estado:'' };
     map[k].vendido += v.cantidad;
   });
   Object.values(map).forEach(i => {
@@ -547,6 +547,7 @@ export default function App() {
                   <th className="text-left py-2 pr-3">Cat.</th>
                   <th className="text-left py-2 pr-3">Talla</th>
                   <th className="text-left py-2 pr-3">Color</th>
+                  <th className="text-left py-2 pr-3">Forma</th>
                   <th className="text-right py-2 pr-3">Comprado</th>
                   <th className="text-right py-2 pr-3">Vendido</th>
                   <th className="text-right py-2 pr-3">Stock</th>
@@ -559,6 +560,7 @@ export default function App() {
                       <td className="py-2 pr-3 text-gray-400">{i.cat}</td>
                       <td className="py-2 pr-3 text-gray-300">{i.talla}</td>
                       <td className="py-2 pr-3 text-gray-300">{i.color}</td>
+                      <td className="py-2 pr-3 text-gray-300">{i.forma && i.forma !== '_' ? i.forma : '—'}</td>
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
