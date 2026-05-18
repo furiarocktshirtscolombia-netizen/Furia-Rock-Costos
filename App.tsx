@@ -21,7 +21,7 @@ const REFS_DEFAULT: Ref[] = [
 
 const COLORES_DEFAULT  = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL CIELO","ROJO","GRIS","AZUL MARINO","ROSADO","MOSTAZA","VAINILLA"];
 const TALLAS_ADULTO    = ["XS","S","M","L","XL","XXL"];
-const TALLAS_NINO      = ["2-4","4-6","6-8","8-10","10-12","12-14","14-16"];
+const TALLAS_NINO      = ["0-2","2-4","4-6","6-8","8-10","10-12","12-14","14-16"];
 const TODAS_TALLAS     = [...TALLAS_ADULTO, ...TALLAS_NINO];
 const TIPOS_IMP        = ["DTF","DTG"];
 const SEDES            = ["Medellin","Bogota","Cali","Online","Otra"];
