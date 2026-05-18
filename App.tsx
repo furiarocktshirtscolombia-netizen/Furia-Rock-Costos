@@ -338,7 +338,7 @@ export default function App() {
     showToast('Ítem agregado ✓');
   };
 
-  const generarCotizacionPDF = () => {
+  const generarCotizacionPDF = async () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un ítem para generar el PDF'); return; }
 
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -455,23 +455,66 @@ export default function App() {
     }
 
 
-    // Información bancaria
-    const bankY = Math.min(finalY + 28, pageH - 30);
-    pdf.setFillColor(15, 23, 42);
-    pdf.roundedRect(ml, bankY, pageW - ml - ml, 18, 2, 2, 'F');
+    // ── Información de Pago ──────────────────────────────────────
+    const bx = ml;
+    const bw = pageW - ml - ml;
+    const qrSize = 28;
+    const bankH = 32;
+    const bankYStart = Math.min(finalY + 26, pageH - bankH - 8);
+
+    // Fondo del bloque
+    pdf.setFillColor(12, 20, 38);
+    pdf.roundedRect(bx, bankYStart, bw, bankH, 2.5, 2.5, 'F');
+    // Barra lateral izquierda (indigo)
     pdf.setFillColor(99, 102, 241);
-    pdf.roundedRect(ml, bankY, 3, 18, 1, 1, 'F');
-    pdf.setFontSize(7);
+    pdf.roundedRect(bx, bankYStart, 3.5, bankH, 1.5, 1.5, 'F');
+
+    // Encabezado
+    const tx = bx + 10;
+    pdf.setFontSize(6.5);
     pdf.setTextColor(148, 163, 184);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('INFORMACIÓN DE PAGO', ml + 7, bankY + 5);
-    pdf.setFontSize(9);
+    pdf.text('INFORMACION DE PAGO', tx, bankYStart + 6);
+
+    // Titular
+    pdf.setFontSize(8.5);
     pdf.setTextColor(255, 255, 255);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Bancolombia  -  Ahorros', ml + 7, bankY + 11);
-    pdf.setFontSize(10);
+    pdf.text('Mariluz Lopez', tx, bankYStart + 13);
+
+    // Banco + tipo de cuenta
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(203, 213, 225);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Bancolombia  -  Cuenta de Ahorros', tx, bankYStart + 19);
+
+    // Numero de cuenta
+    pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(99, 244, 200);
-    pdf.text('13848930681', pageW - ml - 4, bankY + 11, { align: 'right' });
+    pdf.text('13848930681', tx, bankYStart + 25);
+
+    // Nequi
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(167, 139, 250);
+    pdf.text('@mariluz3523', tx, bankYStart + 31);
+
+    // QR de pago
+    try {
+      const qrResp = await fetch('/qr_pago.png');
+      if (qrResp.ok) {
+        const qrBlob = await qrResp.blob();
+        const qrDataUrl = await new Promise<string>((res) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result as string);
+          reader.readAsDataURL(qrBlob);
+        });
+        const qrX = bx + bw - qrSize - 3;
+        const qrY = bankYStart + 2;
+        pdf.setFillColor(255, 255, 255);
+        pdf.roundedRect(qrX - 1, qrY - 1, qrSize + 2, qrSize + 2, 1, 1, 'F');
+        pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+      }
+    } catch (_e) { /* QR no disponible */ }
 
     const today2 = new Date().toISOString().split('T')[0];
     pdf.save('Cotizacion_FuriaRock_' + (clienteNombre || 'cliente').replace(/\s+/g, '_') + '_' + today2 + '.pdf');
@@ -479,7 +522,7 @@ export default function App() {
   };
 
   
-  const generarCuentaCobroPDF = ({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData }: any) => {
+  const generarCuentaCobroPDF = async ({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData }: any) => {
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const pageW = pdf.internal.pageSize.getWidth();
     const pageH = pdf.internal.pageSize.getHeight();
@@ -583,23 +626,66 @@ export default function App() {
     });
 
 
-  // Información bancaria
-  const bankY2 = pageH - 28;
-  pdf.setFillColor(15, 23, 42);
-  pdf.roundedRect(ml, bankY2, pageW - ml - mr, 18, 2, 2, 'F');
+  // ── Información de Pago ──────────────────────────────────────
+  const bx2 = ml;
+  const bw2 = pageW - ml - mr;
+  const qrSize2 = 28;
+  const bankH2 = 32;
+  const bankYStart2 = pageH - bankH2 - 10;
+
+  // Fondo del bloque
+  pdf.setFillColor(12, 20, 38);
+  pdf.roundedRect(bx2, bankYStart2, bw2, bankH2, 2.5, 2.5, 'F');
+  // Barra lateral izquierda (indigo)
   pdf.setFillColor(99, 102, 241);
-  pdf.roundedRect(ml, bankY2, 3, 18, 1, 1, 'F');
-  pdf.setFontSize(7);
+  pdf.roundedRect(bx2, bankYStart2, 3.5, bankH2, 1.5, 1.5, 'F');
+
+  // Encabezado
+  const tx2 = bx2 + 10;
+  pdf.setFontSize(6.5);
   pdf.setTextColor(148, 163, 184);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('INFORMACIÓN DE PAGO', ml + 7, bankY2 + 5);
-  pdf.setFontSize(9);
+  pdf.text('INFORMACION DE PAGO', tx2, bankYStart2 + 6);
+
+  // Titular
+  pdf.setFontSize(8.5);
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Bancolombia  -  Ahorros', ml + 7, bankY2 + 11);
-  pdf.setFontSize(10);
+  pdf.text('Mariluz Lopez', tx2, bankYStart2 + 13);
+
+  // Banco + tipo de cuenta
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(203, 213, 225);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Bancolombia  -  Cuenta de Ahorros', tx2, bankYStart2 + 19);
+
+  // Numero de cuenta
+  pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(99, 244, 200);
-  pdf.text('13848930681', pageW - mr - 4, bankY2 + 11, { align: 'right' });
+  pdf.text('13848930681', tx2, bankYStart2 + 25);
+
+  // Nequi
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(167, 139, 250);
+  pdf.text('@mariluz3523', tx2, bankYStart2 + 31);
+
+  // QR de pago
+  try {
+    const qrResp2 = await fetch('/qr_pago.png');
+    if (qrResp2.ok) {
+      const qrBlob2 = await qrResp2.blob();
+      const qrDataUrl2 = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(qrBlob2);
+      });
+      const qrX2 = bx2 + bw2 - qrSize2 - 3;
+      const qrY2 = bankYStart2 + 2;
+      pdf.setFillColor(255, 255, 255);
+      pdf.roundedRect(qrX2 - 1, qrY2 - 1, qrSize2 + 2, qrSize2 + 2, 1, 1, 'F');
+      pdf.addImage(qrDataUrl2, 'PNG', qrX2, qrY2, qrSize2, qrSize2);
+    }
+  } catch (_e) { /* QR no disponible */ }
 
     pdf.save('CuentaCobro_FuriaRock_' + idVenta + '.pdf');
   };
