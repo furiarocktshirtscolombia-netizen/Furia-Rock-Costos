@@ -454,6 +454,25 @@ export default function App() {
       pdf.text('· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
     }
 
+
+    // Información bancaria
+    const bankY = Math.min(finalY + 28, pageH - 30);
+    pdf.setFillColor(15, 23, 42);
+    pdf.roundedRect(ml, bankY, pageW - ml - ml, 18, 2, 2, 'F');
+    pdf.setFillColor(99, 102, 241);
+    pdf.roundedRect(ml, bankY, 3, 18, 1, 1, 'F');
+    pdf.setFontSize(7);
+    pdf.setTextColor(148, 163, 184);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('INFORMACIÓN DE PAGO', ml + 7, bankY + 5);
+    pdf.setFontSize(9);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Bancolombia  -  Ahorros', ml + 7, bankY + 11);
+    pdf.setFontSize(10);
+    pdf.setTextColor(99, 244, 200);
+    pdf.text('13848930681', pageW - ml - 4, bankY + 11, { align: 'right' });
+
     const today2 = new Date().toISOString().split('T')[0];
     pdf.save('Cotizacion_FuriaRock_' + (clienteNombre || 'cliente').replace(/\s+/g, '_') + '_' + today2 + '.pdf');
     showToast('✅ PDF descargado correctamente');
@@ -562,6 +581,25 @@ export default function App() {
         pdf.text('Pág. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
       },
     });
+
+
+  // Información bancaria
+  const bankY2 = pageH - 28;
+  pdf.setFillColor(15, 23, 42);
+  pdf.roundedRect(ml, bankY2, pageW - ml - mr, 18, 2, 2, 'F');
+  pdf.setFillColor(99, 102, 241);
+  pdf.roundedRect(ml, bankY2, 3, 18, 1, 1, 'F');
+  pdf.setFontSize(7);
+  pdf.setTextColor(148, 163, 184);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('INFORMACIÓN DE PAGO', ml + 7, bankY2 + 5);
+  pdf.setFontSize(9);
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Bancolombia  -  Ahorros', ml + 7, bankY2 + 11);
+  pdf.setFontSize(10);
+  pdf.setTextColor(99, 244, 200);
+  pdf.text('13848930681', pageW - mr - 4, bankY2 + 11, { align: 'right' });
 
     pdf.save('CuentaCobro_FuriaRock_' + idVenta + '.pdf');
   };
