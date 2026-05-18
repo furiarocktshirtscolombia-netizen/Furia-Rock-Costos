@@ -163,7 +163,8 @@ export default function App() {
   const [colorMap, setColorMap] = useState<Record<string,string[]>>(() => loadLS('colorMap', {}));
   const [ventas, setVentas]     = useState<Venta[]>([]);
   const [compras, setCompras]   = useState<Compra[]>([]);
-  const [loading, setLoading]   = useState(false);
+
+  const [invDrive, setInvDrive] = useState<any[]>([]);  const [loading, setLoading]   = useState(false);
   const [toast, setToast]       = useState('');
 
   // Cotizador
@@ -225,6 +226,7 @@ export default function App() {
           localStorage.setItem('compras', JSON.stringify(d.compras));
         }
         if (d.inventario && d.inventario.length) {
+          setInvDrive(d.inventario);
           localStorage.setItem('invDrive', JSON.stringify(d.inventario));
         }
       })
@@ -242,6 +244,38 @@ export default function App() {
   const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG) : null;
   const inventario   = useMemo(() => calcInventario(ventas, compras, refs), [ventas, compras, refs]);
 
+
+  // Use Drive inventario when available, fall back to computed
+  const displayInventario = useMemo(() => {
+    if (invDrive && invDrive.length > 0) {
+      return invDrive.map((i: any) => {
+        // Resolve ref name: invDrive has 'referencia' field
+        let refName = i.referencia || i.ref || '';
+        if (!refName || /^rd+$/.test(refName)) {
+          // Try to match by cross-referencing compras/ventas
+          const fromCompras = compras.find(c => c.talla === i.talla && c.color === i.color && c.forma === i.forma);
+          const fromVentas = ventas.find(v => v.talla === i.talla && v.color === i.color && v.forma === i.forma);
+          const refId = fromCompras?.refId || fromVentas?.refId || '';
+          if (refId) {
+            const found = refs.find(r => r.id === refId);
+            if (found) refName = found.name;
+          }
+        }
+        return {
+          ref: refName || '—',
+          cat: i.categoria || i.cat || '',
+          talla: i.talla || '',
+          color: i.color || '',
+          forma: i.forma || '—',
+          comprado: Number(i.comprado || 0),
+          vendido: Number(i.vendido || 0),
+          stock: Number(i.stock || 0),
+          estado: i.estado || (Number(i.stock || 0) > 5 ? 'OK' : Number(i.stock || 0) > 2 ? 'Bajo' : 'Crítico'),
+        };
+      });
+    }
+    return inventario;
+  }, [invDrive, inventario, refs, compras, ventas]);
   const sincrResultados = async (v: Venta[], c: Compra[], inv: Item[]) => {
     const totalVentas   = v.reduce((a,x)=>a+x.totalVenta,0);
     const costoVentas   = v.reduce((a,x)=>a+x.costo,0);
@@ -564,20 +598,58 @@ export default function App() {
     setLoading(false);
   };
 
-  const buscarCuentaCobro = async (id: string) => {
+    // Helper to resolve reference name from refs array
+  const resolveRefName = (refId: string): string => {
+    const found = refs.find(r => r.id === refId || r.name === refId);
+    return found ? found.name : (refId || '—');
+  };
+
+  const buscarCuentaCobro = (id: string) => {
     if (!id.trim()) return;
-    setCcStatus('loading'); setCcData(null); setCcMsg('');
-    try {
-      const res = await fetch(GAS_URL + '?ventaId=' + encodeURIComponent(id.trim()));
-      const data = await res.json();
-      if (data.status === 'ok' && data.filas && data.filas.length > 0) {
-        setCcData(data.filas); setCcStatus('found');
-      } else if (data.status === 'not_found') {
-        setCcStatus('not_found'); setCcMsg('Esta venta no existe. Verifica el ID.');
-      } else {
-        setCcStatus('error'); setCcMsg('Error al consultar: ' + (data.msg || data.error || 'desconocido'));
-      }
-    } catch(e) { setCcStatus('error'); setCcMsg('Error de conexion. Verifica la red.'); }
+    setCcStatus('loading');
+    setCcData(null);
+    setCcMsg('');
+
+    // Search through the locally loaded ventas from Drive
+    const searchId = id.trim().toLowerCase();
+    
+    // Find all ventas matching this ID (could be same venta with multiple items)
+    const matching = ventas.filter(v => {
+      const vid = String(v.id || '').toLowerCase().trim();
+      const vorden = String(v.ordenInterna || '').toLowerCase().trim();
+      return vid === searchId || vorden === searchId;
+    });
+
+    if (matching.length > 0) {
+      // Convert to the format expected by the UI
+      const filas = matching.map(v => ({
+        ID: v.id,
+        Fecha: v.fecha,
+        Cliente: v.cliente,
+        Telefono: v.telefono,
+        Documento: v.documento,
+        Direccion: v.direccion,
+        Sede: v.sede,
+        Referencia: v.ref || resolveRefName(v.refId),
+        Color: v.color,
+        Talla: v.talla,
+        Forma: v.forma,
+        Cantidad: v.cantidad,
+        'Precio Unit.': v.precio,
+        'Total Venta': v.totalVenta,
+        OrdenInterna: v.ordenInterna,
+        Estado: v.estado,
+        Diseno: v.diseno,
+      }));
+      setCcData(filas);
+      setCcStatus('found');
+    } else if (ventas.length === 0) {
+      setCcStatus('error');
+      setCcMsg('Los datos de ventas aún están cargando. Espera un momento y vuelve a intentar.');
+    } else {
+      setCcStatus('not_found');
+      setCcMsg('No se encontró una venta con este ID. Verifica el número.');
+    }
   };
 
   const tabs: {id:Tab; label:string}[] = [
@@ -766,7 +838,7 @@ export default function App() {
                       <tr key={v.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                         <td className="py-2 pr-3 text-gray-300">{v.fecha}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.cliente || '—'}</td>
-                        <td className="py-2 pr-3 text-gray-200">{v.ref}</td>
+                        <td className="py-2 pr-3 text-gray-200">{v.ref || resolveRefName(v.refId)}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.color}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.talla}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.forma || '—'}</td>
@@ -832,7 +904,7 @@ export default function App() {
                       {compras.map(c => (
                         <tr key={c.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                           <td className="py-2 pr-3 text-gray-300">{c.fecha}</td>
-                          <td className="py-2 pr-3 text-gray-200">{c.ref}</td>
+                          <td className="py-2 pr-3 text-gray-200">{c.ref || resolveRefName(c.refId)}</td>
                           <td className="py-2 pr-3 text-gray-300">{c.forma || '—'}</td>
                           <td className="py-2 pr-3 text-right text-gray-300">{c.cantidad}</td>
                           <td className="py-2 text-right text-blue-400">{cop(c.total)}</td>
@@ -855,10 +927,10 @@ export default function App() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
-                { label:'En stock', val: inventario.reduce((a,i)=>a+Math.max(i.stock,0),0), color:'text-white' },
-                { label:'OK (>5)',   val: inventario.filter(i=>i.stock>5).length, color:'text-green-400' },
-                { label:'Bajo (≤5)', val: inventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
-                { label:'Crítico (≤2)', val: inventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
+                { label:'En stock', val: displayInventario.reduce((a,i)=>a+Math.max(i.stock,0),0), color:'text-white' },
+                { label:'OK (>5)',   val: displayInventario.filter(i=>i.stock>5).length, color:'text-green-400' },
+                { label:'Bajo (≤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
+                { label:'Crítico (≤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
               ].map(k => (
                 <div key={k.label} className="bg-gray-700 rounded-lg p-3 text-center">
                   <p className={`text-2xl font-bold ${k.color}`}>{k.val}</p>
@@ -880,7 +952,7 @@ export default function App() {
                   <th className="text-left py-2">Estado</th>
                 </tr></thead>
                 <tbody>
-                  {inventario.map((i,idx) => (
+                  {displayInventario.map((i,idx) => (
                     <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                       <td className="py-2 pr-3 font-medium text-gray-200">{i.ref}</td>
                       <td className="py-2 pr-3 text-gray-400">{i.cat}</td>
@@ -931,13 +1003,13 @@ export default function App() {
               <Card>
                 <CardTitle text="Stock Crítico" />
                 <div className="space-y-2">
-                  {inventario.filter(i=>i.stock<=2).map((i,idx) => (
+                  {displayInventario.filter(i=>i.stock<=2).map((i,idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm">
                       <span className="text-gray-200">{i.ref} / {i.talla} / {i.color}</span>
                       <Badge text={String(i.stock)} color="red" />
                     </div>
                   ))}
-                  {inventario.filter(i=>i.stock<=2).length === 0 && <p className="text-gray-500 text-sm">Sin items críticos ✅</p>}
+                  {displayInventario.filter(i=>i.stock<=2).length === 0 && <p className="text-gray-500 text-sm">Sin items críticos ✅</p>}
                 </div>
               </Card>
             </div>
