@@ -27,11 +27,15 @@ const TIPOS_IMP        = ["DTF","DTG"];
 const SEDES            = ["Medellin","Bogota","Cali","Online","Otra"];
 const FORMAS_CAMISETA  = ["Oversize","Regular Fit"];
 
+// Helper: detectar si una referencia es de Niño (acepta "Nino","niño","nino","Niño",etc.)
+const esNino = (cat: string) =>
+  cat.toLowerCase().replace(/[^a-z]/g,'').includes('nin');
+
 // COSTOS FIJOS DE PRODUCCION
-const GANANCIA_NETA_FIJA = 30000;   // COP ganancia neta por articulo
-const DTF_POR_CM2        = 170;     // COP por cm2 de area DTF
-const COSTO_EMPAQUE      = 1300;    // COP empaque fijo por unidad
-const COSTO_PLANCHADA    = 1000;    // COP por planchada (cantidad manual)
+const GANANCIA_NETA_FIJA = 30000;
+const DTF_POR_CM2        = 170;
+const COSTO_EMPAQUE      = 1300;
+const COSTO_PLANCHADA    = 1000;
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
@@ -143,7 +147,6 @@ const Badge = ({text,color}:{text:string;color:'green'|'yellow'|'red'}) => {
 
 // ─── Main App ─────────────────────────────────────────────────────────
 export default function App() {
-  // State
   const [tab, setTab]           = useState<Tab>('cotizador');
   const [refs, setRefs]         = useState<Ref[]>(() => loadLS('refs', REFS_DEFAULT));
   const [colorMap, setColorMap] = useState<Record<string,string[]>>(() => loadLS('colorMap', {}));
@@ -189,7 +192,6 @@ export default function App() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  // Load from Drive on mount
   useEffect(() => {
     fetch(GAS_URL)
       .then(r => r.json())
@@ -204,7 +206,11 @@ export default function App() {
   // Derived
   const currentRef   = refs.find(r => r.id === selRef);
   const coloresDisp  = currentRef ? (colorMap[currentRef.name] || COLORES_DEFAULT) : COLORES_DEFAULT;
-  const tallasDisp   = currentRef?.cat === 'Nino' ? TALLAS_NINO : TALLAS_ADULTO;
+  // Tallas: si la referencia es de niño → tallas niño; adulto → tallas adulto
+  // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niño, Niño, nino)
+  const tallasDisp   = currentRef
+    ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
+    : TODAS_TALLAS;
   const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG) : null;
   const inventario   = useMemo(() => calcInventario(ventas, compras), [ventas, compras]);
 
@@ -226,7 +232,6 @@ export default function App() {
     });
   };
 
-  // ── Registrar Venta ────────────────────────────────────────────────
   const registrarVenta = async () => {
     if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos'); return; }
     setLoading(true); setGasErr('');
@@ -261,7 +266,6 @@ export default function App() {
     setLoading(false);
   };
 
-  // ── Registrar Compra ───────────────────────────────────────────────
   const registrarCompra = async () => {
     const r = refs.find(x => x.id === cRef);
     if (!r || !cColor || !cTalla || cQty < 1) { showToast('Completa todos los campos'); return; }
@@ -286,32 +290,22 @@ export default function App() {
     setLoading(false);
   };
 
-  // ── Buscar Cuenta de Cobro ─────────────────────────────────────────
   const buscarCuentaCobro = async (id: string) => {
     if (!id.trim()) return;
-    setCcStatus('loading');
-    setCcData(null);
-    setCcMsg('');
+    setCcStatus('loading'); setCcData(null); setCcMsg('');
     try {
       const res = await fetch(GAS_URL + '?ventaId=' + encodeURIComponent(id.trim()));
       const data = await res.json();
       if (data.status === 'ok' && data.filas && data.filas.length > 0) {
-        setCcData(data.filas);
-        setCcStatus('found');
+        setCcData(data.filas); setCcStatus('found');
       } else if (data.status === 'not_found') {
-        setCcStatus('not_found');
-        setCcMsg('Esta venta no existe. Verifica el ID.');
+        setCcStatus('not_found'); setCcMsg('Esta venta no existe. Verifica el ID.');
       } else {
-        setCcStatus('error');
-        setCcMsg('Error al consultar: ' + (data.msg || data.error || 'desconocido'));
+        setCcStatus('error'); setCcMsg('Error al consultar: ' + (data.msg || data.error || 'desconocido'));
       }
-    } catch(e) {
-      setCcStatus('error');
-      setCcMsg('Error de conexion. Verifica la red.');
-    }
+    } catch(e) { setCcStatus('error'); setCcMsg('Error de conexion. Verifica la red.'); }
   };
 
-  // ─── Render ───────────────────────────────────────────────────────
   const tabs: {id:Tab; label:string}[] = [
     {id:'cotizador', label:'🧮 Cotizador'},
     {id:'ventas',    label:'💰 Ventas'},
@@ -324,24 +318,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {toast && (
-        <div className="fixed top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">
-          {toast}
-        </div>
+        <div className="fixed top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">{toast}</div>
       )}
-      {/* Header */}
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <h1 className="text-xl font-bold text-white">⚡ FURIA ROCK – Gestión de Costos</h1>
         <p className="text-xs text-gray-400 mt-0.5">Sincronizado con Google Drive</p>
       </div>
-      {/* Tabs */}
       <div className="bg-gray-800 border-b border-gray-700 px-4 flex gap-1 flex-wrap">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
               tab===t.id ? 'border-indigo-400 text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-200'
-            }`}>
-            {t.label}
-          </button>
+            }`}>{t.label}</button>
         ))}
       </div>
 
@@ -350,22 +338,20 @@ export default function App() {
         {/* ═══ COTIZADOR ═══ */}
         {tab === 'cotizador' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Producto */}
             <Card>
               <CardTitle text="Producto" />
               <div className="space-y-3">
                 <FG label="Referencia">
                   <Sel options={refs.map(r => r.name)} value={currentRef?.name ?? ''} onChange={e => {
                     const r = refs.find(x => x.name === e.target.value);
-                    setSelRef(r?.id ?? '');
-                    setSelColor(''); setSelTalla('');
+                    setSelRef(r?.id ?? ''); setSelColor(''); setSelTalla('');
                   }} />
                 </FG>
                 <FG label="Color">
                   <Sel options={coloresDisp} value={selColor} onChange={e => setSelColor(e.target.value)} />
                 </FG>
                 <div className="grid grid-cols-2 gap-3">
-                  <FG label="Talla">
+                  <FG label={`Talla${currentRef ? ' (' + (esNino(currentRef.cat) ? 'Niño' : 'Adulto') + ')' : ''}`}>
                     <Sel options={tallasDisp} value={selTalla} onChange={e => setSelTalla(e.target.value)} />
                   </FG>
                   <FG label="Forma de la camiseta">
@@ -378,15 +364,11 @@ export default function App() {
               </div>
             </Card>
 
-            {/* Costos de produccion */}
             <Card>
               <CardTitle text="Costos de Produccion" />
               <div className="space-y-3">
                 <FG label="Tipo de impresion">
-                  <Sel options={TIPOS_IMP} value={selTipoImp} onChange={e => {
-                    setSelTipoImp(e.target.value);
-                    setCostoDTG(0);
-                  }} />
+                  <Sel options={TIPOS_IMP} value={selTipoImp} onChange={e => { setSelTipoImp(e.target.value); setCostoDTG(0); }} />
                 </FG>
                 {selTipoImp === 'DTF' && (
                   <div className="grid grid-cols-2 gap-3">
@@ -404,59 +386,26 @@ export default function App() {
                   </FG>
                 )}
                 <div className="mt-2 p-3 bg-gray-700 rounded-lg space-y-1 text-sm">
-                  <div className="flex justify-between text-gray-400">
-                    <span>Base camisa:</span>
-                    <span>{currentRef ? cop(currentRef.cost) : '—'}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-400">
-                    <span>Empaque:</span>
-                    <span>{cop(COSTO_EMPAQUE)}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-400">
-                    <span>Impresion:</span>
-                    <span>{currentRef ? cop(selTipoImp==='DTF' ? cmDTF*DTF_POR_CM2 + numPlanchadas*COSTO_PLANCHADA : costoDTG) : '—'}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-white border-t border-gray-600 pt-1">
-                    <span>Costo total ({selQty} und):</span>
-                    <span>{calc ? cop(calc.costo) : '—'}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-green-400">
-                    <span>Precio sugerido ({selQty} und):</span>
-                    <span>{calc ? cop(calc.precio) : '—'}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-400 text-xs">
-                    <span>Ganancia neta:</span>
-                    <span>{calc ? cop(GANANCIA_NETA_FIJA * selQty) : '—'}</span>
-                  </div>
+                  <div className="flex justify-between text-gray-400"><span>Base camisa:</span><span>{currentRef ? cop(currentRef.cost) : '—'}</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Empaque:</span><span>{cop(COSTO_EMPAQUE)}</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Impresion:</span><span>{currentRef ? cop(selTipoImp==='DTF' ? cmDTF*DTF_POR_CM2 + numPlanchadas*COSTO_PLANCHADA : costoDTG) : '—'}</span></div>
+                  <div className="flex justify-between font-semibold text-white border-t border-gray-600 pt-1"><span>Costo total ({selQty} und):</span><span>{calc ? cop(calc.costo) : '—'}</span></div>
+                  <div className="flex justify-between font-semibold text-green-400"><span>Precio sugerido ({selQty} und):</span><span>{calc ? cop(calc.precio) : '—'}</span></div>
+                  <div className="flex justify-between text-gray-400 text-xs"><span>Ganancia neta:</span><span>{calc ? cop(GANANCIA_NETA_FIJA * selQty) : '—'}</span></div>
                 </div>
               </div>
             </Card>
 
-            {/* Datos del cliente */}
             <Card className="lg:col-span-2">
               <CardTitle text="Datos del Cliente" />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <FG label="Nombre del cliente">
-                  <Inp value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} placeholder="Nombre completo" />
-                </FG>
-                <FG label="Teléfono / Contacto">
-                  <Inp value={clienteTel} onChange={e => setClienteTel(e.target.value)} placeholder="Ej: 3001234567" />
-                </FG>
-                <FG label="Documento">
-                  <Inp value={clienteDoc} onChange={e => setClienteDoc(e.target.value)} placeholder="CC / NIT" />
-                </FG>
-                <FG label="Dirección">
-                  <Inp value={clienteDireccion} onChange={e => setClienteDireccion(e.target.value)} placeholder="Dirección de entrega" />
-                </FG>
-                <FG label="Sede / Punto de venta">
-                  <Sel options={SEDES} value={clienteSede} onChange={e => setClienteSede(e.target.value)} />
-                </FG>
-                <FG label="Diseño">
-                  <Inp value={clienteDiseno} onChange={e => setClienteDiseno(e.target.value)} placeholder="Nombre del diseño" />
-                </FG>
-                <FG label="Orden interna (referencia interna)">
-                  <Inp value={clienteOrden} onChange={e => setClienteOrden(e.target.value)} placeholder="Ej: ORD-001" />
-                </FG>
+                <FG label="Nombre del cliente"><Inp value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} placeholder="Nombre completo" /></FG>
+                <FG label="Teléfono / Contacto"><Inp value={clienteTel} onChange={e => setClienteTel(e.target.value)} placeholder="Ej: 3001234567" /></FG>
+                <FG label="Documento"><Inp value={clienteDoc} onChange={e => setClienteDoc(e.target.value)} placeholder="CC / NIT" /></FG>
+                <FG label="Dirección"><Inp value={clienteDireccion} onChange={e => setClienteDireccion(e.target.value)} placeholder="Dirección de entrega" /></FG>
+                <FG label="Sede / Punto de venta"><Sel options={SEDES} value={clienteSede} onChange={e => setClienteSede(e.target.value)} /></FG>
+                <FG label="Diseño"><Inp value={clienteDiseno} onChange={e => setClienteDiseno(e.target.value)} placeholder="Nombre del diseño" /></FG>
+                <FG label="Orden interna"><Inp value={clienteOrden} onChange={e => setClienteOrden(e.target.value)} placeholder="Ej: ORD-001" /></FG>
               </div>
               {gasErr && <p className="text-red-400 text-xs mt-2">{gasErr}</p>}
               <div className="mt-4">
@@ -475,24 +424,20 @@ export default function App() {
               <CardTitle text={`Historial de Ventas (${ventas.length})`} />
               <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>⬇ CSV</Btn>
             </div>
-            {ventas.length === 0 ? (
-              <p className="text-gray-500 text-sm">No hay ventas registradas.</p>
-            ) : (
+            {ventas.length === 0 ? <p className="text-gray-500 text-sm">No hay ventas registradas.</p> : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-gray-400 border-b border-gray-700">
-                      <th className="text-left py-2 pr-3">Fecha</th>
-                      <th className="text-left py-2 pr-3">Cliente</th>
-                      <th className="text-left py-2 pr-3">Referencia</th>
-                      <th className="text-left py-2 pr-3">Color</th>
-                      <th className="text-left py-2 pr-3">Talla</th>
-                      <th className="text-left py-2 pr-3">Forma</th>
-                      <th className="text-right py-2 pr-3">Cant.</th>
-                      <th className="text-right py-2 pr-3">Total</th>
-                      <th className="text-right py-2">Ganancia</th>
-                    </tr>
-                  </thead>
+                  <thead><tr className="text-gray-400 border-b border-gray-700">
+                    <th className="text-left py-2 pr-3">Fecha</th>
+                    <th className="text-left py-2 pr-3">Cliente</th>
+                    <th className="text-left py-2 pr-3">Referencia</th>
+                    <th className="text-left py-2 pr-3">Color</th>
+                    <th className="text-left py-2 pr-3">Talla</th>
+                    <th className="text-left py-2 pr-3">Forma</th>
+                    <th className="text-right py-2 pr-3">Cant.</th>
+                    <th className="text-right py-2 pr-3">Total</th>
+                    <th className="text-right py-2">Ganancia</th>
+                  </tr></thead>
                   <tbody>
                     {ventas.map(v => (
                       <tr key={v.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
@@ -527,55 +472,36 @@ export default function App() {
                   }} />
                 </FG>
                 <div className="grid grid-cols-2 gap-3">
-                  <FG label="Color">
-                    <Sel options={COLORES_DEFAULT} value={cColor} onChange={e => setCColor(e.target.value)} />
-                  </FG>
-                  <FG label="Talla">
-                    <Sel options={TODAS_TALLAS} value={cTalla} onChange={e => setCTalla(e.target.value)} />
-                  </FG>
+                  <FG label="Color"><Sel options={COLORES_DEFAULT} value={cColor} onChange={e => setCColor(e.target.value)} /></FG>
+                  <FG label="Talla"><Sel options={TODAS_TALLAS} value={cTalla} onChange={e => setCTalla(e.target.value)} /></FG>
                 </div>
                 <FG label="Forma de la camiseta">
                   <Sel options={FORMAS_CAMISETA} value={cForma} onChange={e => setCForma(e.target.value)} />
                 </FG>
                 <div className="grid grid-cols-2 gap-3">
-                  <FG label="Cantidad">
-                    <Inp type="number" min={1} value={cQty} onChange={e => setCQty(Number(e.target.value))} />
-                  </FG>
-                  <FG label="Precio unitario (COP)">
-                    <Inp type="number" min={0} value={cPrecio} onChange={e => setCPrecio(Number(e.target.value))} />
-                  </FG>
+                  <FG label="Cantidad"><Inp type="number" min={1} value={cQty} onChange={e => setCQty(Number(e.target.value))} /></FG>
+                  <FG label="Precio unitario (COP)"><Inp type="number" min={0} value={cPrecio} onChange={e => setCPrecio(Number(e.target.value))} /></FG>
                 </div>
-                <FG label="Proveedor">
-                  <Inp value={cProv} onChange={e => setCProv(e.target.value)} placeholder="Nombre del proveedor" />
-                </FG>
-                <FG label="Notas">
-                  <Inp value={cNotas} onChange={e => setCNotas(e.target.value)} placeholder="Observaciones" />
-                </FG>
-                <Btn onClick={registrarCompra} disabled={loading}>
-                  {loading ? 'Guardando…' : '+ Registrar Compra'}
-                </Btn>
+                <FG label="Proveedor"><Inp value={cProv} onChange={e => setCProv(e.target.value)} placeholder="Nombre del proveedor" /></FG>
+                <FG label="Notas"><Inp value={cNotas} onChange={e => setCNotas(e.target.value)} placeholder="Observaciones" /></FG>
+                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'Guardando…' : '+ Registrar Compra'}</Btn>
               </div>
             </Card>
-
             <Card>
               <div className="flex items-center justify-between mb-3">
                 <CardTitle text={`Historial de Compras (${compras.length})`} />
                 <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>⬇ CSV</Btn>
               </div>
-              {compras.length === 0 ? (
-                <p className="text-gray-500 text-sm">No hay compras registradas.</p>
-              ) : (
+              {compras.length === 0 ? <p className="text-gray-500 text-sm">No hay compras registradas.</p> : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-gray-400 border-b border-gray-700">
-                        <th className="text-left py-2 pr-3">Fecha</th>
-                        <th className="text-left py-2 pr-3">Referencia</th>
-                        <th className="text-left py-2 pr-3">Forma</th>
-                        <th className="text-right py-2 pr-3">Cant.</th>
-                        <th className="text-right py-2">Total</th>
-                      </tr>
-                    </thead>
+                    <thead><tr className="text-gray-400 border-b border-gray-700">
+                      <th className="text-left py-2 pr-3">Fecha</th>
+                      <th className="text-left py-2 pr-3">Referencia</th>
+                      <th className="text-left py-2 pr-3">Forma</th>
+                      <th className="text-right py-2 pr-3">Cant.</th>
+                      <th className="text-right py-2">Total</th>
+                    </tr></thead>
                     <tbody>
                       {compras.map(c => (
                         <tr key={c.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
@@ -601,12 +527,11 @@ export default function App() {
               <CardTitle text="Inventario en Tiempo Real" />
               <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>⬇ CSV</Btn>
             </div>
-            {/* KPI row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
                 { label:'En stock', val: inventario.reduce((a,i)=>a+Math.max(i.stock,0),0), color:'text-white' },
                 { label:'OK (>5)',   val: inventario.filter(i=>i.stock>5).length, color:'text-green-400' },
-                { label:'Bajo (≤5)',  val: inventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
+                { label:'Bajo (≤5)', val: inventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
                 { label:'Crítico (≤2)', val: inventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
               ].map(k => (
                 <div key={k.label} className="bg-gray-700 rounded-lg p-3 text-center">
@@ -617,18 +542,16 @@ export default function App() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-gray-400 border-b border-gray-700">
-                    <th className="text-left py-2 pr-3">Referencia</th>
-                    <th className="text-left py-2 pr-3">Cat.</th>
-                    <th className="text-left py-2 pr-3">Talla</th>
-                    <th className="text-left py-2 pr-3">Color</th>
-                    <th className="text-right py-2 pr-3">Comprado</th>
-                    <th className="text-right py-2 pr-3">Vendido</th>
-                    <th className="text-right py-2 pr-3">Stock</th>
-                    <th className="text-left py-2">Estado</th>
-                  </tr>
-                </thead>
+                <thead><tr className="text-gray-400 border-b border-gray-700">
+                  <th className="text-left py-2 pr-3">Referencia</th>
+                  <th className="text-left py-2 pr-3">Cat.</th>
+                  <th className="text-left py-2 pr-3">Talla</th>
+                  <th className="text-left py-2 pr-3">Color</th>
+                  <th className="text-right py-2 pr-3">Comprado</th>
+                  <th className="text-right py-2 pr-3">Vendido</th>
+                  <th className="text-right py-2 pr-3">Stock</th>
+                  <th className="text-left py-2">Estado</th>
+                </tr></thead>
                 <tbody>
                   {inventario.map((i,idx) => (
                     <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
@@ -639,12 +562,7 @@ export default function App() {
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
-                      <td className="py-2">
-                        <Badge
-                          text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠️ Bajo':'🔴 Crítico'}
-                          color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'}
-                        />
-                      </td>
+                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠️ Bajo':'🔴 Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -658,10 +576,10 @@ export default function App() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label:'Total Ingresos',   val: cop(ventas.reduce((a,v)=>a+v.totalVenta,0)), color:'text-green-400' },
-                { label:'Total Costo',      val: cop(ventas.reduce((a,v)=>a+v.costo,0)),      color:'text-red-400'   },
-                { label:'Ganancia Bruta',   val: cop(ventas.reduce((a,v)=>a+v.ganancia,0)),   color:'text-indigo-400'},
-                { label:'Unidades Vendidas',val: ventas.reduce((a,v)=>a+v.cantidad,0).toString(), color:'text-yellow-400'},
+                { label:'Total Ingresos',    val: cop(ventas.reduce((a,v)=>a+v.totalVenta,0)), color:'text-green-400' },
+                { label:'Total Costo',       val: cop(ventas.reduce((a,v)=>a+v.costo,0)),      color:'text-red-400'   },
+                { label:'Ganancia Bruta',    val: cop(ventas.reduce((a,v)=>a+v.ganancia,0)),   color:'text-indigo-400'},
+                { label:'Unidades Vendidas', val: ventas.reduce((a,v)=>a+v.cantidad,0).toString(), color:'text-yellow-400'},
               ].map(k => (
                 <Card key={k.label} className="text-center">
                   <p className={`text-3xl font-bold ${k.color}`}>{k.val}</p>
@@ -675,10 +593,7 @@ export default function App() {
                 <div className="space-y-2">
                   {ventas.slice(0,5).map(v => (
                     <div key={v.id} className="flex justify-between items-center text-sm">
-                      <div>
-                        <span className="text-gray-200">{v.ref}</span>
-                        <span className="text-gray-500 ml-2">{v.talla} / {v.color}</span>
-                      </div>
+                      <div><span className="text-gray-200">{v.ref}</span><span className="text-gray-500 ml-2">{v.talla} / {v.color}</span></div>
                       <span className="text-green-400">{cop(v.totalVenta)}</span>
                     </div>
                   ))}
@@ -708,56 +623,33 @@ export default function App() {
               <CardTitle text="Buscar Venta por ID" />
               <div className="flex gap-3 items-end">
                 <FG label="ID de la venta">
-                  <Inp
-                    value={ccId}
-                    onChange={e => {
-                      setCcId(e.target.value);
-                      setCcStatus('idle');
-                      setCcData(null);
-                      setCcMsg('');
-                      if (e.target.value.trim().length > 5) {
-                        buscarCuentaCobro(e.target.value.trim());
-                      }
-                    }}
-                    placeholder="Ingresa el ID de la venta (ej: 1779063838818)"
-                    className="w-80"
-                  />
+                  <Inp value={ccId} onChange={e => {
+                    setCcId(e.target.value); setCcStatus('idle'); setCcData(null); setCcMsg('');
+                    if (e.target.value.trim().length > 5) buscarCuentaCobro(e.target.value.trim());
+                  }} placeholder="Ingresa el ID de la venta (ej: 1779063838818)" className="w-80" />
                 </FG>
                 <Btn onClick={() => buscarCuentaCobro(ccId)} disabled={!ccId.trim() || ccStatus==='loading'}>
                   {ccStatus === 'loading' ? 'Buscando…' : '🔍 Buscar'}
                 </Btn>
               </div>
-
-              {ccStatus === 'loading' && (
-                <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google Drive…</p>
-              )}
-              {ccStatus === 'not_found' && (
-                <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg">
-                  <p className="text-red-300 text-sm">⚠️ {ccMsg}</p>
-                </div>
-              )}
-              {ccStatus === 'error' && (
-                <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg">
-                  <p className="text-yellow-300 text-sm">⚠️ {ccMsg}</p>
-                </div>
-              )}
+              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google Drive…</p>}
+              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">⚠️ {ccMsg}</p></div>}
+              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">⚠️ {ccMsg}</p></div>}
             </Card>
 
             {ccStatus === 'found' && ccData && ccData.length > 0 && (() => {
               const fila0 = ccData[0];
-              const clienteNom  = fila0['Cliente']      || fila0['cliente']      || '—';
-              const clienteFon  = fila0['Telefono']     || fila0['telefono']     || '—';
-              const clienteDoc2 = fila0['Documento']    || fila0['documento']    || '—';
-              const clienteDir  = fila0['Direccion']    || fila0['direccion']    || '—';
-              const clienteS    = fila0['Sede']         || fila0['sede']         || '—';
-              const fecha       = fila0['Fecha']        || fila0['fecha']        || '—';
-              const idVenta     = fila0['ID']           || fila0['id']           || ccId;
-
+              const clienteNom  = fila0['Cliente']   || fila0['cliente']   || '—';
+              const clienteFon  = fila0['Telefono']  || fila0['telefono']  || '—';
+              const clienteDoc2 = fila0['Documento'] || fila0['documento'] || '—';
+              const clienteDir  = fila0['Direccion'] || fila0['direccion'] || '—';
+              const clienteS    = fila0['Sede']      || fila0['sede']      || '—';
+              const fecha       = fila0['Fecha']     || fila0['fecha']     || '—';
+              const idVenta     = fila0['ID']        || fila0['id']        || ccId;
               const totalGeneral = ccData.reduce((acc: number, row: any) => {
-                const tv = Number(String(row['Total Venta'] || row['totalVenta'] || row['TotalVenta'] || 0).toString().replace(/[^0-9.-]/g,''));
+                const tv = Number(String(row['Total Venta'] || row['totalVenta'] || row['TotalVenta'] || 0).replace(/[^0-9.-]/g,''));
                 return acc + tv;
               }, 0);
-
               return (
                 <div className="space-y-4">
                   <Card className="border border-indigo-700">
@@ -772,17 +664,10 @@ export default function App() {
                       </div>
                     </div>
                   </Card>
-
                   <Card>
                     <CardTitle text="A. Datos del Cliente" />
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {[
-                        { label:'Cliente',    val: clienteNom  },
-                        { label:'Teléfono',   val: clienteFon  },
-                        { label:'Documento',  val: clienteDoc2 },
-                        { label:'Dirección',  val: clienteDir  },
-                        { label:'Sede',       val: clienteS    },
-                      ].map(item => (
+                      {[{label:'Cliente',val:clienteNom},{label:'Teléfono',val:clienteFon},{label:'Documento',val:clienteDoc2},{label:'Dirección',val:clienteDir},{label:'Sede',val:clienteS}].map(item => (
                         <div key={item.label}>
                           <p className="text-xs text-gray-400">{item.label}</p>
                           <p className="text-sm text-white font-medium mt-0.5">{item.val}</p>
@@ -790,32 +675,29 @@ export default function App() {
                       ))}
                     </div>
                   </Card>
-
                   <Card>
                     <CardTitle text="B. Detalle de la Venta" />
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-gray-400 border-b border-gray-700">
-                            <th className="text-left py-2 pr-3">#</th>
-                            <th className="text-left py-2 pr-3">Referencia</th>
-                            <th className="text-left py-2 pr-3">Color</th>
-                            <th className="text-left py-2 pr-3">Talla</th>
-                            <th className="text-left py-2 pr-3">Forma</th>
-                            <th className="text-right py-2 pr-3">Cant.</th>
-                            <th className="text-left py-2 pr-3">Orden interna</th>
-                            <th className="text-right py-2">Total</th>
-                          </tr>
-                        </thead>
+                        <thead><tr className="text-gray-400 border-b border-gray-700">
+                          <th className="text-left py-2 pr-3">#</th>
+                          <th className="text-left py-2 pr-3">Referencia</th>
+                          <th className="text-left py-2 pr-3">Color</th>
+                          <th className="text-left py-2 pr-3">Talla</th>
+                          <th className="text-left py-2 pr-3">Forma</th>
+                          <th className="text-right py-2 pr-3">Cant.</th>
+                          <th className="text-left py-2 pr-3">Orden interna</th>
+                          <th className="text-right py-2">Total</th>
+                        </tr></thead>
                         <tbody>
                           {ccData.map((row: any, idx: number) => {
-                            const refName = row['Referencia'] || row['referencia'] || row['ref'] || '—';
-                            const colorV  = row['Color']      || row['color']      || '—';
-                            const tallaV  = row['Talla']      || row['talla']      || '—';
-                            const formaV  = row['Forma']      || row['forma']      || '—';
-                            const cantV   = row['Cantidad']   || row['cantidad']   || 0;
-                            const ordenV  = row['OrdenInterna']|| row['ordenInterna']|| row['Orden interna'] || '—';
-                            const totalV  = Number(String(row['Total Venta'] || row['totalVenta'] || row['TotalVenta'] || 0).toString().replace(/[^0-9.-]/g,''));
+                            const refName = row['Referencia']||row['referencia']||row['ref']||'—';
+                            const colorV  = row['Color']||row['color']||'—';
+                            const tallaV  = row['Talla']||row['talla']||'—';
+                            const formaV  = row['Forma']||row['forma']||'—';
+                            const cantV   = row['Cantidad']||row['cantidad']||0;
+                            const ordenV  = row['OrdenInterna']||row['ordenInterna']||row['Orden interna']||'—';
+                            const totalV  = Number(String(row['Total Venta']||row['totalVenta']||row['TotalVenta']||0).replace(/[^0-9.-]/g,''));
                             return (
                               <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                                 <td className="py-2 pr-3 text-gray-500">{idx+1}</td>
@@ -833,7 +715,6 @@ export default function App() {
                       </table>
                     </div>
                   </Card>
-
                   <Card className="border border-green-700">
                     <CardTitle text="C. Resumen" />
                     <div className="flex items-center justify-between">
