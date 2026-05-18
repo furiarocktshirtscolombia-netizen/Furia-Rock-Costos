@@ -68,21 +68,30 @@ const sendToGAS = async (body: object) => {
   return r.json();
 };
 
-const calcInventario = (ventas: Venta[], compras: Compra[]) => {
-  const map: Record<string,Item> = {};
+const calcInventario = (ventas: Venta[], compras: Compra[], refsList: Ref[] = []) => {
+  const resolveRef = (ref: string, refId: string): string => {
+    if (ref && ref.length > 3 && !/^r\d+$/.test(ref)) return ref;
+    const found = refsList.find(r => r.id === refId || r.name === ref);
+    return found ? found.name : (ref || refId || '—');
+  };
+  const map: Record<string, Item> = {};
   compras.forEach(c => {
-    const k = c.refId+'|'+c.talla+'|'+c.color+'|'+(c.forma||'_');
-    if (!map[k]) map[k] = { ref:c.ref, refId:c.refId, cat:c.cat, talla:c.talla, color:c.color, forma:c.forma||'_', comprado:0, vendido:0, stock:0, estado:'' };
+    const k = `${c.refId}|${c.talla}|${c.color}|${c.forma || '_'}`;
+    if (!map[k]) map[k] = { ref: resolveRef(c.ref, c.refId), refId: c.refId, cat: c.cat, talla: c.talla, color: c.color, forma: c.forma || '—', comprado: 0, vendido: 0, stock: 0, estado: '' };
     map[k].comprado += c.cantidad;
   });
   ventas.forEach(v => {
-    const k = v.refId+'|'+v.talla+'|'+v.color+'|'+(v.forma||'_');
-    if (!map[k]) map[k] = { ref:v.ref, refId:v.refId, cat:v.cat, talla:v.talla, color:v.color, forma:v.forma||'_', comprado:0, vendido:0, stock:0, estado:'' };
+    const k = `${v.refId}|${v.talla}|${v.color}|${v.forma || '_'}`;
+    if (!map[k]) map[k] = { ref: resolveRef(v.ref, v.refId), refId: v.refId, cat: v.cat, talla: v.talla, color: v.color, forma: v.forma || '—', comprado: 0, vendido: 0, stock: 0, estado: '' };
     map[k].vendido += v.cantidad;
   });
   Object.values(map).forEach(i => {
     i.stock = i.comprado - i.vendido;
-    i.estado = i.stock > 5 ? 'OK' : i.stock > 2 ? 'Bajo' : 'Critico';
+    i.estado = i.stock > 5 ? 'OK' : i.stock > 2 ? 'Bajo' : 'Crítico';
+    if (!i.ref || i.ref === '—' || /^r\d+$/.test(i.ref)) {
+      const found = refsList.find(r => r.id === i.refId);
+      if (found) i.ref = found.name;
+    }
   });
   return Object.values(map);
 };
@@ -199,14 +208,28 @@ export default function App() {
     fetch(GAS_URL)
       .then(r => r.json())
       .then(d => {
-        if (d.refs  && d.refs.length)    { setRefs(d.refs);      localStorage.setItem('refs',     JSON.stringify(d.refs)); }
-        if (d.colorMap)                  { setColorMap(d.colorMap); localStorage.setItem('colorMap', JSON.stringify(d.colorMap)); }
-        if (d.inventario && d.inventario.length) localStorage.setItem('invDrive', JSON.stringify(d.inventario));
-        if (d.ventas   && d.ventas.length)   { setVentas(d.ventas);   localStorage.setItem('ventas',   JSON.stringify(d.ventas)); }
-        if (d.compras  && d.compras.length)  { setCompras(d.compras); localStorage.setItem('compras',  JSON.stringify(d.compras)); }
+        if (d.refs && d.refs.length) {
+          setRefs(d.refs);
+          localStorage.setItem('refs', JSON.stringify(d.refs));
+        }
+        if (d.colorMap) {
+          setColorMap(d.colorMap);
+          localStorage.setItem('colorMap', JSON.stringify(d.colorMap));
+        }
+        if (d.ventas && d.ventas.length) {
+          setVentas(d.ventas);
+          localStorage.setItem('ventas', JSON.stringify(d.ventas));
+        }
+        if (d.compras && d.compras.length) {
+          setCompras(d.compras);
+          localStorage.setItem('compras', JSON.stringify(d.compras));
+        }
+        if (d.inventario && d.inventario.length) {
+          localStorage.setItem('invDrive', JSON.stringify(d.inventario));
+        }
       })
       .catch(() => {});
-  }, []);
+  }, [])
 
   // Derived
   const currentRef   = refs.find(r => r.id === selRef);
@@ -217,7 +240,7 @@ export default function App() {
     ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
     : TODAS_TALLAS;
   const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG) : null;
-  const inventario   = useMemo(() => calcInventario(ventas, compras), [ventas, compras]);
+  const inventario   = useMemo(() => calcInventario(ventas, compras, refs), [ventas, compras, refs]);
 
   const sincrResultados = async (v: Venta[], c: Compra[], inv: Item[]) => {
     const totalVentas   = v.reduce((a,x)=>a+x.totalVenta,0);
@@ -254,70 +277,230 @@ export default function App() {
 
   const generarCotizacionPDF = () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un ítem para generar el PDF'); return; }
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-    const pageW = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    doc.setFillColor(30, 30, 46);
-    doc.rect(0, 0, pageW, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('FURIA ROCK', margin, 13);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Cotización de Pedido', margin, 20);
-    const fecha = new Date().toLocaleDateString('es-CO', { year:'numeric', month:'long', day:'numeric' });
-    doc.text(fecha, pageW - margin, 20, { align: 'right' });
-    doc.setTextColor(40, 40, 40);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Datos del Cliente', margin, 40);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('Cliente: ' + (clienteNombre || 'Sin nombre'), margin, 47);
-    if (clienteTel) doc.text('Teléfono: ' + clienteTel, margin, 53);
-    if (clienteDoc) doc.text('Documento: ' + clienteDoc, margin, 59);
-    if (clienteDireccion) doc.text('Dirección: ' + clienteDireccion, margin + 70, 47);
-    if (clienteSede) doc.text('Sede: ' + clienteSede, margin + 70, 53);
-    if (clienteOrden) doc.text('Orden: ' + clienteOrden, margin + 70, 59);
+
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ml = 18, mr = 18;
+    const contentW = pageW - ml - mr;
+    const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    const cotizId = 'COT-' + Date.now().toString().slice(-8);
+
+    // Header background
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, pageW, 42, 'F');
+    pdf.setFillColor(99, 102, 241);
+    pdf.rect(0, 0, 5, 42, 'F');
+
+    // Company name
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(22);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FURIA ROCK', ml + 2, 17);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(148, 163, 184);
+    pdf.text('Camisetas & Diseño Personalizado', ml + 2, 24);
+
+    // Document type (right)
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(199, 210, 254);
+    pdf.text('COTIZACIÓN', pageW - mr, 17, { align: 'right' });
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(148, 163, 184);
+    pdf.text('No. ' + cotizId, pageW - mr, 24, { align: 'right' });
+    pdf.text('Fecha: ' + fecha, pageW - mr, 30, { align: 'right' });
+
+    // Client section
+    const clienteY = 52;
+    pdf.setFillColor(241, 245, 249);
+    pdf.roundedRect(ml, clienteY - 6, contentW, 34, 2, 2, 'F');
+    pdf.setFontSize(7.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(71, 85, 105);
+    pdf.text('INFORMACIÓN DEL CLIENTE', ml + 4, clienteY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(15, 23, 42);
+    pdf.setFontSize(10);
+    pdf.text(clienteNombre || 'Cliente no especificado', ml + 4, clienteY + 8);
+    const col2X = ml + contentW / 2;
+    pdf.setFontSize(8);
+    pdf.setTextColor(71, 85, 105);
+    let infoY = clienteY + 15;
+    if (clienteTel) pdf.text('Tel: ' + clienteTel, ml + 4, infoY);
+    if (clienteDoc) pdf.text('Doc: ' + clienteDoc, col2X, infoY);
+    infoY += 6;
+    if (clienteDireccion) pdf.text('Dir: ' + clienteDireccion, ml + 4, infoY);
+    if (clienteSede) pdf.text('Sede: ' + clienteSede, col2X, infoY);
+
+    // Products table
+    const tableY = clienteY + 38;
     const tableData = cartItems.map((item, i) => [
-      String(i + 1), item.ref, item.color, item.talla,
-      item.forma || '-', String(item.qty),
-      cop(item.precio / item.qty), cop(item.precio)
+      String(i + 1), item.ref, item.color, item.talla, item.forma || '—',
+      String(item.qty), cop(item.precio), cop(item.precio * item.qty),
     ]);
-    const total = cartItems.reduce((s, i) => s + i.precio, 0);
-    (doc as any).autoTable({
-      startY: 68,
-      head: [['#', 'Referencia', 'Color', 'Talla', 'Forma', 'Cant.', 'P. Unitario', 'Total']],
+    const total = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
+
+    (pdf as any).autoTable({
+      startY: tableY,
+      head: [['#', 'REFERENCIA', 'COLOR', 'TALLA', 'FORMA', 'CANT', 'P. UNIT', 'SUBTOTAL']],
       body: tableData,
       foot: [['', '', '', '', '', '', 'TOTAL PEDIDO', cop(total)]],
-      theme: 'striped',
-      headStyles: { fillColor: [30, 30, 46], textColor: [255,255,255], fontSize: 9, fontStyle: 'bold' },
-      footStyles: { fillColor: [240, 240, 240], textColor: [30,30,46], fontSize: 10, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 9 },
+      theme: 'plain',
+      headStyles: { fillColor: [15, 23, 42], textColor: [199, 210, 254], fontSize: 7.5, fontStyle: 'bold', cellPadding: { top: 4, bottom: 4, left: 3, right: 3 } },
+      footStyles: { fillColor: [238, 242, 255], textColor: [67, 56, 202], fontSize: 10, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 3, right: 3 } },
+      bodyStyles: { fontSize: 8.5, textColor: [30, 41, 59], cellPadding: { top: 4, bottom: 4, left: 3, right: 3 } },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 8 },
-        1: { cellWidth: 50 },
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 52 },
         2: { cellWidth: 22 },
-        3: { cellWidth: 18 },
-        4: { cellWidth: 22 },
+        3: { cellWidth: 14, halign: 'center' },
+        4: { cellWidth: 22, halign: 'center' },
         5: { cellWidth: 12, halign: 'center' },
         6: { cellWidth: 24, halign: 'right' },
-        7: { cellWidth: 24, halign: 'right' },
+        7: { cellWidth: 26, halign: 'right' },
       },
-      margin: { left: margin, right: margin },
+      margin: { left: ml, right: mr },
+      tableLineColor: [226, 232, 240],
+      tableLineWidth: 0.1,
       didDrawPage: (data: any) => {
-        doc.setFontSize(8);
-        doc.setTextColor(150,150,150);
-        doc.text('Furia Rock • Cotización Pág. ' + data.pageNumber, pageW / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
-      }
+        const footY = pageH - 12;
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setLineWidth(0.3);
+        pdf.line(ml, footY - 4, pageW - mr, footY - 4);
+        pdf.setFontSize(7);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text('FURIA ROCK · Camisetas & Diseño Personalizado', ml, footY);
+        pdf.text('Cotización sin valor fiscal. Precios en COP.', pageW / 2, footY, { align: 'center' });
+        pdf.text('Pág. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
+      },
     });
-    const finalY = (doc as any).lastAutoTable.finalY + 8;
-    doc.setFontSize(8);
-    doc.setTextColor(120,120,120);
-    doc.text('Este documento es una cotización y no constituye una factura. Precios en COP.', margin, finalY);
-    doc.save('Cotizacion_FuriaRock_' + (clienteNombre || 'cliente').replace(/\s+/g,'_') + '_' + today() + '.pdf');
-    showToast('PDF descargado ✓');
+
+    const finalY = (pdf as any).lastAutoTable.finalY + 10;
+    if (finalY < pageH - 45) {
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(100, 116, 139);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('CONDICIONES:', ml, finalY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('· Esta cotización tiene vigencia de 5 días hábiles.', ml, finalY + 5);
+      pdf.text('· Los precios están sujetos a cambios sin previo aviso.', ml, finalY + 10);
+      pdf.text('· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
+    }
+
+    const today2 = new Date().toISOString().split('T')[0];
+    pdf.save('Cotizacion_FuriaRock_' + (clienteNombre || 'cliente').replace(/\s+/g, '_') + '_' + today2 + '.pdf');
+    showToast('✅ PDF descargado correctamente');
+  };
+
+  
+  const generarCuentaCobroPDF = ({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData }: any) => {
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ml = 18, mr = 18;
+    const contentW = pageW - ml - mr;
+
+    // Header
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, pageW, 42, 'F');
+    pdf.setFillColor(16, 185, 129); // green-500
+    pdf.rect(0, 0, 5, 42, 'F');
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(22);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FURIA ROCK', ml + 2, 17);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(148, 163, 184);
+    pdf.text('Camisetas & Diseño Personalizado', ml + 2, 24);
+
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(167, 243, 208); // green-200
+    pdf.text('CUENTA DE COBRO', pageW - mr, 17, { align: 'right' });
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(148, 163, 184);
+    pdf.text('ID: ' + idVenta, pageW - mr, 24, { align: 'right' });
+    pdf.text('Fecha: ' + fecha, pageW - mr, 30, { align: 'right' });
+
+    // Client section
+    const clienteY = 52;
+    pdf.setFillColor(241, 245, 249);
+    pdf.roundedRect(ml, clienteY - 6, contentW, 34, 2, 2, 'F');
+    pdf.setFontSize(7.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(71, 85, 105);
+    pdf.text('DATOS DEL CLIENTE', ml + 4, clienteY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(15, 23, 42);
+    pdf.setFontSize(10);
+    pdf.text(clienteNom || 'Cliente no especificado', ml + 4, clienteY + 8);
+    const col2X = ml + contentW / 2;
+    pdf.setFontSize(8);
+    pdf.setTextColor(71, 85, 105);
+    let infoY = clienteY + 15;
+    if (clienteFon) pdf.text('Tel: ' + clienteFon, ml + 4, infoY);
+    if (clienteDoc2) pdf.text('Doc: ' + clienteDoc2, col2X, infoY);
+    infoY += 6;
+    if (clienteDir) pdf.text('Dir: ' + clienteDir, ml + 4, infoY);
+    if (clienteS) pdf.text('Sede: ' + clienteS, col2X, infoY);
+
+    // Items table
+    const tableY = clienteY + 38;
+    const tableData = (ccData || []).map((row: any, i: number) => {
+      const refName = row.Referencia || row.referencia || row.ref || '—';
+      const colorV = row.Color || row.color || '—';
+      const tallaV = row.Talla || row.talla || '—';
+      const formaV = row.Forma || row.forma || '—';
+      const cantV = row.Cantidad || row.cantidad || '—';
+      const precioV = Number(String(row['Precio Unit.'] || row.precioUnit || 0).replace(/[^0-9.]/g, ''));
+      const totalV = Number(String(row['Total Venta'] || row.totalVenta || 0).replace(/[^0-9.]/g, ''));
+      return [String(i + 1), refName, colorV, tallaV, formaV, String(cantV), cop(precioV), cop(totalV)];
+    });
+
+    (pdf as any).autoTable({
+      startY: tableY,
+      head: [['#', 'REFERENCIA', 'COLOR', 'TALLA', 'FORMA', 'CANT', 'P. UNIT', 'TOTAL']],
+      body: tableData,
+      foot: [['', '', '', '', '', '', 'TOTAL GENERAL', cop(totalGeneral)]],
+      theme: 'plain',
+      headStyles: { fillColor: [15, 23, 42], textColor: [167, 243, 208], fontSize: 7.5, fontStyle: 'bold', cellPadding: { top: 4, bottom: 4, left: 3, right: 3 } },
+      footStyles: { fillColor: [236, 253, 245], textColor: [6, 95, 70], fontSize: 10, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 3, right: 3 } },
+      bodyStyles: { fontSize: 8.5, textColor: [30, 41, 59], cellPadding: { top: 4, bottom: 4, left: 3, right: 3 } },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 52 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 14, halign: 'center' },
+        4: { cellWidth: 22, halign: 'center' },
+        5: { cellWidth: 12, halign: 'center' },
+        6: { cellWidth: 24, halign: 'right' },
+        7: { cellWidth: 26, halign: 'right' },
+      },
+      margin: { left: ml, right: mr },
+      tableLineColor: [226, 232, 240],
+      tableLineWidth: 0.1,
+      didDrawPage: (data: any) => {
+        const footY = pageH - 12;
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setLineWidth(0.3);
+        pdf.line(ml, footY - 4, pageW - mr, footY - 4);
+        pdf.setFontSize(7);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text('FURIA ROCK · Camisetas & Diseño Personalizado', ml, footY);
+        pdf.text('Cuenta de Cobro · ID: ' + idVenta, pageW / 2, footY, { align: 'center' });
+        pdf.text('Pág. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
+      },
+    });
+
+    pdf.save('CuentaCobro_FuriaRock_' + idVenta + '.pdf');
   };
 
   const registrarVenta = async () => {
@@ -438,6 +621,12 @@ export default function App() {
                     setSelRef(r?.id ?? ''); setSelColor(''); setSelTalla('');
                   }} />
                 </FG>
+        {refs.length === 0 && (
+          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
+        )}
+        {selRef && !currentRef && (
+          <p className="text-red-400 text-xs mt-1">⚠️ La referencia no existe en la base de datos del Drive.</p>
+        )}
                 <FG label="Color">
                   <Sel options={coloresDisp} value={selColor} onChange={e => setSelColor(e.target.value)} />
                 </FG>
@@ -605,6 +794,9 @@ export default function App() {
                     setCRef(r?.id ?? ''); setCColor(''); setCTalla('');
                   }} />
                 </FG>
+        {refs.length === 0 && (
+          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
+        )}
                 <div className="grid grid-cols-2 gap-3">
                   <FG label="Color"><Sel options={COLORES_DEFAULT} value={cColor} onChange={e => setCColor(e.target.value)} /></FG>
                   <FG label="Talla"><Sel options={TODAS_TALLAS} value={cTalla} onChange={e => setCTalla(e.target.value)} /></FG>
@@ -798,6 +990,12 @@ export default function App() {
                         <p className="text-2xl font-bold text-green-400">{cop(totalGeneral)}</p>
                         <p className="text-xs text-gray-400">Total general</p>
                       </div>
+              <button
+                onClick={() => generarCuentaCobroPDF({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData })}
+                className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors"
+              >
+                📄 Descargar PDF
+              </button>
                     </div>
                   </Card>
                   <Card>
