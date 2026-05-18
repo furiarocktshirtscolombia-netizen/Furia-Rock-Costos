@@ -19,11 +19,13 @@ const REFS_DEFAULT: Ref[] = [
   { id:"r15", name:"CONJUNTO NINO CAMISETA NACIONAL + JOGGER",cost:33000, cat:"Nino"   },
 ]
 
-const COLORES_DEFAULT = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL CIELO","ROJO","GRIS","AZUL MARINO","ROSADO","MOSTAZA"]
-const TALLAS_ADULTO   = ["XS","S","M","L","XL","XXL"];
-const TALLAS_NINO     = ["2","4","6","8","10","12","14","16"];
-const TIPOS_IMP       = ["DTF","DTG"];
-const SEDES           = ["Medellin","Bogota","Cali","Online","Otra"];
+const COLORES_DEFAULT  = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL CIELO","ROJO","GRIS","AZUL MARINO","ROSADO","MOSTAZA","VAINILLA"];
+const TALLAS_ADULTO    = ["XS","S","M","L","XL","XXL"];
+const TALLAS_NINO      = ["2-4","4-6","6-8","8-10","10-12","12-14","14-16"];
+const TODAS_TALLAS     = [...TALLAS_ADULTO, ...TALLAS_NINO];
+const TIPOS_IMP        = ["DTF","DTG"];
+const SEDES            = ["Medellin","Bogota","Cali","Online","Otra"];
+const FORMAS_CAMISETA  = ["Oversize","Regular Fit"];
 
 // COSTOS FIJOS DE PRODUCCION
 const GANANCIA_NETA_FIJA = 30000;   // COP ganancia neta por articulo
@@ -40,13 +42,13 @@ interface Venta {
   id:string; fecha:string; cliente:string; ref:string; refId:string;
   talla:string; color:string; cantidad:number; cat:string;
   precio:number; totalVenta:number; costo:number; ganancia:number;
-  tipoImp:string; diseno:string; sede:string;
+  tipoImp:string; diseno:string; sede:string; forma:string;
   telefono:string; documento:string; direccion:string; ordenInterna:string;
 }
 interface Compra {
   id:string; fecha:string; refId:string; ref:string; cat:string;
   color:string; talla:string; cantidad:number; precio:number; total:number;
-  proveedor:string; notas:string;
+  proveedor:string; notas:string; forma:string;
 }
 interface Calc { costo:number; precio:number }
 type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta';
@@ -151,14 +153,15 @@ export default function App() {
   const [toast, setToast]       = useState('');
 
   // Cotizador
-  const [selRef,      setSelRef]      = useState('');
-  const [selColor,    setSelColor]    = useState('');
-  const [selTalla,    setSelTalla]    = useState('');
-  const [selQty,      setSelQty]      = useState(1);
-  const [selTipoImp,  setSelTipoImp]  = useState('DTF');
-  const [cmDTF,       setCmDTF]       = useState(100);
+  const [selRef,        setSelRef]        = useState('');
+  const [selColor,      setSelColor]      = useState('');
+  const [selTalla,      setSelTalla]      = useState('');
+  const [selQty,        setSelQty]        = useState(1);
+  const [selTipoImp,    setSelTipoImp]    = useState('DTF');
+  const [selForma,      setSelForma]      = useState('');
+  const [cmDTF,         setCmDTF]         = useState(100);
   const [numPlanchadas, setNumPlanchadas] = useState(3);
-  const [costoDTG,    setCostoDTG]    = useState(0);
+  const [costoDTG,      setCostoDTG]      = useState(0);
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteTel,    setClienteTel]    = useState('');
   const [clienteDoc,    setClienteDoc]    = useState('');
@@ -166,7 +169,7 @@ export default function App() {
   const [clienteSede,   setClienteSede]   = useState('');
   const [clienteDiseno, setClienteDiseno] = useState('');
   const [clienteOrden,  setClienteOrden]  = useState('');
-  const [gasErr,  setGasErr]  = useState('');
+  const [gasErr,        setGasErr]        = useState('');
 
   // Compras
   const [cRef,    setCRef]    = useState('');
@@ -176,12 +179,13 @@ export default function App() {
   const [cPrecio, setCPrecio] = useState(0);
   const [cProv,   setCProv]   = useState('');
   const [cNotas,  setCNotas]  = useState('');
+  const [cForma,  setCForma]  = useState('');
 
   // Cuenta de Cobro
-  const [ccId,      setCcId]      = useState('');
-  const [ccData,    setCcData]    = useState<any>(null);
-  const [ccStatus,  setCcStatus]  = useState<'idle'|'loading'|'found'|'not_found'|'error'>('idle');
-  const [ccMsg,     setCcMsg]     = useState('');
+  const [ccId,     setCcId]     = useState('');
+  const [ccData,   setCcData]   = useState<any>(null);
+  const [ccStatus, setCcStatus] = useState<'idle'|'loading'|'found'|'not_found'|'error'>('idle');
+  const [ccMsg,    setCcMsg]    = useState('');
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
@@ -234,6 +238,7 @@ export default function App() {
       totalVenta: calc!.precio, costo: calc!.costo,
       ganancia: calc!.precio - calc!.costo,
       tipoImp: selTipoImp, diseno: clienteDiseno, sede: clienteSede,
+      forma: selForma,
       telefono: clienteTel, documento: clienteDoc,
       direccion: clienteDireccion, ordenInterna: clienteOrden
     };
@@ -249,6 +254,7 @@ export default function App() {
     localStorage.setItem('ventas', JSON.stringify(nuevasVentas));
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0);
+    setSelForma('');
     setClienteNombre(''); setClienteTel(''); setClienteDoc('');
     setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden('');
     showToast('Venta registrada ✓');
@@ -264,7 +270,7 @@ export default function App() {
       id: uid(), fecha: today(), refId: r.id, ref: r.name, cat: r.cat,
       color: cColor, talla: cTalla, cantidad: cQty,
       precio: cPrecio, total: cPrecio * cQty,
-      proveedor: cProv, notas: cNotas
+      proveedor: cProv, notas: cNotas, forma: cForma
     };
     const nuevasCompras = [c, ...compras];
     const nuevoInv      = calcInventario(ventas, nuevasCompras);
@@ -275,7 +281,7 @@ export default function App() {
     } catch {}
     setCompras(nuevasCompras);
     localStorage.setItem('compras', JSON.stringify(nuevasCompras));
-    setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCProv(''); setCNotas('');
+    setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCProv(''); setCNotas(''); setCForma('');
     showToast('Compra registrada ✓');
     setLoading(false);
   };
@@ -358,9 +364,14 @@ export default function App() {
                 <FG label="Color">
                   <Sel options={coloresDisp} value={selColor} onChange={e => setSelColor(e.target.value)} />
                 </FG>
-                <FG label="Talla">
-                  <Sel options={tallasDisp} value={selTalla} onChange={e => setSelTalla(e.target.value)} />
-                </FG>
+                <div className="grid grid-cols-2 gap-3">
+                  <FG label="Talla">
+                    <Sel options={tallasDisp} value={selTalla} onChange={e => setSelTalla(e.target.value)} />
+                  </FG>
+                  <FG label="Forma de la camiseta">
+                    <Sel options={FORMAS_CAMISETA} value={selForma} onChange={e => setSelForma(e.target.value)} />
+                  </FG>
+                </div>
                 <FG label="Cantidad">
                   <Inp type="number" min={1} value={selQty} onChange={e => setSelQty(Number(e.target.value))} />
                 </FG>
@@ -476,6 +487,7 @@ export default function App() {
                       <th className="text-left py-2 pr-3">Referencia</th>
                       <th className="text-left py-2 pr-3">Color</th>
                       <th className="text-left py-2 pr-3">Talla</th>
+                      <th className="text-left py-2 pr-3">Forma</th>
                       <th className="text-right py-2 pr-3">Cant.</th>
                       <th className="text-right py-2 pr-3">Total</th>
                       <th className="text-right py-2">Ganancia</th>
@@ -489,6 +501,7 @@ export default function App() {
                         <td className="py-2 pr-3 text-gray-200">{v.ref}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.color}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.talla}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.forma || '—'}</td>
                         <td className="py-2 pr-3 text-right text-gray-300">{v.cantidad}</td>
                         <td className="py-2 pr-3 text-right text-green-400">{cop(v.totalVenta)}</td>
                         <td className="py-2 text-right text-indigo-400">{cop(v.ganancia)}</td>
@@ -518,9 +531,12 @@ export default function App() {
                     <Sel options={COLORES_DEFAULT} value={cColor} onChange={e => setCColor(e.target.value)} />
                   </FG>
                   <FG label="Talla">
-                    <Sel options={refs.find(r=>r.id===cRef)?.cat==='Nino'?TALLAS_NINO:TALLAS_ADULTO} value={cTalla} onChange={e => setCTalla(e.target.value)} />
+                    <Sel options={TODAS_TALLAS} value={cTalla} onChange={e => setCTalla(e.target.value)} />
                   </FG>
                 </div>
+                <FG label="Forma de la camiseta">
+                  <Sel options={FORMAS_CAMISETA} value={cForma} onChange={e => setCForma(e.target.value)} />
+                </FG>
                 <div className="grid grid-cols-2 gap-3">
                   <FG label="Cantidad">
                     <Inp type="number" min={1} value={cQty} onChange={e => setCQty(Number(e.target.value))} />
@@ -555,6 +571,7 @@ export default function App() {
                       <tr className="text-gray-400 border-b border-gray-700">
                         <th className="text-left py-2 pr-3">Fecha</th>
                         <th className="text-left py-2 pr-3">Referencia</th>
+                        <th className="text-left py-2 pr-3">Forma</th>
                         <th className="text-right py-2 pr-3">Cant.</th>
                         <th className="text-right py-2">Total</th>
                       </tr>
@@ -564,6 +581,7 @@ export default function App() {
                         <tr key={c.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                           <td className="py-2 pr-3 text-gray-300">{c.fecha}</td>
                           <td className="py-2 pr-3 text-gray-200">{c.ref}</td>
+                          <td className="py-2 pr-3 text-gray-300">{c.forma || '—'}</td>
                           <td className="py-2 pr-3 text-right text-gray-300">{c.cantidad}</td>
                           <td className="py-2 text-right text-blue-400">{cop(c.total)}</td>
                         </tr>
@@ -742,7 +760,6 @@ export default function App() {
 
               return (
                 <div className="space-y-4">
-                  {/* Header cuenta de cobro */}
                   <Card className="border border-indigo-700">
                     <div className="flex items-center justify-between mb-2">
                       <div>
@@ -756,7 +773,6 @@ export default function App() {
                     </div>
                   </Card>
 
-                  {/* A. Datos del cliente */}
                   <Card>
                     <CardTitle text="A. Datos del Cliente" />
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -775,7 +791,6 @@ export default function App() {
                     </div>
                   </Card>
 
-                  {/* B. Detalle de la venta */}
                   <Card>
                     <CardTitle text="B. Detalle de la Venta" />
                     <div className="overflow-x-auto">
@@ -786,6 +801,7 @@ export default function App() {
                             <th className="text-left py-2 pr-3">Referencia</th>
                             <th className="text-left py-2 pr-3">Color</th>
                             <th className="text-left py-2 pr-3">Talla</th>
+                            <th className="text-left py-2 pr-3">Forma</th>
                             <th className="text-right py-2 pr-3">Cant.</th>
                             <th className="text-left py-2 pr-3">Orden interna</th>
                             <th className="text-right py-2">Total</th>
@@ -796,6 +812,7 @@ export default function App() {
                             const refName = row['Referencia'] || row['referencia'] || row['ref'] || '—';
                             const colorV  = row['Color']      || row['color']      || '—';
                             const tallaV  = row['Talla']      || row['talla']      || '—';
+                            const formaV  = row['Forma']      || row['forma']      || '—';
                             const cantV   = row['Cantidad']   || row['cantidad']   || 0;
                             const ordenV  = row['OrdenInterna']|| row['ordenInterna']|| row['Orden interna'] || '—';
                             const totalV  = Number(String(row['Total Venta'] || row['totalVenta'] || row['TotalVenta'] || 0).toString().replace(/[^0-9.-]/g,''));
@@ -805,6 +822,7 @@ export default function App() {
                                 <td className="py-2 pr-3 text-gray-200 font-medium">{refName}</td>
                                 <td className="py-2 pr-3 text-gray-300">{colorV}</td>
                                 <td className="py-2 pr-3 text-gray-300">{tallaV}</td>
+                                <td className="py-2 pr-3 text-gray-300">{formaV}</td>
                                 <td className="py-2 pr-3 text-right text-gray-300">{cantV}</td>
                                 <td className="py-2 pr-3 text-gray-400 text-xs">{ordenV}</td>
                                 <td className="py-2 text-right text-green-400 font-semibold">{cop(totalV)}</td>
@@ -816,7 +834,6 @@ export default function App() {
                     </div>
                   </Card>
 
-                  {/* C. Resumen */}
                   <Card className="border border-green-700">
                     <CardTitle text="C. Resumen" />
                     <div className="flex items-center justify-between">
