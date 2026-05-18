@@ -184,6 +184,7 @@ export default function App() {
   const [clienteSede,   setClienteSede]   = useState('');
   const [clienteDiseno, setClienteDiseno] = useState('');
   const [clienteOrden,  setClienteOrden]  = useState('');
+  const [clienteEstadoPago, setClienteEstadoPago] = useState('Pendiente de pago');
   const [gasErr,        setGasErr]        = useState('');
   const [cartItems, setCartItems] = useState<{ref:string; refId:string; cat:string; color:string; talla:string; forma:string; qty:number; precio:number; costo:number}[]>([]);
 
@@ -705,7 +706,8 @@ export default function App() {
         tipoImp: selTipoImp, diseno: clienteDiseno, sede: clienteSede,
         forma: item.forma,
         telefono: clienteTel, documento: clienteDoc,
-        direccion: clienteDireccion, ordenInterna: clienteOrden
+        direccion: clienteDireccion, ordenInterna: clienteOrden,
+        estadoPago: clienteEstadoPago
       };
       nuevasVentas.unshift(v);
       try {
@@ -722,7 +724,7 @@ export default function App() {
     localStorage.setItem('ventas', JSON.stringify(nuevasVentas));
     setCartItems([]);
     setClienteNombre(''); setClienteTel(''); setClienteDoc('');
-    setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden('');
+    setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden(''); setClienteEstadoPago('Pendiente de pago');
     showToast('Pedido registrado ✓');
     setLoading(false);
   };
@@ -987,6 +989,7 @@ export default function App() {
                 <FG label="Sede / Punto de venta"><Sel options={SEDES} value={clienteSede} onChange={e => setClienteSede(e.target.value)} /></FG>
                 <FG label="Diseño"><Inp value={clienteDiseno} onChange={e => setClienteDiseno(e.target.value)} placeholder="Nombre del diseño" /></FG>
                 <FG label="Orden interna"><Inp value={clienteOrden} onChange={e => setClienteOrden(e.target.value)} placeholder="Ej: ORD-001" /></FG>
+              <FG label="Estado de pago"><Sel options={['Pendiente de pago','Pagado']} value={clienteEstadoPago} onChange={e => setClienteEstadoPago(e.target.value)} /></FG>
               </div>
               {gasErr && <p className="text-red-400 text-xs mt-2">{gasErr}</p>}
               <div className="mt-4 space-y-3">
