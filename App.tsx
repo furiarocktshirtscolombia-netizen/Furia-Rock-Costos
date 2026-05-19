@@ -798,8 +798,8 @@ export default function App() {
     if (loading) return;
     setLoading(true);
     try {
-      const cantArr = String(cot['Cantidades'] || '1').split(' / ');
-      const precioArr = String(cot['Precio Unitario'] || '0').split(' / ');
+      const cantArr = String(cot.cantidades || '1').split(' / ');
+      const precioArr = String(cot.precios || '0').split(' / ');
       const items = String(cot.detalle || '').split(' / ').map((det: string, idx: number) => {
         const parts = det.split(' | ');
         return {
@@ -815,8 +815,8 @@ export default function App() {
         cotizacionId: cotId,
         cotizacion: {
           fecha: cot.fecha || new Date().toISOString().split('T')[0],
-          cliente: cot.cliente || '', telefono: cot['Telefono'] || '',
-          documento: cot['Documento'] || '', total: cot.total || 0,
+          cliente: cot.cliente || '', telefono: cot.telefono || '',
+          documento: cot.documento || '', total: cot.total || 0,
           items
         }
       });
