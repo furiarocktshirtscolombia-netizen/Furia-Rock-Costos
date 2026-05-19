@@ -756,6 +756,7 @@ export default function App() {
     // ── Cotizaciones ─────────────────────────────────────────────────
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
   const [loadingCot, setLoadingCot] = useState(false);
+  const [cotBusqueda, setCotBusqueda] = useState('');
 
   const guardarCotizacion = async () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un item al carrito'); return; }
@@ -787,7 +788,6 @@ export default function App() {
 
   const cargarCotizaciones = async () => {
     try {
-      const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZylNyGjsrWW_EkqSCcRFX3Y63p4mmO8XK6-c2vw24VT8TRH5VnWF5CA/exec';
       const resp = await fetch(GAS_URL + '?action=getCotizaciones&t=' + Date.now());
       const d = await resp.json();
       if (d.cotizaciones) setCotizaciones(d.cotizaciones);
@@ -800,7 +800,7 @@ export default function App() {
     try {
       const cantArr = String(cot['Cantidades'] || '1').split(' / ');
       const precioArr = String(cot['Precio Unitario'] || '0').split(' / ');
-      const items = String(cot['Referencias (detalle)'] || '').split(' / ').map((det: string, idx: number) => {
+      const items = String(cot.detalle || '').split(' / ').map((det: string, idx: number) => {
         const parts = det.split(' | ');
         return {
           refName: parts[0] || '', nombre: parts[0] || '', color: parts[1] || '',
@@ -814,9 +814,9 @@ export default function App() {
         action: 'convertirCotizacion',
         cotizacionId: cotId,
         cotizacion: {
-          fecha: cot['Fecha'] || new Date().toISOString().split('T')[0],
-          cliente: cot['Cliente'] || '', telefono: cot['Telefono'] || '',
-          documento: cot['Documento'] || '', total: cot['Total'] || 0,
+          fecha: cot.fecha || new Date().toISOString().split('T')[0],
+          cliente: cot.cliente || '', telefono: cot['Telefono'] || '',
+          documento: cot['Documento'] || '', total: cot.total || 0,
           items
         }
       });
@@ -1378,12 +1378,31 @@ export default function App() {
       {/* ── COTIZACIONES ──────────────────────────────────────── */}
       {tab === 'cotizaciones' && (
         <div className="space-y-4">
+          {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white">📋 REGISTRO DE COTIZACIONES</h2>
             <button onClick={cargarCotizaciones} className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-500">
               🔄 Actualizar
             </button>
           </div>
+
+          {/* Buscador por ID */}
+          <div className="flex items-center gap-2 mb-3">
+            <label className="text-slate-400 text-sm whitespace-nowrap">Buscar por ID:</label>
+            <input
+              type="text"
+              value={cotBusqueda}
+              onChange={e => setCotBusqueda(e.target.value)}
+              placeholder="Ej: COT-12345"
+              className="flex-1 bg-slate-700 border border-slate-600 text-white text-sm rounded-lg px-3 py-1.5 placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+            />
+            {cotBusqueda && (
+              <button onClick={() => setCotBusqueda('')} className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded-lg hover:bg-slate-500">
+                ✕ Limpiar
+              </button>
+            )}
+          </div>
+
           {cotizaciones.length === 0 ? (
             <div className="text-slate-400 text-center py-12">No hay cotizaciones registradas. Guarda una desde el Cotizador.</div>
           ) : (
@@ -1401,26 +1420,28 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cotizaciones.map((cot: any, idx: number) => (
+                  {cotizaciones
+                    .filter((cot: any) => !cotBusqueda || String(cot.id || '').toLowerCase().includes(cotBusqueda.toLowerCase()))
+                    .map((cot: any, idx: number) => (
                     <tr key={idx} className="border-t border-slate-700 hover:bg-slate-800/40">
-                      <td className="px-3 py-2 text-indigo-400 font-mono text-xs">{String(cot['ID'] || '-')}</td>
-                      <td className="px-3 py-2 text-slate-300">{String(cot['Fecha'] || '-')}</td>
-                      <td className="px-3 py-2 text-white font-medium">{String(cot['Cliente'] || '-')}</td>
-                      <td className="px-3 py-2 text-slate-400 text-xs max-w-xs">{String(cot['Referencias (detalle)'] || '-').slice(0, 60)}</td>
+                      <td className="px-3 py-2 text-indigo-400 font-mono text-xs">{String(cot.id || '-')}</td>
+                      <td className="px-3 py-2 text-slate-300">{String(cot.fecha || '-')}</td>
+                      <td className="px-3 py-2 text-white font-medium">{String(cot.cliente || '-')}</td>
+                      <td className="px-3 py-2 text-slate-400 text-xs max-w-xs">{(String(cot.detalle || '') || '-').slice(0, 60)}</td>
                       <td className="px-3 py-2 text-emerald-400 font-bold text-right">
-                        {'$' + (Number(cot['Total']) || 0).toLocaleString('es-CO')}
+                        ${(Number(cot.total || 0)).toLocaleString('es-CO')}
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <span className={String(cot['Estado']) === 'Convertida en Venta'
+                        <span className={String(cot.estado) === 'Convertida en Venta'
                           ? 'px-2 py-0.5 rounded-full text-xs bg-emerald-900 text-emerald-300'
                           : 'px-2 py-0.5 rounded-full text-xs bg-indigo-900 text-indigo-300'}>
-                          {String(cot['Estado'] || 'Cotización')}
+                          {String(cot.estado || 'Cotización')}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
-                        {String(cot['Estado']) !== 'Convertida en Venta' && (
+                        {String(cot.estado) !== 'Convertida en Venta' && (
                           <button
-                            onClick={() => convertirEnVenta(cot, String(cot['ID']))}
+                            onClick={() => convertirEnVenta(cot, String(cot.id))}
                             disabled={loading}
                             className="px-3 py-1 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-500 disabled:opacity-50"
                           >
@@ -1436,7 +1457,6 @@ export default function App() {
           )}
         </div>
       )}
-      </div>
     </div>
   );
 }
