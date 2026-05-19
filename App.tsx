@@ -587,7 +587,7 @@ export default function App() {
       const cantV = row.Cantidad || row.cantidad || '—';
       const precioV = Number(String(row['Precio Unit.'] || row.precioUnit || 0).replace(/[^0-9.]/g, ''));
       const totalV = Number(String(row['Total Venta'] || row.totalVenta || 0).replace(/[^0-9.]/g, ''));
-      return [String(i + 1), refName, colorV, tallaV, formaV, String(cantV), cop(precioV), cop(totalV)];
+      return [String(i + 1), refName, colorV, tallaV, formaV, String(cantV), cop(precioV > 0 ? precioV : (cantV > 0 ? totalV / cantV : 0)), cop(totalV)];
     });
 
     (pdf as any).autoTable({
