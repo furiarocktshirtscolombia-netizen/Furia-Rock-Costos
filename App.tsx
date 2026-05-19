@@ -764,8 +764,8 @@ export default function App() {
       const cotData = {
         fecha: new Date().toISOString().split('T')[0],
         cliente: clienteNombre || 'Sin nombre',
-        telefono: clienteTelefono || '',
-        documento: clienteDocumento || '',
+        telefono: clienteTel || '',
+        documento: clienteDoc || '',
         total: cartItems.reduce((s, i) => s + i.precio * i.cantidad, 0),
         observaciones: '',
         usuario: 'App',
