@@ -839,13 +839,18 @@ export default function App() {
   }
 
     const actualizarEstadoPago = async (ventaId: string, nuevoEstado: string) => {
+    // Optimistic update - update UI immediately
+    setVentas(prev => prev.map(v => v.id === ventaId ? { ...v, estadoPago: nuevoEstado } : v));
     try {
       const resp = await sendToGAS({ action: 'actualizarEstadoPago', ventaId, nuevoEstado });
       if (resp.status === 'ok') {
-        setVentas(prev => prev.map(v => v.id === ventaId ? { ...v, estadoPago: nuevoEstado } : v));
-        showToast('Estado actualizado');
-      } else { showToast('Error: ' + (resp.msg || 'desconocido')); }
-    } catch (e: any) { showToast('Error: ' + e.message); }
+        showToast('Estado actualizado ✓');
+      } else {
+        showToast('Guardado localmente. Actualiza Drive manualmente si es necesario.');
+      }
+    } catch (e: any) {
+      showToast('Sin conexión - estado guardado en pantalla');
+    }
   };
 
   const descargarCotizacionPDF = async (cot: any) => {
