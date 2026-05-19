@@ -767,13 +767,13 @@ export default function App() {
         cliente: clienteNombre || 'Sin nombre',
         telefono: clienteTel || '',
         documento: clienteDoc || '',
-        total: cartItems.reduce((s, i) => s + i.precio * i.qty, 0),
+        total: cartItems.reduce((s, i) => s + i.precio, 0),
         observaciones: '',
         usuario: 'App',
         items: cartItems.map(i => ({
           refId: i.refId, refName: i.refName, nombre: i.refName,
           color: i.color, talla: i.talla, forma: i.forma,
-          cantidad: i.qty, precio: i.precio, precioUnit: i.precio,
+          cantidad: i.qty, precio: i.precio, precioUnit: i.qty > 0 ? i.precio / i.qty : i.precio,
           categoria: i.categoria, costo: i.costo || 0
         }))
       };
