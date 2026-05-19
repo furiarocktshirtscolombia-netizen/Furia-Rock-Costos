@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
+// v1.4 - Fixes: PDF unit price, cotizacion total calculation
 // ══ DATOS REALES DEL SPREADSHEET FURIA ROCK ══════════════════════════
 const REFS_DEFAULT: Ref[] = [
   { id:"r1",  name:"CAMISETA ALGODON PERUANO 178G",           cost:18000, cat:"Adulto" },
