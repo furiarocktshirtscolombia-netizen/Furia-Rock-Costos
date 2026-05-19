@@ -1425,7 +1425,7 @@ export default function App() {
                     .map((cot: any, idx: number) => (
                     <tr key={idx} className="border-t border-slate-700 hover:bg-slate-800/40">
                       <td className="px-3 py-2 text-indigo-400 font-mono text-xs">{String(cot.id || '-')}</td>
-                      <td className="px-3 py-2 text-slate-300">{String(cot.fecha || '-')}</td>
+                      <td className="px-3 py-2 text-slate-300">{cot.fecha ? (String(cot.fecha).includes('T') || String(cot.fecha).length > 15 ? new Date(cot.fecha).toLocaleDateString('es-CO') : String(cot.fecha)) : '-'}</td>
                       <td className="px-3 py-2 text-white font-medium">{String(cot.cliente || '-')}</td>
                       <td className="px-3 py-2 text-slate-400 text-xs max-w-xs">{(String(cot.detalle || '') || '-').slice(0, 60)}</td>
                       <td className="px-3 py-2 text-emerald-400 font-bold text-right">
