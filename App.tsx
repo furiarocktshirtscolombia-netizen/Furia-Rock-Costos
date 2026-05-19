@@ -51,6 +51,7 @@ interface Venta {
   precio:number; totalVenta:number; costo:number; ganancia:number;
   tipoImp:string; diseno:string; sede:string; forma:string;
   telefono:string; documento:string; direccion:string; ordenInterna:string;
+  estadoPago?: string;
 }
 interface Compra {
   id:string; fecha:string; refId:string; ref:string; cat:string;
@@ -162,7 +163,9 @@ export default function App() {
   const [tab, setTab]           = useState<Tab>('cotizador');
   const [refs, setRefs]         = useState<Ref[]>(REFS_DEFAULT);
   const [colorMap, setColorMap] = useState<Record<string,string[]>>(() => loadLS('colorMap', {}));
-  const [ventas, setVentas]     = useState<Venta[]>([]);
+  const [ventas, setVentas]     = useState<Venta[]>([]);  const [searchVentas, setSearchVentas] = useState('');
+  const [filterEstadoVentas, setFilterEstadoVentas] = useState('');
+
   const [compras, setCompras]   = useState<Compra[]>([]);
 
   const [invDrive, setInvDrive] = useState<any[]>([]);  const [loading, setLoading]   = useState(false);
@@ -318,7 +321,8 @@ export default function App() {
     const pctROI        = costoVentas>0 ? ((gananciaVentas/costoVentas)*100).toFixed(2) : '0';
     await sendToGAS({
       accion: 'sincronizarResultados',
-      ventas:    { unidades: v.reduce((a,x)=>a+x.cantidad,0), ingresos: totalVentas, costo: costoVentas, ganancia: gananciaVentas },
+      ventas:    { unidades: v.reduce((a,x)=>a+x.cantidad,0), ingresos: totalVentas, costo: costoVentas, ganancia: gananciaVentas },      estadoPago: row['Estado de Pago'] || row['estadoPago'] || '',
+
       compras:   { unidades: c.reduce((a,x)=>a+x.cantidad,0), invertido: totalCompras },
       inventario:{ enStock, enNegativo },
       margen:    { pct: pctMargen, roi: pctROI }
@@ -834,6 +838,16 @@ export default function App() {
     setLoading(false);
   }
 
+    const actualizarEstadoPago = async (ventaId: string, nuevoEstado: string) => {
+    try {
+      const resp = await sendToGAS({ action: 'actualizarEstadoPago', ventaId, nuevoEstado });
+      if (resp.status === 'ok') {
+        setVentas(prev => prev.map(v => v.id === ventaId ? { ...v, estadoPago: nuevoEstado } : v));
+        showToast('Estado actualizado');
+      } else { showToast('Error: ' + (resp.msg || 'desconocido')); }
+    } catch (e: any) { showToast('Error: ' + e.message); }
+  };
+
   const descargarCotizacionPDF = async (cot: any) => {
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const pageW = pdf.internal.pageSize.getWidth();
@@ -1212,13 +1226,37 @@ export default function App() {
           </div>
         )}
 
-        {/* ═══ VENTAS ═══ */}
+{/* ═══ VENTAS ═══ */}
         {tab === 'ventas' && (
           <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text={`Historial de Ventas (${ventas.length})`} />
-              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>⬇ CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>📊 CSV</Btn>
             </div>
+
+            {/* ── Buscador y Filtro ── */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔍</span>
+                <input
+                  type="text"
+                  value={searchVentas}
+                  onChange={e => setSearchVentas(e.target.value)}
+                  placeholder="Buscar por cliente, documento o teléfono..."
+                  className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 transition-all duration-200"
+                />
+              </div>
+              <select
+                value={filterEstadoVentas}
+                onChange={e => setFilterEstadoVentas(e.target.value)}
+                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-400 transition-all duration-200"
+              >
+                <option value="">Todos los estados</option>
+                <option value="Pendiente de pago">Pendiente de pago</option>
+                <option value="Pagado">Pagado</option>
+              </select>
+            </div>
+
             {ventas.length === 0 ? <p className="text-gray-500 text-sm">No hay ventas registradas.</p> : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1232,19 +1270,42 @@ export default function App() {
                     <th className="text-right py-2 pr-3">Cant.</th>
                     <th className="text-right py-2 pr-3">Total</th>
                     <th className="text-right py-2">Ganancia</th>
+                    <th className="text-center py-2 pl-3">Estado</th>
                   </tr></thead>
                   <tbody>
-                    {ventas.map(v => (
+                    {ventas.filter(v => {
+                      const q = searchVentas.toLowerCase();
+                      const matchCliente = !q ||
+                        (v.cliente || '').toLowerCase().includes(q) ||
+                        (v.documento || '').toLowerCase().includes(q) ||
+                        (v.telefono || '').toLowerCase().includes(q);
+                      const matchEstado = !filterEstadoVentas || (v.estadoPago || 'Pendiente de pago') === filterEstadoVentas;
+                      return matchCliente && matchEstado;
+                    }).map(v => (
                       <tr key={v.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                         <td className="py-2 pr-3 text-gray-300">{v.fecha}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.cliente || '—'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.cliente || '–'}</td>
                         <td className="py-2 pr-3 text-gray-200">{v.ref || resolveRefName(v.refId)}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.color}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.talla}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.forma || '—'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.forma || '–'}</td>
                         <td className="py-2 pr-3 text-right text-gray-300">{v.cantidad}</td>
-                        <td className="py-2 pr-3 text-right text-green-400">{cop(v.totalVenta)}</td>
+                        <td className="py-2 pr-3 text-right text-green-400 font-semibold text-xs">{cop(v.totalVenta)}</td>
                         <td className="py-2 text-right text-indigo-400">{cop(v.ganancia)}</td>
+                        <td className="py-2 pl-3 text-center">
+                          <select
+                            value={v.estadoPago || 'Pendiente de pago'}
+                            onChange={e => actualizarEstadoPago(v.id, e.target.value)}
+                            className={`text-xs px-2 py-1 rounded-lg border cursor-pointer focus:outline-none transition-colors ${
+                              (v.estadoPago || 'Pendiente de pago') === 'Pagado'
+                                ? 'bg-green-900/40 border-green-600 text-green-300'
+                                : 'bg-yellow-900/40 border-yellow-600 text-yellow-300'
+                            }`}
+                          >
+                            <option value="Pendiente de pago">⏳ Pendiente</option>
+                            <option value="Pagado">✅ Pagado</option>
+                          </select>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1253,8 +1314,7 @@ export default function App() {
             )}
           </Card>
         )}
-
-        {/* ═══ COMPRAS ═══ */}
+                {/* ═══ COMPRAS ═══ */}
         {tab === 'compras' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
