@@ -11,7 +11,7 @@ const REFS_DEFAULT: Ref[] = [
   { id:"r4",  name:"CAMISETA CATAR",                          cost:37000, cat:"Adulto" },
   { id:"r5",  name:"CAMISETA C4 ALGODON NACIONAL 200G",       cost:19000, cat:"Adulto" },
   { id:"r6",  name:"HOODIE PERUANO 400G",                     cost:82000, cat:"Adulto" },
-  { id:"r7",  name:"CAMISETA NINO ALGODON PERUANO 200G",      cost:24000, cat:"Nino"   },
+  { id:"r7",  name:"CAMISETA NINO ALGODON PERUANO 200G",      cost:24000, chat:"Nino"   },
   { id:"r8",  name:"CAMISETA NINO NACIONAL 200G",             cost:14000, cat:"Nino"   },
   { id:"r9",  name:"CAMISETA ACID WASH NINO",                 cost:18000, cat:"Nino"   },
   { id:"r10", name:"BERMUDA NINO ALGODON PERCHADO",           cost:13500, cat:"Nino"   },
@@ -406,7 +406,7 @@ export default function App() {
       String(i + 1), item.ref, item.color, item.talla, item.forma || '—',
       String(item.qty), cop(item.qty > 0 ? item.precio / item.qty : 0), cop(item.precio),
     ]);
-    const total = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
+    const total = cartItems.reduce((s, i) => s + i.precio, 0);
 
     (pdf as any).autoTable({
       startY: tableY,
@@ -928,7 +928,7 @@ export default function App() {
       const totalNum = Number(String(cot.total || 0).replace(/[^0-9.]/g, ''));
       tableData.push(['1', detalleStr || '—', '—', '—', '—', String(cants[0] || 1), cop(Number(precs[0] || 0)), cop(totalNum)]);
     }
-    const totalFinal = Number(String(cot.total || 0).replace(/[^0-9.]/g, '')) || tableData.reduce((s: number, r: any) => s + Number(String(r[7]).replace(/[^0-9.]/g, '')), 0);
+    const totalFinal = Number(String(cot.total || 0).replace(/[^0-9.]/g, '')) || tableData.reduce((s: number, r: any) => s + Number(String(r[7]).replace(/[^0-9]/g, '')), 0);
 
     const tableY = clienteY + 30;
     (pdf as any).autoTable({
