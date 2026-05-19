@@ -403,7 +403,7 @@ export default function App() {
     const tableY = clienteY + 38;
     const tableData = cartItems.map((item, i) => [
       String(i + 1), item.ref, item.color, item.talla, item.forma || '—',
-      String(item.qty), cop(item.precio), cop(item.precio * item.qty),
+      String(item.qty), cop(item.qty > 0 ? item.precio / item.qty : 0), cop(item.precio),
     ]);
     const total = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
 
