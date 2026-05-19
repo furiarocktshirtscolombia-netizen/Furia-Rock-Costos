@@ -794,6 +794,11 @@ export default function App() {
     } catch (_e) { /* ignore */ }
   };
 
+
+  // Auto-load cotizaciones when tab switches to cotizaciones
+  useEffect(() => {
+    if (tab === 'cotizaciones') cargarCotizaciones();
+  }, [tab]);
   const convertirEnVenta = async (cot: any, cotId: string) => {
     if (loading) return;
     setLoading(true);
