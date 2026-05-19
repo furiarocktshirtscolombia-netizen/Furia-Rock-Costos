@@ -832,7 +832,166 @@ export default function App() {
       } else { showToast('Error: ' + (resp.msg || 'desconocido')); }
     } catch (e: any) { showToast('Error: ' + e.message); }
     setLoading(false);
+  }
+
+  const descargarCotizacionPDF = async (cot: any) => {
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ml = 18, mr = 18;
+    const contentW = pageW - ml - mr;
+
+    // Parse items from cot.detalle / cot.cantidades / cot.precios
+    const detalleStr = String(cot.detalle || '');
+    const cantStr    = String(cot.cantidades || '');
+    const precStr    = String(cot.precios || '');
+    const parts   = detalleStr.split('|').map((s: string) => s.trim()).filter(Boolean);
+    const cants   = cantStr.split(/[|,]/).map((s: string) => s.trim()).filter(Boolean);
+    const precs   = precStr.split(/[|,]/).map((s: string) => s.trim()).filter(Boolean);
+
+    // Header background
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, pageW, 42, 'F');
+    pdf.setFillColor(99, 102, 241);
+    pdf.rect(0, 0, 6, 42, 'F');
+
+    // Company name
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FURIA ROCK', ml, 15);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Camisetas & Diseño Personalizado', ml, 22);
+
+    // Document type
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('COTIZACIÓN', pageW - mr, 14, { align: 'right' });
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(200, 200, 255);
+    pdf.text('ID: ' + String(cot.id || ''), pageW - mr, 21, { align: 'right' });
+    const fechaStr = cot.fecha ? (String(cot.fecha).includes('T') || String(cot.fecha).length > 15
+      ? new Date(cot.fecha).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })
+      : String(cot.fecha)) : new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    pdf.text('Fecha: ' + fechaStr, pageW - mr, 27, { align: 'right' });
+
+    // Client section
+    const clienteY = 52;
+    pdf.setFillColor(22, 33, 62);
+    pdf.roundedRect(ml, clienteY - 6, contentW, 32, 2, 2, 'F');
+    pdf.setTextColor(147, 197, 253);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('INFORMACIÓN DEL CLIENTE', ml + 4, clienteY - 0.5);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(String(cot.cliente || 'Cliente no especificado'), ml + 4, clienteY + 7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    const col2X = ml + contentW / 2;
+    let infoY = clienteY + 14;
+    if (cot.telefono) { pdf.text('Tel: ' + String(cot.telefono), ml + 4, infoY); }
+    if (cot.documento) { pdf.text('Doc: ' + String(cot.documento), col2X, infoY); }
+    infoY += 6;
+
+    // Build table data from parsed parts
+    const tableData: any[] = [];
+    // Each part is like "CAMISETA EN ALGODON | NEGRO | M | Oversize" or just color/talla/forma
+    // Try to group every 3 parts as one item (color, talla, forma per item)
+    // But first check if we have structured data
+    let rowCount = Math.max(parts.length > 0 ? 1 : 0, cants.length, precs.length);
+    if (parts.length >= 3 && cants.length > 0) {
+      // Multiple items: group parts into rows
+      const itemsPerRow = Math.ceil(parts.length / cants.length);
+      for (let i = 0; i < cants.length; i++) {
+        const pStart = i * itemsPerRow;
+        const rowParts = parts.slice(pStart, pStart + itemsPerRow);
+        const cant = Number(cants[i] || 1);
+        const precUnit = Number(String(precs[i] || 0).replace(/[^0-9.]/g, ''));
+        const subtotal = precUnit * cant;
+        tableData.push([
+          String(i + 1),
+          rowParts[0] || '—',
+          rowParts[1] || '—',
+          rowParts[2] || '—',
+          rowParts[3] || '—',
+          String(cant),
+          cop(precUnit),
+          cop(subtotal)
+        ]);
+      }
+    } else {
+      // Fallback: single row with all detail
+      const totalNum = Number(String(cot.total || 0).replace(/[^0-9.]/g, ''));
+      tableData.push(['1', detalleStr || '—', '—', '—', '—', String(cants[0] || 1), cop(Number(precs[0] || 0)), cop(totalNum)]);
+    }
+    const totalFinal = Number(String(cot.total || 0).replace(/[^0-9.]/g, '')) || tableData.reduce((s: number, r: any) => s + Number(String(r[7]).replace(/[^0-9.]/g, '')), 0);
+
+    const tableY = clienteY + 30;
+    (pdf as any).autoTable({
+      startY: tableY,
+      head: [['#', 'REFERENCIA', 'COLOR', 'TALLA', 'FORMA', 'CANT', 'P. UNIT', 'SUBTOTAL']],
+      body: tableData,
+      foot: [['', '', '', '', '', '', 'TOTAL PEDIDO', cop(totalFinal)]],
+      theme: 'plain',
+      headStyles: { fillColor: [15, 23, 42], textColor: [147, 197, 253], fontSize: 7.5, fontStyle: 'bold', cellPadding: { top: 3, bottom: 3, left: 2, right: 2 } },
+      footStyles: { fillColor: [15, 23, 42], textColor: [52, 211, 153], fontSize: 9, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 8, textColor: [255, 255, 255], fillColor: [22, 33, 62], cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 } },
+      alternateRowStyles: { fillColor: [30, 41, 59] },
+      columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 5: { cellWidth: 12, halign: 'center' }, 6: { cellWidth: 22, halign: 'right' }, 7: { cellWidth: 24, halign: 'right' } },
+      margin: { left: ml, right: mr },
+    });
+
+    const finalY = (pdf as any).lastAutoTable.finalY || tableY + 40;
+    const qrSize = 28;
+    const bankH = 52;
+    const bankYStart = Math.min(finalY + 10, pageH - bankH - 10);
+    const bx = ml, bw = contentW;
+
+    pdf.setFillColor(22, 33, 62);
+    pdf.roundedRect(bx, bankYStart, bw, bankH, 2, 2, 'F');
+    pdf.setFillColor(99, 102, 241);
+    pdf.rect(bx, bankYStart, 4, bankH, 'F');
+
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(147, 197, 253);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('INFORMACIÓN DE PAGO', bx + 8, bankYStart + 7);
+    const tx = bx + 8;
+    let ty = bankYStart + 14;
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Titular:', tx, ty); pdf.setFont('helvetica', 'bold'); pdf.text('Mariluz Lopez', tx + 14, ty); ty += 7;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Banco:', tx, ty);   pdf.setFont('helvetica', 'bold'); pdf.text('Bancolombia', tx + 14, ty); ty += 7;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Tipo:', tx, ty);    pdf.setFont('helvetica', 'bold'); pdf.text('Ahorros', tx + 11, ty); ty += 7;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Cuenta:', tx, ty);  pdf.setFont('helvetica', 'bold'); pdf.text('13848930681', tx + 16, ty); ty += 7;
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Nequi:', tx, ty);   pdf.setFont('helvetica', 'bold'); pdf.text('@mariluz3523', tx + 13, ty);
+
+    try {
+      const qrResp = await fetch('/qr_pago.png');
+      const qrBlob = await qrResp.blob();
+      const qrDataUrl = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.readAsDataURL(qrBlob);
+      });
+      const qrX = bx + bw - qrSize - 6;
+      const qrY = bankYStart + (bankH - qrSize) / 2;
+      pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+    } catch { /* QR no disponible */ }
+
+    const today = new Date().toISOString().split('T')[0];
+    pdf.save('Cotizacion_FuriaRock_' + String(cot.id || today) + '.pdf');
+    showToast('PDF de cotización descargado');
   };
+;
 
   // Helper to resolve reference name from refs array
   const resolveRefName = (refId: string): string => {
@@ -1445,7 +1604,14 @@ export default function App() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
-                        {String(cot.estado) !== 'Convertida en Venta' && (
+                        <div className="flex gap-1 justify-center flex-wrap">
+                          <button
+                            onClick={() => descargarCotizacionPDF(cot)}
+                            className="px-3 py-1 bg-indigo-700 text-white text-xs rounded-lg hover:bg-indigo-600"
+                          >
+                            📄 PDF
+                          </button>
+                          {String(cot.estado) !== 'Convertida en Venta' && (
                           <button
                             onClick={() => convertirEnVenta(cot, String(cot.id))}
                             disabled={loading}
@@ -1453,7 +1619,8 @@ export default function App() {
                           >
                             ✅ Convertir en Venta
                           </button>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
