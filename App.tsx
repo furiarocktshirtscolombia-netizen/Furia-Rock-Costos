@@ -1253,7 +1253,33 @@ export default function App() {
 
 {/* ═══ VENTAS ═══ */}
         {tab === 'ventas' && (
-          <Card>
+          <div className="space-y-4">
+            {/* ── Tarjetas Resumen ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gray-800 border border-gray-700 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">VENTAS TOTALES</p>
+                  <p className="text-2xl font-bold text-white">{ventas.length}</p>
+                </div>
+                <span className="text-3xl opacity-60">🛒</span>
+              </div>
+              <div className="bg-gray-800 border border-yellow-600 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-yellow-400 uppercase tracking-wider mb-1">PENDIENTE</p>
+                  <p className="text-2xl font-bold text-yellow-400">{cop(ventas.filter(v=>(v.estadoPago||'Pendiente de pago')!=='Pagado'&&(v.estadoPago||'Pendiente de pago')!=='Cancelado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
+                </div>
+                <span className="text-3xl opacity-60">⏳</span>
+              </div>
+              <div className="bg-gray-800 border border-emerald-600 rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-emerald-400 uppercase tracking-wider mb-1">COBRADO</p>
+                  <p className="text-2xl font-bold text-emerald-400">{cop(ventas.filter(v=>(v.estadoPago||'Pendiente de pago')==='Pagado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
+                </div>
+                <span className="text-3xl opacity-60">✅</span>
+              </div>
+            </div>
+
+            <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text={`Historial de Ventas (${ventas.length})`} />
               <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>📊 CSV</Btn>
@@ -1267,7 +1293,7 @@ export default function App() {
                   type="text"
                   value={searchVentas}
                   onChange={e => setSearchVentas(e.target.value)}
-                  placeholder="Buscar por cliente, documento o teléfono..."
+                  placeholder="Buscar por cliente..."
                   className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 transition-all duration-200"
                 />
               </div>
@@ -1277,9 +1303,11 @@ export default function App() {
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-400 transition-all duration-200"
               >
                 <option value="">Todos los estados</option>
-                <option value="Pendiente de pago">Pendiente de pago</option>
+                <option value="Pendiente de pago">Pendiente</option>
                 <option value="Pagado">Pagado</option>
+                <option value="Cancelado">Cancelado</option>
               </select>
+                <Btn variant="primary" onClick={() => setTab('cotizador')}>+ Nueva Venta</Btn>
             </div>
 
             {ventas.length === 0 ? <p className="text-gray-500 text-sm">No hay ventas registradas.</p> : (
@@ -1338,6 +1366,7 @@ export default function App() {
               </div>
             )}
           </Card>
+          </div>
         )}
                 {/* ═══ COMPRAS ═══ */}
         {tab === 'compras' && (
