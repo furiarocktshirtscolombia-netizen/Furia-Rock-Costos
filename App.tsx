@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 // v1.4 - Fixes: PDF unit price, cotizacion total calculation
-// ══ DATOS REALES DEL SPREADSHEET FURIA ROCK ══════════════════════════
+// ââ DATOS REALES DEL SPREADSHEET FURIA ROCK ââââââââââââââââââââââââââ
 const REFS_DEFAULT: Ref[] = [
   { id:"r1",  name:"CAMISETA ALGODON PERUANO 178G",           cost:18000, cat:"Adulto" },
   { id:"r2",  name:"CAMISETA ALGODON PERUANO 320G",           cost:37000, cat:"Adulto" },
@@ -30,7 +30,7 @@ const TIPOS_IMP        = ["DTF","DTG"];
 const SEDES            = ["Medellin","Bogota","Cali","Online","Otra"];
 const FORMAS_CAMISETA  = ["Oversize","Regular Fit"];
 
-// Helper: detectar si una referencia es de Niño (acepta "Nino","niño","nino","Niño",etc.)
+// Helper: detectar si una referencia es de NiÃ±o (acepta "Nino","niÃ±o","nino","NiÃ±o",etc.)
 const esNino = (cat: string) =>
   cat.toLowerCase().replace(/[^a-z]/g,'').includes('nin');
 
@@ -42,7 +42,7 @@ const COSTO_PLANCHADA    = 1000;
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
-// ─── Types ────────────────────────────────────────────────────────────
+// âââ Types ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 interface Ref  { id:string; name:string; cost:number; cat:string }
 interface Item { ref:string; refId:string; cat:string; talla:string; color:string; forma:string; comprado:number; vendido:number; stock:number; estado:string }
 interface Venta {
@@ -61,7 +61,7 @@ interface Compra {
 interface Calc { costo:number; precio:number }
 type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones';
 
-// ─── Helpers ──────────────────────────────────────────────────────────
+// âââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const sendToGAS = async (body: object) => {
   const r = await fetch(GAS_URL, {
     method:'POST', redirect:'follow',
@@ -74,23 +74,23 @@ const calcInventario = (ventas: Venta[], compras: Compra[], refsList: Ref[] = []
   const resolveRef = (ref: string, refId: string): string => {
     if (ref && ref.length > 3 && !/^r\d+$/.test(ref)) return ref;
     const found = refsList.find(r => r.id === refId || r.name === ref);
-    return found ? found.name : (ref || refId || '—');
+    return found ? found.name : (ref || refId || 'â');
   };
   const map: Record<string, Item> = {};
   compras.forEach(c => {
     const k = `${c.refId}|${c.talla}|${c.color}|${c.forma || '_'}`;
-    if (!map[k]) map[k] = { ref: resolveRef(c.ref, c.refId), refId: c.refId, cat: c.cat, talla: c.talla, color: c.color, forma: c.forma || '—', comprado: 0, vendido: 0, stock: 0, estado: '' };
+    if (!map[k]) map[k] = { ref: resolveRef(c.ref, c.refId), refId: c.refId, cat: c.cat, talla: c.talla, color: c.color, forma: c.forma || 'â', comprado: 0, vendido: 0, stock: 0, estado: '' };
     map[k].comprado += c.cantidad;
   });
   ventas.forEach(v => {
     const k = `${v.refId}|${v.talla}|${v.color}|${v.forma || '_'}`;
-    if (!map[k]) map[k] = { ref: resolveRef(v.ref, v.refId), refId: v.refId, cat: v.cat, talla: v.talla, color: v.color, forma: v.forma || '—', comprado: 0, vendido: 0, stock: 0, estado: '' };
+    if (!map[k]) map[k] = { ref: resolveRef(v.ref, v.refId), refId: v.refId, cat: v.cat, talla: v.talla, color: v.color, forma: v.forma || 'â', comprado: 0, vendido: 0, stock: 0, estado: '' };
     map[k].vendido += v.cantidad;
   });
   Object.values(map).forEach(i => {
     i.stock = i.comprado - i.vendido;
-    i.estado = i.stock > 5 ? 'OK' : i.stock > 2 ? 'Bajo' : 'Crítico';
-    if (!i.ref || i.ref === '—' || /^r\d+$/.test(i.ref)) {
+    i.estado = i.stock > 5 ? 'OK' : i.stock > 2 ? 'Bajo' : 'CrÃ­tico';
+    if (!i.ref || i.ref === 'â' || /^r\d+$/.test(i.ref)) {
       const found = refsList.find(r => r.id === i.refId);
       if (found) i.ref = found.name;
     }
@@ -125,7 +125,7 @@ const exportCSV = (rows: object[], name:string) => {
   a.click();
 };
 
-// ─── UI Atoms ─────────────────────────────────────────────────────────
+// âââ UI Atoms âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const Card = ({children,className=''}:{children:React.ReactNode;className?:string}) => (
   <div className={`bg-gray-800 rounded-xl p-4 ${className}`}>{children}</div>
 );
@@ -144,7 +144,7 @@ const Inp = (p: React.InputHTMLAttributes<HTMLInputElement>) => (
 );
 const Sel = (p: React.SelectHTMLAttributes<HTMLSelectElement> & {options:string[]}) => (
   <select {...p} className={`w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-400 ${p.className??''}`}>
-    <option value="">— Selecciona —</option>
+    <option value="">â Selecciona â</option>
     {p.options.map(o => <option key={o} value={o}>{o}</option>)}
   </select>
 );
@@ -158,7 +158,7 @@ const Badge = ({text,color}:{text:string;color:'green'|'yellow'|'red'}) => {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c}`}>{text}</span>;
 };
 
-// ─── Main App ─────────────────────────────────────────────────────────
+// âââ Main App âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export default function App() {
   const [tab, setTab]           = useState<Tab>('cotizador');
   const [refs, setRefs]         = useState<Ref[]>(REFS_DEFAULT);
@@ -214,7 +214,7 @@ export default function App() {
     fetch(GAS_URL)
       .then(r => r.json())
       .then(d => {
-        // ── REFS: normalize any column naming convention from Drive ──
+        // ââ REFS: normalize any column naming convention from Drive ââ
         if (d.refs && Array.isArray(d.refs) && d.refs.length > 0) {
           const normalizedRefs = d.refs
             .map((r: any, i: number) => {
@@ -266,8 +266,8 @@ export default function App() {
   // Derived
   const currentRef   = refs.find(r => r.id === selRef);
   const coloresDisp  = currentRef ? (colorMap[currentRef.name] || COLORES_DEFAULT) : COLORES_DEFAULT;
-  // Tallas: si la referencia es de niño → tallas niño; adulto → tallas adulto
-  // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niño, Niño, nino)
+  // Tallas: si la referencia es de niÃ±o â tallas niÃ±o; adulto â tallas adulto
+  // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niÃ±o, NiÃ±o, nino)
   const tallasDisp   = currentRef
     ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
     : TODAS_TALLAS;
@@ -296,15 +296,15 @@ export default function App() {
           }
         }
         return {
-          ref: refName || '—',
+          ref: refName || 'â',
           cat: i.categoria || i.cat || '',
           talla: i.talla || '',
           color: i.color || '',
-          forma: i.forma || '—',
+          forma: i.forma || 'â',
           comprado: Number(i.comprado || 0),
           vendido: Number(i.vendido || 0),
           stock: Number(i.stock || 0),
-          estado: i.estado || (Number(i.stock || 0) > 5 ? 'OK' : Number(i.stock || 0) > 2 ? 'Bajo' : 'Crítico'),
+          estado: i.estado || (Number(i.stock || 0) > 5 ? 'OK' : Number(i.stock || 0) > 2 ? 'Bajo' : 'CrÃ­tico'),
         };
       });
     }
@@ -320,7 +320,7 @@ export default function App() {
     const pctMargen     = totalVentas>0 ? ((gananciaVentas/totalVentas)*100).toFixed(2) : '0';
     const pctROI        = costoVentas>0 ? ((gananciaVentas/costoVentas)*100).toFixed(2) : '0';
     await sendToGAS({
-      accion: 'sincronizarResultados',
+      action: 'sincronizarResultados',
       ventas:    { unidades: v.reduce((a,x)=>a+x.cantidad,0), ingresos: totalVentas, costo: costoVentas, ganancia: gananciaVentas },      estadoPago: row['Estado de Pago'] || row['estadoPago'] || '',
 
       compras:   { unidades: c.reduce((a,x)=>a+x.cantidad,0), invertido: totalCompras },
@@ -330,7 +330,7 @@ export default function App() {
   };
 
   const agregarItem = () => {
-    if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos del ítem'); return; }
+    if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos del Ã­tem'); return; }
     if (!calc) { showToast('No hay precio calculado'); return; }
     const item = {
       ref: currentRef.name, refId: currentRef.id, cat: currentRef.cat,
@@ -341,11 +341,11 @@ export default function App() {
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0);
     setSelForma('');
-    showToast('Ítem agregado ✓');
+    showToast('Ãtem agregado â');
   };
 
   const generarCotizacionPDF = async () => {
-    if (cartItems.length === 0) { showToast('Agrega al menos un ítem para generar el PDF'); return; }
+    if (cartItems.length === 0) { showToast('Agrega al menos un Ã­tem para generar el PDF'); return; }
 
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const pageW = pdf.internal.pageSize.getWidth();
@@ -369,13 +369,13 @@ export default function App() {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184);
-    pdf.text('Camisetas & Diseño Personalizado', ml + 2, 24);
+    pdf.text('Camisetas & DiseÃ±o Personalizado', ml + 2, 24);
 
     // Document type (right)
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(199, 210, 254);
-    pdf.text('COTIZACIÓN', pageW - mr, 17, { align: 'right' });
+    pdf.text('COTIZACIÃN', pageW - mr, 17, { align: 'right' });
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184);
@@ -389,7 +389,7 @@ export default function App() {
     pdf.setFontSize(7.5);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(71, 85, 105);
-    pdf.text('INFORMACIÓN DEL CLIENTE', ml + 4, clienteY);
+    pdf.text('INFORMACIÃN DEL CLIENTE', ml + 4, clienteY);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(15, 23, 42);
     pdf.setFontSize(10);
@@ -407,7 +407,7 @@ export default function App() {
     // Products table
     const tableY = clienteY + 38;
     const tableData = cartItems.map((item, i) => [
-      String(i + 1), item.ref, item.color, item.talla, item.forma || '—',
+      String(i + 1), item.ref, item.color, item.talla, item.forma || 'â',
       String(item.qty), cop(item.qty > 0 ? item.precio / item.qty : 0), cop(item.precio),
     ]);
     const total = cartItems.reduce((s, i) => s + i.precio, 0);
@@ -442,9 +442,9 @@ export default function App() {
         pdf.line(ml, footY - 4, pageW - mr, footY - 4);
         pdf.setFontSize(7);
         pdf.setTextColor(148, 163, 184);
-        pdf.text('FURIA ROCK · Camisetas & Diseño Personalizado', ml, footY);
-        pdf.text('Cotización sin valor fiscal. Precios en COP.', pageW / 2, footY, { align: 'center' });
-        pdf.text('Pág. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
+        pdf.text('FURIA ROCK Â· Camisetas & DiseÃ±o Personalizado', ml, footY);
+        pdf.text('CotizaciÃ³n sin valor fiscal. Precios en COP.', pageW / 2, footY, { align: 'center' });
+        pdf.text('PÃ¡g. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
       },
     });
 
@@ -455,13 +455,13 @@ export default function App() {
       pdf.setFont('helvetica', 'bold');
       pdf.text('CONDICIONES:', ml, finalY);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('· Esta cotización tiene vigencia de 5 días hábiles.', ml, finalY + 5);
-      pdf.text('· Los precios están sujetos a cambios sin previo aviso.', ml, finalY + 10);
-      pdf.text('· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
+      pdf.text('Â· Esta cotizaciÃ³n tiene vigencia de 5 dÃ­as hÃ¡biles.', ml, finalY + 5);
+      pdf.text('Â· Los precios estÃ¡n sujetos a cambios sin previo aviso.', ml, finalY + 10);
+      pdf.text('Â· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
     }
 
 
-    // ── Información de Pago ──────────────────────────────────────
+    // ââ InformaciÃ³n de Pago ââââââââââââââââââââââââââââââââââââââ
     const bx = ml;
     const bw = pageW - ml - ml;
     const qrSize = 28;
@@ -524,7 +524,7 @@ export default function App() {
 
     const today2 = new Date().toISOString().split('T')[0];
     pdf.save('Cotizacion_FuriaRock_' + (clienteNombre || 'cliente').replace(/\s+/g, '_') + '_' + today2 + '.pdf');
-    showToast('✅ PDF descargado correctamente');
+    showToast('â PDF descargado correctamente');
   };
 
   
@@ -548,7 +548,7 @@ export default function App() {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184);
-    pdf.text('Camisetas & Diseño Personalizado', ml + 2, 24);
+    pdf.text('Camisetas & DiseÃ±o Personalizado', ml + 2, 24);
 
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
@@ -585,11 +585,11 @@ export default function App() {
     // Items table
     const tableY = clienteY + 38;
     const tableData = (ccData || []).map((row: any, i: number) => {
-      const refName = row.Referencia || row.referencia || row.ref || '—';
-      const colorV = row.Color || row.color || '—';
-      const tallaV = row.Talla || row.talla || '—';
-      const formaV = row.Forma || row.forma || '—';
-      const cantV = row.Cantidad || row.cantidad || '—';
+      const refName = row.Referencia || row.referencia || row.ref || 'â';
+      const colorV = row.Color || row.color || 'â';
+      const tallaV = row.Talla || row.talla || 'â';
+      const formaV = row.Forma || row.forma || 'â';
+      const cantV = row.Cantidad || row.cantidad || 'â';
       const precioV = Number(String(row['Precio Unit.'] || row.precioUnit || 0).replace(/[^0-9.]/g, ''));
       const totalV = Number(String(row['Total Venta'] || row.totalVenta || 0).replace(/[^0-9.]/g, ''));
       return [String(i + 1), refName, colorV, tallaV, formaV, String(cantV), cop(precioV > 0 ? precioV : (cantV > 0 ? totalV / cantV : 0)), cop(totalV)];
@@ -625,14 +625,14 @@ export default function App() {
         pdf.line(ml, footY - 4, pageW - mr, footY - 4);
         pdf.setFontSize(7);
         pdf.setTextColor(148, 163, 184);
-        pdf.text('FURIA ROCK · Camisetas & Diseño Personalizado', ml, footY);
-        pdf.text('Cuenta de Cobro · ID: ' + idVenta, pageW / 2, footY, { align: 'center' });
-        pdf.text('Pág. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
+        pdf.text('FURIA ROCK Â· Camisetas & DiseÃ±o Personalizado', ml, footY);
+        pdf.text('Cuenta de Cobro Â· ID: ' + idVenta, pageW / 2, footY, { align: 'center' });
+        pdf.text('PÃ¡g. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
       },
     });
 
 
-  // ── Información de Pago ──────────────────────────────────────
+  // ââ InformaciÃ³n de Pago ââââââââââââââââââââââââââââââââââââââ
   const bx2 = ml;
   const bw2 = pageW - ml - mr;
   const qrSize2 = 28;
@@ -697,7 +697,7 @@ export default function App() {
   };
 
   const registrarVenta = async () => {
-    if (cartItems.length === 0) { showToast('Agrega al menos un ítem al pedido'); return; }
+    if (cartItems.length === 0) { showToast('Agrega al menos un Ã­tem al pedido'); return; }
     setLoading(true); setGasErr('');
     const nuevasVentas = [...ventas];
     for (const item of cartItems) {
@@ -716,13 +716,13 @@ export default function App() {
       };
       nuevasVentas.unshift(v);
       try {
-        const res = await sendToGAS({ accion:'guardarVenta', ...v });
+        const res = await sendToGAS({ action:'guardarVenta', ...v });
         if (res.status !== 'ok') { setGasErr('Error Drive: ' + res.msg); }
       } catch(e) { setGasErr('Sin conexion Drive'); }
     }
     const nuevoInv = calcInventario(nuevasVentas, compras);
     try {
-      await sendToGAS({ accion:'sincronizarInventarioBatch', rows: nuevoInv });
+      await sendToGAS({ action:'sincronizarInventarioBatch', rows: nuevoInv });
       await sincrResultados(nuevasVentas, compras, nuevoInv);
     } catch {}
     setVentas(nuevasVentas);
@@ -730,7 +730,7 @@ export default function App() {
     setCartItems([]);
     setClienteNombre(''); setClienteTel(''); setClienteDoc('');
     setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden(''); setClienteEstadoPago('Pendiente de pago');
-    showToast('Pedido registrado ✓');
+    showToast('Pedido registrado â');
     setLoading(false);
   };
 
@@ -747,18 +747,18 @@ export default function App() {
     const nuevasCompras = [c, ...compras];
     const nuevoInv      = calcInventario(ventas, nuevasCompras);
     try {
-      await sendToGAS({ accion:'guardarCompra', ...c });
-      await sendToGAS({ accion:'sincronizarInventarioBatch', rows: nuevoInv });
+      await sendToGAS({ action:'guardarCompra', ...c });
+      await sendToGAS({ action:'sincronizarInventarioBatch', rows: nuevoInv });
       await sincrResultados(ventas, nuevasCompras, nuevoInv);
     } catch {}
     setCompras(nuevasCompras);
     localStorage.setItem('compras', JSON.stringify(nuevasCompras));
     setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCProv(''); setCNotas(''); setCForma('');
-    showToast('Compra registrada ✓');
+    showToast('Compra registrada â');
     setLoading(false);
   };
 
-    // ── Cotizaciones ─────────────────────────────────────────────────
+    // ââ Cotizaciones âââââââââââââââââââââââââââââââââââââââââââââââââ
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
   const [loadingCot, setLoadingCot] = useState(false);
   const [cotBusqueda, setCotBusqueda] = useState('');
@@ -844,12 +844,12 @@ export default function App() {
     try {
       const resp = await sendToGAS({ action: 'actualizarEstadoPago', ventaId, nuevoEstado });
       if (resp.status === 'ok') {
-        showToast('Estado actualizado ✓');
+        showToast('Estado actualizado â');
       } else {
         showToast('Guardado localmente. Actualiza Drive manualmente si es necesario.');
       }
     } catch (e: any) {
-      showToast('Sin conexión - estado guardado en pantalla');
+      showToast('Sin conexiÃ³n - estado guardado en pantalla');
     }
   };
 
@@ -881,12 +881,12 @@ export default function App() {
     pdf.text('FURIA ROCK', ml, 15);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Camisetas & Diseño Personalizado', ml, 22);
+    pdf.text('Camisetas & DiseÃ±o Personalizado', ml, 22);
 
     // Document type
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('COTIZACIÓN', pageW - mr, 14, { align: 'right' });
+    pdf.text('COTIZACIÃN', pageW - mr, 14, { align: 'right' });
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(200, 200, 255);
@@ -903,7 +903,7 @@ export default function App() {
     pdf.setTextColor(147, 197, 253);
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('INFORMACIÓN DEL CLIENTE', ml + 4, clienteY - 0.5);
+    pdf.text('INFORMACIÃN DEL CLIENTE', ml + 4, clienteY - 0.5);
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
@@ -933,10 +933,10 @@ export default function App() {
         const subtotal = precUnit * cant;
         tableData.push([
           String(i + 1),
-          rowParts[0] || '—',
-          rowParts[1] || '—',
-          rowParts[2] || '—',
-          rowParts[3] || '—',
+          rowParts[0] || 'â',
+          rowParts[1] || 'â',
+          rowParts[2] || 'â',
+          rowParts[3] || 'â',
           String(cant),
           cop(precUnit),
           cop(subtotal)
@@ -945,7 +945,7 @@ export default function App() {
     } else {
       // Fallback: single row with all detail
       const totalNum = Number(String(cot.total || 0).replace(/[^0-9.]/g, ''));
-      tableData.push(['1', detalleStr || '—', '—', '—', '—', String(cants[0] || 1), cop(Number(precs[0] || 0)), cop(totalNum)]);
+      tableData.push(['1', detalleStr || 'â', 'â', 'â', 'â', String(cants[0] || 1), cop(Number(precs[0] || 0)), cop(totalNum)]);
     }
     const totalFinal = Number(String(cot.total || 0).replace(/[^0-9.]/g, '')) || tableData.reduce((s: number, r: any) => s + Number(String(r[7]).replace(/[^0-9]/g, '')), 0);
 
@@ -978,7 +978,7 @@ export default function App() {
     pdf.setFontSize(7.5);
     pdf.setTextColor(147, 197, 253);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('INFORMACIÓN DE PAGO', bx + 8, bankYStart + 7);
+    pdf.text('INFORMACIÃN DE PAGO', bx + 8, bankYStart + 7);
     const tx = bx + 8;
     let ty = bankYStart + 14;
     pdf.setTextColor(255, 255, 255);
@@ -1008,14 +1008,14 @@ export default function App() {
 
     const today = new Date().toISOString().split('T')[0];
     pdf.save('Cotizacion_FuriaRock_' + String(cot.id || today) + '.pdf');
-    showToast('PDF de cotización descargado');
+    showToast('PDF de cotizaciÃ³n descargado');
   };
 ;
 
   // Helper to resolve reference name from refs array
   const resolveRefName = (refId: string): string => {
     const found = refs.find(r => r.id === refId || r.name === refId);
-    return found ? found.name : (refId || '—');
+    return found ? found.name : (refId || 'â');
   };
 
   const buscarCuentaCobro = (id: string) => {
@@ -1059,21 +1059,21 @@ export default function App() {
       setCcStatus('found');
     } else if (ventas.length === 0) {
       setCcStatus('error');
-      setCcMsg('Los datos de ventas aún están cargando. Espera un momento y vuelve a intentar.');
+      setCcMsg('Los datos de ventas aÃºn estÃ¡n cargando. Espera un momento y vuelve a intentar.');
     } else {
       setCcStatus('not_found');
-      setCcMsg('No se encontró una venta con este ID. Verifica el número.');
+      setCcMsg('No se encontrÃ³ una venta con este ID. Verifica el nÃºmero.');
     }
   };
 
   const tabs: {id:Tab; label:string}[] = [
-    {id:'cotizador', label:'🧮 Cotizador'},
-    {id:'ventas',    label:'💰 Ventas'},
-    {id:'compras',   label:'📦 Compras'},
-    {id:'inventario',label:'📊 Inventario'},
-    {id:'dashboard', label:'📈 Dashboard'},
-    {id:'cuenta',    label:'🧾 Cuenta de Cobro'},
-    {id:'cotizaciones', label:'📋 Cotizaciones'},
+    {id:'cotizador', label:'ð§® Cotizador'},
+    {id:'ventas',    label:'ð° Ventas'},
+    {id:'compras',   label:'ð¦ Compras'},
+    {id:'inventario',label:'ð Inventario'},
+    {id:'dashboard', label:'ð Dashboard'},
+    {id:'cuenta',    label:'ð§¾ Cuenta de Cobro'},
+    {id:'cotizaciones', label:'ð Cotizaciones'},
   ];
 
   return (
@@ -1082,7 +1082,7 @@ export default function App() {
         <div className="fixed top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">{toast}</div>
       )}
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
-        <h1 className="text-xl font-bold text-white">⚡ FURIA ROCK – Gestión de Costos</h1>
+        <h1 className="text-xl font-bold text-white">â¡ FURIA ROCK â GestiÃ³n de Costos</h1>
         <p className="text-xs text-gray-400 mt-0.5">Sincronizado con Google Drive</p>
       </div>
       <div className="bg-gray-800 border-b border-gray-700 px-4 flex gap-1 flex-wrap">
@@ -1096,7 +1096,7 @@ export default function App() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
 
-        {/* ═══ COTIZADOR ═══ */}
+        {/* âââ COTIZADOR âââ */}
         {tab === 'cotizador' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1109,16 +1109,16 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">â ï¸ Cargando referencias desde Drive...</p>
         )}
         {selRef && !currentRef && (
-          <p className="text-red-400 text-xs mt-1">⚠️ La referencia no existe en la base de datos del Drive.</p>
+          <p className="text-red-400 text-xs mt-1">â ï¸ La referencia no existe en la base de datos del Drive.</p>
         )}
                 <FG label="Color">
                   <Sel options={coloresDisp} value={selColor} onChange={e => setSelColor(e.target.value)} />
                 </FG>
                 <div className="grid grid-cols-2 gap-3">
-                  <FG label={`Talla${currentRef ? ' (' + (esNino(currentRef.cat) ? 'Niño' : 'Adulto') + ')' : ''}`}>
+                  <FG label={`Talla${currentRef ? ' (' + (esNino(currentRef.cat) ? 'NiÃ±o' : 'Adulto') + ')' : ''}`}>
                     <Sel options={tallasDisp} value={selTalla} onChange={e => setSelTalla(e.target.value)} />
                   </FG>
                   <FG label="Forma de la camiseta">
@@ -1139,7 +1139,7 @@ export default function App() {
                 </FG>
                 {selTipoImp === 'DTF' && (
                   <div className="grid grid-cols-2 gap-3">
-                    <FG label="Área DTF (cm²)" hint="170 COP/cm²">
+                    <FG label="Ãrea DTF (cmÂ²)" hint="170 COP/cmÂ²">
                       <Inp type="number" min={0} value={cmDTF} onChange={e => setCmDTF(Number(e.target.value))} />
                     </FG>
                     <FG label="Num. planchadas" hint="1.000 COP c/u">
@@ -1153,12 +1153,12 @@ export default function App() {
                   </FG>
                 )}
                 <div className="mt-2 p-3 bg-gray-700 rounded-lg space-y-1 text-sm">
-                  <div className="flex justify-between text-gray-400"><span>Base camisa:</span><span>{currentRef ? cop(currentRef.cost) : '—'}</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Base camisa:</span><span>{currentRef ? cop(currentRef.cost) : 'â'}</span></div>
                   <div className="flex justify-between text-gray-400"><span>Empaque:</span><span>{cop(COSTO_EMPAQUE)}</span></div>
-                  <div className="flex justify-between text-gray-400"><span>Impresion:</span><span>{currentRef ? cop(selTipoImp==='DTF' ? cmDTF*DTF_POR_CM2 + numPlanchadas*COSTO_PLANCHADA : costoDTG) : '—'}</span></div>
-                  <div className="flex justify-between font-semibold text-white border-t border-gray-600 pt-1"><span>Costo total ({selQty} und):</span><span>{calc ? cop(calc.costo) : '—'}</span></div>
-                  <div className="flex justify-between font-semibold text-green-400"><span>Precio sugerido ({selQty} und):</span><span>{calc ? cop(calc.precio) : '—'}</span></div>
-                  <div className="flex justify-between text-gray-400 text-xs"><span>Ganancia neta:</span><span>{calc ? cop(GANANCIA_NETA_FIJA * selQty) : '—'}</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Impresion:</span><span>{currentRef ? cop(selTipoImp==='DTF' ? cmDTF*DTF_POR_CM2 + numPlanchadas*COSTO_PLANCHADA : costoDTG) : 'â'}</span></div>
+                  <div className="flex justify-between font-semibold text-white border-t border-gray-600 pt-1"><span>Costo total ({selQty} und):</span><span>{calc ? cop(calc.costo) : 'â'}</span></div>
+                  <div className="flex justify-between font-semibold text-green-400"><span>Precio sugerido ({selQty} und):</span><span>{calc ? cop(calc.precio) : 'â'}</span></div>
+                  <div className="flex justify-between text-gray-400 text-xs"><span>Ganancia neta:</span><span>{calc ? cop(GANANCIA_NETA_FIJA * selQty) : 'â'}</span></div>
                 </div>
               </div>
             </Card>
@@ -1167,11 +1167,11 @@ export default function App() {
               <CardTitle text="Datos del Cliente" />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <FG label="Nombre del cliente"><Inp value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} placeholder="Nombre completo" /></FG>
-                <FG label="Teléfono / Contacto"><Inp value={clienteTel} onChange={e => setClienteTel(e.target.value)} placeholder="Ej: 3001234567" /></FG>
+                <FG label="TelÃ©fono / Contacto"><Inp value={clienteTel} onChange={e => setClienteTel(e.target.value)} placeholder="Ej: 3001234567" /></FG>
                 <FG label="Documento"><Inp value={clienteDoc} onChange={e => setClienteDoc(e.target.value)} placeholder="CC / NIT" /></FG>
-                <FG label="Dirección"><Inp value={clienteDireccion} onChange={e => setClienteDireccion(e.target.value)} placeholder="Dirección de entrega" /></FG>
+                <FG label="DirecciÃ³n"><Inp value={clienteDireccion} onChange={e => setClienteDireccion(e.target.value)} placeholder="DirecciÃ³n de entrega" /></FG>
                 <FG label="Sede / Punto de venta"><Sel options={SEDES} value={clienteSede} onChange={e => setClienteSede(e.target.value)} /></FG>
-                <FG label="Diseño"><Inp value={clienteDiseno} onChange={e => setClienteDiseno(e.target.value)} placeholder="Nombre del diseño" /></FG>
+                <FG label="DiseÃ±o"><Inp value={clienteDiseno} onChange={e => setClienteDiseno(e.target.value)} placeholder="Nombre del diseÃ±o" /></FG>
                 <FG label="Orden interna"><Inp value={clienteOrden} onChange={e => setClienteOrden(e.target.value)} placeholder="Ej: ORD-001" /></FG>
               <FG label="Estado de pago"><Sel options={['Pendiente de pago','Pagado']} value={clienteEstadoPago} onChange={e => setClienteEstadoPago(e.target.value)} /></FG>
               </div>
@@ -1187,7 +1187,7 @@ export default function App() {
                         <th className="text-left py-1 pr-2">Forma</th>
                         <th className="text-right py-1 pr-2">Cant</th>
                         <th className="text-right py-1 pr-2">Precio</th>
-                        <th className="text-right py-1">Acción</th>
+                        <th className="text-right py-1">AcciÃ³n</th>
                       </tr></thead>
                       <tbody>
                         {cartItems.map((item, idx) => (
@@ -1199,7 +1199,7 @@ export default function App() {
                             <td className="py-1 pr-2 text-right text-gray-300">{item.qty}</td>
                             <td className="py-1 pr-2 text-right text-green-400">{cop(item.precio)}</td>
                             <td className="py-1 text-right">
-                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">✕</button>
+                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">â</button>
                             </td>
                           </tr>
                         ))}
@@ -1214,16 +1214,16 @@ export default function App() {
                 )}
                 <div className="flex gap-2 flex-wrap">
                   <Btn onClick={agregarItem} disabled={loading || !currentRef || !selColor || !selTalla} variant="secondary">
-                    + Agregar ítem
+                    + Agregar Ã­tem
                   </Btn>
                   <Btn onClick={generarCotizacionPDF} disabled={cartItems.length === 0} variant="secondary">
-                    📄 Descargar PDF
+                    ð Descargar PDF
                   </Btn>
                   <Btn onClick={guardarCotizacion} disabled={loadingCot || cartItems.length === 0} variant="secondary">
-                    💾 Guardar Cotización
+                    ð¾ Guardar CotizaciÃ³n
                   </Btn>
                   <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
-                    {loading ? 'Guardando…' : `✓ Registrar Pedido (${cartItems.length})`}
+                    {loading ? 'Guardandoâ¦' : `â Registrar Pedido (${cartItems.length})`}
                   </Btn>
                 </div>
               </div>
@@ -1231,23 +1231,23 @@ export default function App() {
           </div>
         )}
 
-{/* ═══ VENTAS ═══ */}
+{/* âââ VENTAS âââ */}
         {tab === 'ventas' && (
           <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text={`Historial de Ventas (${ventas.length})`} />
-              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>📊 CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>ð CSV</Btn>
             </div>
 
-            {/* ── Buscador y Filtro ── */}
+            {/* ââ Buscador y Filtro ââ */}
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔍</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">ð</span>
                 <input
                   type="text"
                   value={searchVentas}
                   onChange={e => setSearchVentas(e.target.value)}
-                  placeholder="Buscar por cliente, documento o teléfono..."
+                  placeholder="Buscar por cliente, documento o telÃ©fono..."
                   className="w-full pl-9 pr-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 transition-all duration-200"
                 />
               </div>
@@ -1289,11 +1289,11 @@ export default function App() {
                     }).map(v => (
                       <tr key={v.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                         <td className="py-2 pr-3 text-gray-300">{v.fecha}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.cliente || '–'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.cliente || 'â'}</td>
                         <td className="py-2 pr-3 text-gray-200">{v.ref || resolveRefName(v.refId)}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.color}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.talla}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.forma || '–'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.forma || 'â'}</td>
                         <td className="py-2 pr-3 text-right text-gray-300">{v.cantidad}</td>
                         <td className="py-2 pr-3 text-right text-green-400 font-semibold text-xs">{cop(v.totalVenta)}</td>
                         <td className="py-2 text-right text-indigo-400">{cop(v.ganancia)}</td>
@@ -1307,8 +1307,8 @@ export default function App() {
                                 : 'bg-yellow-900/40 border-yellow-600 text-yellow-300'
                             }`}
                           >
-                            <option value="Pendiente de pago">⏳ Pendiente</option>
-                            <option value="Pagado">✅ Pagado</option>
+                            <option value="Pendiente de pago">â³ Pendiente</option>
+                            <option value="Pagado">â Pagado</option>
                           </select>
                         </td>
                       </tr>
@@ -1319,7 +1319,7 @@ export default function App() {
             )}
           </Card>
         )}
-                {/* ═══ COMPRAS ═══ */}
+                {/* âââ COMPRAS âââ */}
         {tab === 'compras' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1332,7 +1332,7 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">â ï¸ Cargando referencias desde Drive...</p>
         )}
                 <div className="grid grid-cols-2 gap-3">
                   <FG label="Color"><Sel options={cColoresDisp} value={cColor} onChange={e => setCColor(e.target.value)} /></FG>
@@ -1347,13 +1347,13 @@ export default function App() {
                 </div>
                 <FG label="Proveedor"><Inp value={cProv} onChange={e => setCProv(e.target.value)} placeholder="Nombre del proveedor" /></FG>
                 <FG label="Notas"><Inp value={cNotas} onChange={e => setCNotas(e.target.value)} placeholder="Observaciones" /></FG>
-                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'Guardando…' : '+ Registrar Compra'}</Btn>
+                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'Guardandoâ¦' : '+ Registrar Compra'}</Btn>
               </div>
             </Card>
             <Card>
               <div className="flex items-center justify-between mb-3">
                 <CardTitle text={`Historial de Compras (${compras.length})`} />
-                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>⬇ CSV</Btn>
+                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>â¬ CSV</Btn>
               </div>
               {compras.length === 0 ? <p className="text-gray-500 text-sm">No hay compras registradas.</p> : (
                 <div className="overflow-x-auto">
@@ -1370,7 +1370,7 @@ export default function App() {
                         <tr key={c.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                           <td className="py-2 pr-3 text-gray-300">{c.fecha}</td>
                           <td className="py-2 pr-3 text-gray-200">{c.ref || resolveRefName(c.refId)}</td>
-                          <td className="py-2 pr-3 text-gray-300">{c.forma || '—'}</td>
+                          <td className="py-2 pr-3 text-gray-300">{c.forma || 'â'}</td>
                           <td className="py-2 pr-3 text-right text-gray-300">{c.cantidad}</td>
                           <td className="py-2 text-right text-blue-400">{cop(c.total)}</td>
                         </tr>
@@ -1383,19 +1383,19 @@ export default function App() {
           </div>
         )}
 
-        {/* ═══ INVENTARIO ═══ */}
+        {/* âââ INVENTARIO âââ */}
         {tab === 'inventario' && (
           <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text="Inventario en Tiempo Real" />
-              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>⬇ CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>â¬ CSV</Btn>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
                 { label:'En stock', val: displayInventario.reduce((a,i)=>a+Math.max(i.stock,0),0), color:'text-white' },
                 { label:'OK (>5)',   val: displayInventario.filter(i=>i.stock>5).length, color:'text-green-400' },
-                { label:'Bajo (≤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
-                { label:'Crítico (≤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
+                { label:'Bajo (â¤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
+                { label:'CrÃ­tico (â¤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
               ].map(k => (
                 <div key={k.label} className="bg-gray-700 rounded-lg p-3 text-center">
                   <p className={`text-2xl font-bold ${k.color}`}>{k.val}</p>
@@ -1423,11 +1423,11 @@ export default function App() {
                       <td className="py-2 pr-3 text-gray-400">{i.cat}</td>
                       <td className="py-2 pr-3 text-gray-300">{i.talla}</td>
                       <td className="py-2 pr-3 text-gray-300">{i.color}</td>
-                      <td className="py-2 pr-3 text-gray-300">{i.forma && i.forma !== '_' ? i.forma : '—'}</td>
+                      <td className="py-2 pr-3 text-gray-300">{i.forma && i.forma !== '_' ? i.forma : 'â'}</td>
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
-                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠️ Bajo':'🔴 Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
+                      <td className="py-2"><Badge text={i.estado==='OK'?'â OK':i.estado==='Bajo'?'â ï¸ Bajo':'ð´ CrÃ­tico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1436,7 +1436,7 @@ export default function App() {
           </Card>
         )}
 
-        {/* ═══ DASHBOARD ═══ */}
+        {/* âââ DASHBOARD âââ */}
         {tab === 'dashboard' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1454,7 +1454,7 @@ export default function App() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
-                <CardTitle text="Últimas 5 Ventas" />
+                <CardTitle text="Ãltimas 5 Ventas" />
                 <div className="space-y-2">
                   {ventas.slice(0,5).map(v => (
                     <div key={v.id} className="flex justify-between items-center text-sm">
@@ -1462,11 +1462,11 @@ export default function App() {
                       <span className="text-green-400">{cop(v.totalVenta)}</span>
                     </div>
                   ))}
-                  {ventas.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aún</p>}
+                  {ventas.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aÃºn</p>}
                 </div>
               </Card>
               <Card>
-                <CardTitle text="Stock Crítico" />
+                <CardTitle text="Stock CrÃ­tico" />
                 <div className="space-y-2">
                   {displayInventario.filter(i=>i.stock<=2).map((i,idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm">
@@ -1474,14 +1474,14 @@ export default function App() {
                       <Badge text={String(i.stock)} color="red" />
                     </div>
                   ))}
-                  {displayInventario.filter(i=>i.stock<=2).length === 0 && <p className="text-gray-500 text-sm">Sin items críticos ✅</p>}
+                  {displayInventario.filter(i=>i.stock<=2).length === 0 && <p className="text-gray-500 text-sm">Sin items crÃ­ticos â</p>}
                 </div>
               </Card>
             </div>
           </div>
         )}
 
-        {/* ═══ CUENTA DE COBRO ═══ */}
+        {/* âââ CUENTA DE COBRO âââ */}
         {tab === 'cuenta' && (
           <div className="space-y-4">
             <Card>
@@ -1494,22 +1494,22 @@ export default function App() {
                   }} placeholder="Ingresa el ID de la venta (ej: 1779063838818)" className="w-80" />
                 </FG>
                 <Btn onClick={() => buscarCuentaCobro(ccId)} disabled={!ccId.trim() || ccStatus==='loading'}>
-                  {ccStatus === 'loading' ? 'Buscando…' : '🔍 Buscar'}
+                  {ccStatus === 'loading' ? 'Buscandoâ¦' : 'ð Buscar'}
                 </Btn>
               </div>
-              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google Drive…</p>}
-              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">⚠️ {ccMsg}</p></div>}
-              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">⚠️ {ccMsg}</p></div>}
+              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google Driveâ¦</p>}
+              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">â ï¸ {ccMsg}</p></div>}
+              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">â ï¸ {ccMsg}</p></div>}
             </Card>
 
             {ccStatus === 'found' && ccData && ccData.length > 0 && (() => {
               const fila0 = ccData[0];
-              const clienteNom  = fila0['Cliente']   || fila0['cliente']   || '—';
-              const clienteFon  = fila0['Telefono']  || fila0['telefono']  || '—';
-              const clienteDoc2 = fila0['Documento'] || fila0['documento'] || '—';
-              const clienteDir  = fila0['Direccion'] || fila0['direccion'] || '—';
-              const clienteS    = fila0['Sede']      || fila0['sede']      || '—';
-              const fecha       = fila0['Fecha']     || fila0['fecha']     || '—';
+              const clienteNom  = fila0['Cliente']   || fila0['cliente']   || 'â';
+              const clienteFon  = fila0['Telefono']  || fila0['telefono']  || 'â';
+              const clienteDoc2 = fila0['Documento'] || fila0['documento'] || 'â';
+              const clienteDir  = fila0['Direccion'] || fila0['direccion'] || 'â';
+              const clienteS    = fila0['Sede']      || fila0['sede']      || 'â';
+              const fecha       = fila0['Fecha']     || fila0['fecha']     || 'â';
               const idVenta     = fila0['ID']        || fila0['id']        || ccId;
               const totalGeneral = ccData.reduce((acc: number, row: any) => {
                 const tv = Number(String(row['Total Venta'] || row['totalVenta'] || row['TotalVenta'] || 0).replace(/[^0-9.-]/g,''));
@@ -1520,7 +1520,7 @@ export default function App() {
                   <Card className="border border-indigo-700">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <h2 className="text-lg font-bold text-white">🧾 Cuenta de Cobro</h2>
+                        <h2 className="text-lg font-bold text-white">ð§¾ Cuenta de Cobro</h2>
                         <p className="text-xs text-gray-400">ID: {idVenta} &nbsp;|&nbsp; Fecha: {fecha}</p>
                       </div>
                       <div className="text-right">
@@ -1531,14 +1531,14 @@ export default function App() {
                 onClick={() => generarCuentaCobroPDF({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData })}
                 className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors"
               >
-                📄 Descargar PDF
+                ð Descargar PDF
               </button>
                     </div>
                   </Card>
                   <Card>
                     <CardTitle text="A. Datos del Cliente" />
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {[{label:'Cliente',val:clienteNom},{label:'Teléfono',val:clienteFon},{label:'Documento',val:clienteDoc2},{label:'Dirección',val:clienteDir},{label:'Sede',val:clienteS}].map(item => (
+                      {[{label:'Cliente',val:clienteNom},{label:'TelÃ©fono',val:clienteFon},{label:'Documento',val:clienteDoc2},{label:'DirecciÃ³n',val:clienteDir},{label:'Sede',val:clienteS}].map(item => (
                         <div key={item.label}>
                           <p className="text-xs text-gray-400">{item.label}</p>
                           <p className="text-sm text-white font-medium mt-0.5">{item.val}</p>
@@ -1562,12 +1562,12 @@ export default function App() {
                         </tr></thead>
                         <tbody>
                           {ccData.map((row: any, idx: number) => {
-                            const refName = row['Referencia']||row['referencia']||row['ref']||'—';
-                            const colorV  = row['Color']||row['color']||'—';
-                            const tallaV  = row['Talla']||row['talla']||'—';
-                            const formaV  = row['Forma']||row['forma']||'—';
+                            const refName = row['Referencia']||row['referencia']||row['ref']||'â';
+                            const colorV  = row['Color']||row['color']||'â';
+                            const tallaV  = row['Talla']||row['talla']||'â';
+                            const formaV  = row['Forma']||row['forma']||'â';
                             const cantV   = row['Cantidad']||row['cantidad']||0;
-                            const ordenV  = row['OrdenInterna']||row['ordenInterna']||row['Orden interna']||'—';
+                            const ordenV  = row['OrdenInterna']||row['ordenInterna']||row['Orden interna']||'â';
                             const totalV  = Number(String(row['Total Venta']||row['totalVenta']||row['TotalVenta']||0).replace(/[^0-9.-]/g,''));
                             return (
                               <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
@@ -1590,7 +1590,7 @@ export default function App() {
                     <CardTitle text="C. Resumen" />
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <p className="text-sm text-gray-400">Líneas en el pedido: <span className="text-white">{ccData.length}</span></p>
+                        <p className="text-sm text-gray-400">LÃ­neas en el pedido: <span className="text-white">{ccData.length}</span></p>
                         <p className="text-sm text-gray-400">Unidades totales: <span className="text-white">{ccData.reduce((a:number,r:any) => a + Number(r['Cantidad']||r['cantidad']||0), 0)}</span></p>
                       </div>
                       <div className="text-right">
@@ -1605,14 +1605,14 @@ export default function App() {
           </div>
         )}
 
-      {/* ── COTIZACIONES ──────────────────────────────────────── */}
+      {/* ââ COTIZACIONES ââââââââââââââââââââââââââââââââââââââââ */}
       {tab === 'cotizaciones' && (
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">📋 REGISTRO DE COTIZACIONES</h2>
+            <h2 className="text-xl font-bold text-white">ð REGISTRO DE COTIZACIONES</h2>
             <button onClick={cargarCotizaciones} className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-500">
-              🔄 Actualizar
+              ð Actualizar
             </button>
           </div>
 
@@ -1628,7 +1628,7 @@ export default function App() {
             />
             {cotBusqueda && (
               <button onClick={() => setCotBusqueda('')} className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded-lg hover:bg-slate-500">
-                ✕ Limpiar
+                â Limpiar
               </button>
             )}
           </div>
@@ -1646,7 +1646,7 @@ export default function App() {
                     <th className="px-3 py-2">Referencias</th>
                     <th className="px-3 py-2 text-right">Total</th>
                     <th className="px-3 py-2 text-center">Estado</th>
-                    <th className="px-3 py-2 text-center">Acción</th>
+                    <th className="px-3 py-2 text-center">AcciÃ³n</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1665,7 +1665,7 @@ export default function App() {
                         <span className={String(cot.estado) === 'Convertida en Venta'
                           ? 'px-2 py-0.5 rounded-full text-xs bg-emerald-900 text-emerald-300'
                           : 'px-2 py-0.5 rounded-full text-xs bg-indigo-900 text-indigo-300'}>
-                          {String(cot.estado || 'Cotización')}
+                          {String(cot.estado || 'CotizaciÃ³n')}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -1674,7 +1674,7 @@ export default function App() {
                             onClick={() => descargarCotizacionPDF(cot)}
                             className="px-3 py-1 bg-indigo-700 text-white text-xs rounded-lg hover:bg-indigo-600"
                           >
-                            📄 PDF
+                            ð PDF
                           </button>
                           {String(cot.estado) !== 'Convertida en Venta' && (
                           <button
@@ -1682,7 +1682,7 @@ export default function App() {
                             disabled={loading}
                             className="px-3 py-1 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-500 disabled:opacity-50"
                           >
-                            ✅ Convertir en Venta
+                            â Convertir en Venta
                           </button>
                           )}
                         </div>
