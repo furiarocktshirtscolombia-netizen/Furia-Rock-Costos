@@ -925,6 +925,7 @@ export default function App() {
     const precs = precStr.split(/[|,]/).map((s: string) => s.trim()).filter(Boolean);
     const itemStrs = detalleStr.split('/').map((s: string) => s.trim()).filter(Boolean);
     const rowCount = Math.max(itemStrs.length || (detalleStr ? 1 : 0), cants.length, precs.length);
+    const tableData: any[] = [];
 
     if (rowCount > 0 && cants.length > 0) {
       for (let i = 0; i < rowCount; i++) {
