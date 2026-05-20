@@ -297,7 +297,7 @@ export default function App() {
         }
         return {
           ref: refName || '-',
-          cat: i.categoria || i.cat || '',
+          cat: i.cat || i.cat || '',
           talla: i.talla || '',
           color: i.color || '',
           forma: i.forma || '-',
@@ -779,7 +779,7 @@ export default function App() {
           refId: i.refId, refName: i.ref, nombre: i.ref,
           color: i.color, talla: i.talla, forma: i.forma,
           cantidad: i.qty, precio: i.precio, precioUnit: i.qty > 0 ? i.precio / i.qty : i.precio,
-          categoria: i.categoria, costo: i.costo || 0
+          categoria: i.cat, costo: i.costo || 0
         }))
       };
       const resp = await sendToGAS({ action: 'guardarCotizacion', cotizacion: cotData });
