@@ -13,7 +13,7 @@ const REFS_DEFAULT: Ref[] = [
   { id:"r6",  name:"HOODIE PERUANO 400G",                     cost:82000, cat:"Adulto" },
   { id:"r7",  name:"CAMISETA NINO ALGODON PERUANO 200G",      cost:24000, chat:"Nino"   },
   { id:"r8",  name:"CAMISETA NINO NACIONAL 200G",             cost:14000, cat:"Nino"   },
-  { id:"r9",  name:"CAMISETA ACID WASH NINO",                 cost:18000, cat:"Nino"   },
+  { id:"r9",  name:"CAMISETA ACID WASH NINO",                 cost:18000, cath:"Nino"   },
   { id:"r10", name:"BERMUDA NINO ALGODON PERCHADO",           cost:13500, cat:"Nino"   },
   { id:"r11", name:"SUDADERA NINOS ALGODON PERCHADO",         cost:19000, cat:"Nino"   },
   { id:"r12", name:"CONJUNTO NINO CAMISETA PERUANO + BERMUDA",cost:37500, cat:"Nino"   },
@@ -416,7 +416,7 @@ export default function App() {
       startY: tableY,
       head: [['#', 'REFERENCIA', 'COLOR', 'TALLA', 'FORMA', 'CANT', 'P. UNIT', 'SUBTOTAL']],
       body: tableData,
-      foot: [['', '', '', '', '', '', 'TOTAL PEDIDO', cop(total)]],
+      foot: [['', '', '', '', '', '', 'TOTAL GENERAL', cop(total)]],
       theme: 'plain',
       headStyles: { fillColor: [15, 23, 42], textColor: [199, 210, 254], fontSize: 7.5, fontStyle: 'bold', cellPadding: { top: 4, bottom: 4, left: 3, right: 3 } },
       footStyles: { fillColor: [238, 242, 255], textColor: [67, 56, 202], fontSize: 10, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 3, right: 3 } },
@@ -974,7 +974,7 @@ export default function App() {
       startY: tableY,
       head: [['#', 'REFERENCIA', 'COLOR', 'TALLA', 'FORMA', 'CANT', 'P. UNIT', 'SUBTOTAL']],
       body: tableData,
-      foot: [['', '', '', '', '', '', 'TOTAL PEDIDO', cop(totalFinal)]],
+      foot: [['', '', '', '', '', '', 'TOTAL GENERAL', cop(totalFinal)]],
       theme: 'plain',
       headStyles: { fillColor: [15, 23, 42], textColor: [147, 197, 253], fontSize: 7.5, fontStyle: 'bold', cellPadding: { top: 3, bottom: 3, left: 2, right: 2 } },
       footStyles: { fillColor: [15, 23, 42], textColor: [52, 211, 153], fontSize: 9, fontStyle: 'bold' },
@@ -1224,7 +1224,7 @@ export default function App() {
                           </tr>
                         ))}
                         <tr className="border-t border-gray-600">
-                          <td colSpan={5} className="py-1 text-gray-400 text-xs font-semibold">TOTAL PEDIDO</td>
+                          <td colSpan={5} className="py-1 text-gray-400 text-xs font-semibold">TOTAL GENERAL</td>
                           <td className="py-1 text-right text-green-400 font-semibold text-xs">{cop(cartItems.reduce((s,i) => s + i.precio, 0))}</td>
                           <td></td>
                         </tr>
