@@ -860,13 +860,13 @@ export default function App() {
     const ml = 18, mr = 18;
     const contentW = pageW - ml - mr;
 
-    // Parse items from cot.detalle / cot.cantidades / cot.precios
-    const detalleStr = String(cot.detalle || '');
-    const cantStr    = String(cot.cantidades || '');
-    const precStr    = String(cot.precios || '');
-    const parts   = detalleStr.split('|').map((s: string) => s.trim()).filter(Boolean);
-    const cants   = cantStr.split(/[|,]/).map((s: string) => s.trim()).filter(Boolean);
-    const precs   = precStr.split(/[|,]/).map((s: string) => s.trim()).filter(Boolean);
+
+
+
+
+
+
+
 
     // Header background
     pdf.setFillColor(15, 23, 42);
@@ -918,8 +918,8 @@ export default function App() {
 
     // Build table data from items structured data or parsed detalle string
     const FORMAS_VALID = ['Oversize', 'Regular Fit', 'oversize', 'regular fit'];
-    const detalleStr = String(cot.detalle || '');
-    const cantStr    = String(cot.cantidades || '');
+    const detalleStr = String(cot.detalle || '');    const cantStr    = String(cot.cantidades || '');
+
     const precStr    = String(cot.precios    || '');
     const cants = cantStr.split(/[|,]/).map((s: string) => s.trim()).filter(Boolean);
     const precs = precStr.split(/[|,]/).map((s: string) => s.trim()).filter(Boolean);
