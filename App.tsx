@@ -1315,6 +1315,7 @@ export default function App() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="text-gray-400 border-b border-gray-700">
+                    <th className="text-left py-2 pr-3 text-indigo-300">ID Pedido</th>
                     <th className="text-left py-2 pr-3">Fecha</th>
                     <th className="text-left py-2 pr-3">Cliente</th>
                     <th className="text-left py-2 pr-3">Referencia</th>
@@ -1337,6 +1338,15 @@ export default function App() {
                       return matchCliente && matchEstado;
                     }).map(v => (
                       <tr key={v.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                        <td className="py-2 pr-3">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className="text-xs font-mono text-indigo-400">{v.id || '–'}</span>
+                            <button
+                              onClick={() => { setTab('cuenta'); setCcId(String(v.id)); setTimeout(() => buscarCuentaCobro(String(v.id)), 150); }}
+                              className="text-xs px-2 py-0.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded transition-colors whitespace-nowrap"
+                            >🧾 Cobro</button>
+                          </div>
+                        </td>
                         <td className="py-2 pr-3 text-gray-300">{v.fecha}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.cliente || '–'}</td>
                         <td className="py-2 pr-3 text-gray-200">{v.ref || resolveRefName(v.refId)}</td>
@@ -1540,7 +1550,7 @@ export default function App() {
                 <FG label="ID de la venta">
                   <Inp value={ccId} onChange={e => {
                     setCcId(e.target.value); setCcStatus('idle'); setCcData(null); setCcMsg('');
-                    if (e.target.value.trim().length > 5) buscarCuentaCobro(e.target.value.trim());
+                    if (e.target.value.trim().length >= 1) buscarCuentaCobro(e.target.value.trim());
                   }} placeholder="Ingresa el ID de la venta (ej: 1779063838818)" className="w-80" />
                 </FG>
                 <Btn onClick={() => buscarCuentaCobro(ccId)} disabled={!ccId.trim() || ccStatus==='loading'}>
@@ -1733,6 +1743,14 @@ export default function App() {
                             className="px-3 py-1 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-500 disabled:opacity-50"
                           >
                             ✅ Convertir en Venta
+                          </button>
+                          )}
+                          {String(cot.estado) === 'Convertida en Venta' && (
+                          <button
+                            onClick={() => { setTab('cuenta'); setCcId(String(cot.ventaId || cot.id)); setTimeout(() => buscarCuentaCobro(String(cot.ventaId || cot.id)), 150); }}
+                            className="px-3 py-1 bg-teal-700 text-white text-xs rounded-lg hover:bg-teal-600"
+                          >
+                            🧾 Ver Cobro
                           </button>
                           )}
                         </div>
