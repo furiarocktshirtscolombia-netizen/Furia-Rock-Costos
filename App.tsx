@@ -742,7 +742,8 @@ export default function App() {
 
   const registrarCompra = async () => {
     const r = refs.find(x => x.id === cRef);
-    if (!r || !cColor || !cTalla || cQty < 1) { showToast('Completa todos los campos'); return; }
+    const esAccesorio = r.cat === 'Accesorio';
+    if (!r || (!esAccesorio && (!cColor || !cTalla)) || cQty < 1) { showToast('Completa todos los campos'); return; }
     setLoading(true);
     const c: Compra = {
       id: uid(), fecha: today(), refId: r.id, ref: r.name, cat: r.cat,
@@ -1400,13 +1401,17 @@ export default function App() {
         {refs.length === 0 && (
           <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
         )}
-                <div className="grid grid-cols-2 gap-3">
-                  <FG label="Color"><Sel options={cColoresDisp} value={cColor} onChange={e => setCColor(e.target.value)} /></FG>
-                  <FG label="Talla"><Sel options={TODAS_TALLAS} value={cTalla} onChange={e => setCTalla(e.target.value)} /></FG>
-                </div>
-                <FG label="Forma de la camiseta">
-                  <Sel options={FORMAS_CAMISETA} value={cForma} onChange={e => setCForma(e.target.value)} />
-                </FG>
+                {!(refs.find(x => x.id === cRef)?.cat === 'Accesorio') && (
+                  <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FG label="Color"><Sel options={cColoresDisp} value={cColor} onChange={e => setCColor(e.target.value)} /></FG>
+                    <FG label="Talla"><Sel options={TODAS_TALLAS} value={cTalla} onChange={e => setCTalla(e.target.value)} /></FG>
+                  </div>
+                  <FG label="Forma de la camiseta">
+                    <Sel options={FORMAS_CAMISETA} value={cForma} onChange={e => setCForma(e.target.value)} />
+                  </FG>
+                  </>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <FG label="Cantidad"><Inp type="number" min={1} value={cQty} onChange={e => setCQty(Number(e.target.value))} /></FG>
                   <FG label="Precio unitario (COP)"><Inp type="number" min={0} value={cPrecio} onChange={e => setCPrecio(Number(e.target.value))} /></FG>
