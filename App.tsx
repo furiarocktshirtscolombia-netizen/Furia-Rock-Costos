@@ -26,7 +26,7 @@ const COLORES_DEFAULT  = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL C
 const TALLAS_ADULTO    = ["XS","S","M","L","XL","XXL"];
 const TALLAS_NINO      = ["0-2","2-4","4-6","6-8","8-10","10-12","12-14","14-16"];
 const TODAS_TALLAS     = [...TALLAS_ADULTO, ...TALLAS_NINO];
-const TIPOS_IMP        = ["DTF","DTG"];
+const TIPOS_IMP        = ["DTF","DTG","Bordado"];
 const SEDES            = ["Medellin","Bogota","Cali","Online","Otra"];
 const FORMAS_CAMISETA  = ["Oversize","Regular Fit"];
 
@@ -37,7 +37,7 @@ const esNino = (cat: string) =>
 // COSTOS FIJOS DE PRODUCCION
 const GANANCIA_NETA_FIJA = 30000;
 const DTF_POR_CM2        = 170;
-const COSTO_EMPAQUE      = 1300;
+const COSTO_EMPAQUE      = 1700;
 const COSTO_PLANCHADA    = 1000;
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
@@ -101,12 +101,13 @@ const cop  = (n:number) => '$' + Math.round(n).toLocaleString('es-CO');
 const today = () => new Date().toISOString().split('T')[0];
 const uid   = () => Date.now().toString();
 
-const calcPrice = (ref: Ref, qty: number, tipoImp: string, cmDTF: number, numPlanchadas: number, costoDTG: number): Calc => {
+const calcPrice = (ref: Ref, qty: number, tipoImp: string, cmDTF: number, numPlanchadas: number, costoDTG: number, costoBordado: number): Calc => {
   const base       = ref.cost;
   const empaque    = COSTO_EMPAQUE;
   let impresion    = 0;
   if (tipoImp === 'DTF') impresion = cmDTF * DTF_POR_CM2 + numPlanchadas * COSTO_PLANCHADA;
   if (tipoImp === 'DTG') impresion = costoDTG;
+  if (tipoImp === 'Bordado') impresion = costoBordado;
   const costoUnit  = base + empaque + impresion;
   const precioUnit = Math.ceil((costoUnit + GANANCIA_NETA_FIJA) / 500) * 500;
   return { costo: costoUnit * qty, precio: precioUnit * qty };
@@ -182,6 +183,7 @@ export default function App() {
   const [cmDTF,         setCmDTF]         = useState(100);
   const [numPlanchadas, setNumPlanchadas] = useState(3);
   const [costoDTG,      setCostoDTG]      = useState(0);
+  const [costoBordado, setCostoBordado] = useState(0);
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteTel,    setClienteTel]    = useState('');
   const [clienteDoc,    setClienteDoc]    = useState('');
@@ -277,7 +279,7 @@ export default function App() {
   const tallasDisp   = currentRef
     ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
     : TODAS_TALLAS;
-  const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG) : null;
+  const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG, costoBordado) : null;
   const inventario   = useMemo(() => calcInventario(ventas, compras, refs), [ventas, compras, refs]);
 
   // Compras: ref seleccionada y sus colores disponibles
@@ -345,7 +347,7 @@ export default function App() {
     };
     setCartItems(prev => [...prev, item]);
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
-    setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0);
+    setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0); setCostoBordado(0);
     setSelForma('');
     showToast('Ítem agregado ✓');
   };
@@ -1163,7 +1165,7 @@ export default function App() {
               <CardTitle text="Costos de Produccion" />
               <div className="space-y-3">
                 <FG label="Tipo de impresion">
-                  <Sel options={TIPOS_IMP} value={selTipoImp} onChange={e => { setSelTipoImp(e.target.value); setCostoDTG(0); }} />
+                  <Sel options={TIPOS_IMP} value={selTipoImp} onChange={e => { setSelTipoImp(e.target.value); setCostoDTG(0); setCostoBordado(0); }} />
                 </FG>
                 {selTipoImp === 'DTF' && (
                   <div className="grid grid-cols-2 gap-3">
@@ -1180,10 +1182,15 @@ export default function App() {
                     <Inp type="number" min={0} value={costoDTG} onChange={e => setCostoDTG(Number(e.target.value))} />
                   </FG>
                 )}
+                {selTipoImp === 'Bordado' && (
+                  <FG label="Costo de bordado (COP)" hint="Ingresa el precio del bordado">
+                    <Inp type="number" min={0} value={costoBordado} onChange={e => setCostoBordado(Number(e.target.value))} />
+                  </FG>
+                )}
                 <div className="mt-2 p-3 bg-gray-700 rounded-lg space-y-1 text-sm">
                   <div className="flex justify-between text-gray-400"><span>Base camisa:</span><span>{currentRef ? cop(currentRef.cost) : '-'}</span></div>
                   <div className="flex justify-between text-gray-400"><span>Empaque:</span><span>{cop(COSTO_EMPAQUE)}</span></div>
-                  <div className="flex justify-between text-gray-400"><span>Impresion:</span><span>{currentRef ? cop(selTipoImp==='DTF' ? cmDTF*DTF_POR_CM2 + numPlanchadas*COSTO_PLANCHADA : costoDTG) : '-'}</span></div>
+                  <div className="flex justify-between text-gray-400"><span>Impresion:</span><span>{currentRef ? cop(selTipoImp==='DTF' ? cmDTF*DTF_POR_CM2 + numPlanchadas*COSTO_PLANCHADA : selTipoImp==='Bordado' ? costoBordado : costoDTG) : '-'}</span></div>
                   <div className="flex justify-between font-semibold text-white border-t border-gray-600 pt-1"><span>Costo total ({selQty} und):</span><span>{calc ? cop(calc.costo) : '-'}</span></div>
                   <div className="flex justify-between font-semibold text-green-400"><span>Precio sugerido ({selQty} und):</span><span>{calc ? cop(calc.precio) : '-'}</span></div>
                   <div className="flex justify-between text-gray-400 text-xs"><span>Ganancia neta:</span><span>{calc ? cop(GANANCIA_NETA_FIJA * selQty) : '-'}</span></div>
