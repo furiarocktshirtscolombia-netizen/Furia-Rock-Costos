@@ -168,6 +168,13 @@ export default function App() {
   const [ventas, setVentas]     = useState<Venta[]>([]);  const [searchVentas, setSearchVentas] = useState('');
   const [filterEstadoVentas, setFilterEstadoVentas] = useState('');
 
+  // ── Filtro Global de Fecha ─────────────────────────────
+  const [fechaInicio,      setFechaInicio]      = useState('');
+  const [fechaFin,         setFechaFin]         = useState('');
+  const [filtroModo,       setFiltroModo]       = useState<'rango'|'mes'|'dia'>('rango');
+  const [filtroMes,        setFiltroMes]        = useState(''); // formato: 2026-05
+  const [filtroDia,        setFiltroDia]        = useState(''); // formato: 2026-05-25
+
   const [compras, setCompras]   = useState<Compra[]>([]);
 
   const [invDrive, setInvDrive] = useState<any[]>([]);  const [loading, setLoading]   = useState(false);
@@ -318,6 +325,24 @@ export default function App() {
     }
     return inventario;
   }, [invDrive, inventario, refs, compras, ventas]);
+
+  // ── Helpers de Filtro por Fecha ─────────────────────────
+  const inDateRange = (fecha: string): boolean => {
+    if (!fecha) return true;
+    if (filtroModo === 'dia' && filtroDia) return fecha.startsWith(filtroDia);
+    if (filtroModo === 'mes' && filtroMes) return fecha.startsWith(filtroMes);
+    if (filtroModo === 'rango') {
+      if (fechaInicio && fecha < fechaInicio) return false;
+      if (fechaFin   && fecha > fechaFin)   return false;
+    }
+    return true;
+  };
+  const hasFiltroFecha = filtroModo === 'dia' ? !!filtroDia : filtroModo === 'mes' ? !!filtroMes : !!(fechaInicio || fechaFin);
+  const ventasFiltradas  = hasFiltroFecha ? ventas.filter(v  => inDateRange(v.fecha))  : ventas;
+  const comprasFiltradas = hasFiltroFecha ? compras.filter(c => inDateRange(c.fecha)) : compras;
+  const stockTotal = displayInventario.reduce((a, i) => a + Math.max(0, i.stock), 0);
+  const totalComprasGlobal = compras.reduce((a, c) => a + (c.total || 0), 0);
+
   const sincrResultados = async (v: Venta[], c: Compra[], inv: Item[]) => {
     const totalVentas   = v.reduce((a,x)=>a+x.totalVenta,0);
     const costoVentas   = v.reduce((a,x)=>a+x.costo,0);
@@ -1124,6 +1149,46 @@ export default function App() {
         ))}
       </div>
 
+      {/* ═══ BARRA DE FILTRO POR FECHA GLOBAL ═══ */}
+      <div className="bg-gray-800 border-b border-gray-600 px-4 py-2">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-3">
+          <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider whitespace-nowrap">📅 Filtrar por fecha:</span>
+          <div className="flex gap-1 rounded-lg overflow-hidden border border-gray-600">
+            {(['rango','mes','dia'] as const).map(m => (
+              <button key={m} onClick={() => { setFiltroModo(m); setFechaInicio(''); setFechaFin(''); setFiltroMes(''); setFiltroDia(''); }}
+                className={`px-3 py-1 text-xs font-medium transition-colors ${filtroModo===m ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                {m==='rango' ? 'Rango' : m==='mes' ? 'Mes' : 'Día'}
+              </button>
+            ))}
+          </div>
+          {filtroModo === 'rango' && (<>
+            <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
+              className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
+            <span className="text-gray-500 text-xs">→</span>
+            <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
+              className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
+          </>)}
+          {filtroModo === 'mes' && (
+            <input type="month" value={filtroMes} onChange={e => setFiltroMes(e.target.value)}
+              className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
+          )}
+          {filtroModo === 'dia' && (
+            <input type="date" value={filtroDia} onChange={e => setFiltroDia(e.target.value)}
+              className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
+          )}
+          {hasFiltroFecha && (
+            <button onClick={() => { setFechaInicio(''); setFechaFin(''); setFiltroMes(''); setFiltroDia(''); }}
+              className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">✕ Limpiar</button>
+          )}
+          {hasFiltroFecha && (
+            <span className="text-xs text-indigo-300 font-medium">
+              {ventasFiltradas.length} ventas · {comprasFiltradas.length} compras
+            </span>
+          )}
+        </div>
+      </div>
+
+
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
 
         {/* ═══ COTIZADOR ═══ */}
@@ -1274,21 +1339,21 @@ export default function App() {
               <div className="bg-gray-800 border border-gray-700 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">VENTAS TOTALES</p>
-                  <p className="text-2xl font-bold text-white">{ventas.length}</p>
+                  <p className="text-2xl font-bold text-white">{ventasFiltradas.length}</p>
                 </div>
                 <span className="text-3xl opacity-60">🛒</span>
               </div>
               <div className="bg-gray-800 border border-yellow-600 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-yellow-400 uppercase tracking-wider mb-1">PENDIENTE</p>
-                  <p className="text-2xl font-bold text-yellow-400">{cop(ventas.filter(v=>(v.estadoPago||'Pendiente de pago')!=='Pagado'&&(v.estadoPago||'Pendiente de pago')!=='Cancelado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
+                  <p className="text-2xl font-bold text-yellow-400">{cop(ventasFiltradas.filter(v=>(v.estadoPago||'Pendiente de pago')!=='Pagado'&&(v.estadoPago||'Pendiente de pago')!=='Cancelado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
                 </div>
                 <span className="text-3xl opacity-60">⏳</span>
               </div>
               <div className="bg-gray-800 border border-emerald-600 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-emerald-400 uppercase tracking-wider mb-1">COBRADO</p>
-                  <p className="text-2xl font-bold text-emerald-400">{cop(ventas.filter(v=>(v.estadoPago||'Pendiente de pago')==='Pagado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
+                  <p className="text-2xl font-bold text-emerald-400">{cop(ventasFiltradas.filter(v=>(v.estadoPago||'Pendiente de pago')==='Pagado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
                 </div>
                 <span className="text-3xl opacity-60">✅</span>
               </div>
@@ -1296,7 +1361,7 @@ export default function App() {
 
             <Card>
             <div className="flex items-center justify-between mb-3">
-              <CardTitle text={`Historial de Ventas (${ventas.length})`} />
+              <CardTitle text={`Historial de Ventas (${ventasFiltradas.length})`} />
               <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>📊 CSV</Btn>
             </div>
 
@@ -1325,7 +1390,7 @@ export default function App() {
                 <Btn variant="primary" onClick={() => setTab('cotizador')}>+ Nueva Venta</Btn>
             </div>
 
-            {ventas.length === 0 ? <p className="text-gray-500 text-sm">No hay ventas registradas.</p> : (
+            {ventasFiltradas.length === 0 ? <p className="text-gray-500 text-sm">No hay ventas registradas.</p> : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="text-gray-400 border-b border-gray-700">
@@ -1342,7 +1407,7 @@ export default function App() {
                     <th className="text-center py-2 pl-3">Estado</th>
                   </tr></thead>
                   <tbody>
-                    {ventas.filter(v => {
+                    {ventasFiltradas.filter(v => {
                       const q = searchVentas.toLowerCase();
                       const matchCliente = !q ||
                         (v.cliente || '').toLowerCase().includes(q) ||
@@ -1430,10 +1495,10 @@ export default function App() {
             </Card>
             <Card>
               <div className="flex items-center justify-between mb-3">
-                <CardTitle text={`Historial de Compras (${compras.length})`} />
+                <CardTitle text={`Historial de Compras (${comprasFiltradas.length})`} />
                 <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>⬇ CSV</Btn>
               </div>
-              {compras.length === 0 ? <p className="text-gray-500 text-sm">No hay compras registradas.</p> : (
+              {comprasFiltradas.length === 0 ? <p className="text-gray-500 text-sm">No hay compras registradas.</p> : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead><tr className="text-gray-400 border-b border-gray-700">
@@ -1444,7 +1509,7 @@ export default function App() {
                       <th className="text-right py-2">Total</th>
                     </tr></thead>
                     <tbody>
-                      {compras.map(c => (
+                      {comprasFiltradas.map(c => (
                         <tr key={c.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                           <td className="py-2 pr-3 text-gray-300">{c.fecha}</td>
                           <td className="py-2 pr-3 text-gray-200">{c.ref || resolveRefName(c.refId)}</td>
@@ -1517,15 +1582,37 @@ export default function App() {
         {/* ═══ DASHBOARD ═══ */}
         {tab === 'dashboard' && (
           <div className="space-y-4">
+            {/* ── Label de filtro activo ── */}
+            {hasFiltroFecha && (
+              <div className="bg-indigo-900/30 border border-indigo-700 rounded-xl px-4 py-2 text-sm text-indigo-300">
+                📅 Mostrando datos filtrados: <strong>{ventasFiltradas.length}</strong> ventas · <strong>{comprasFiltradas.length}</strong> compras
+              </div>
+            )}
+            {/* ── KPIs Fila 1: Ventas e Inventario ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label:'Total Ingresos',    val: cop(ventas.reduce((a,v)=>a+v.totalVenta,0)), color:'text-green-400' },
-                { label:'Total Costo',       val: cop(ventas.reduce((a,v)=>a+v.costo,0)),      color:'text-red-400'   },
-                { label:'Ganancia Bruta',    val: cop(ventas.reduce((a,v)=>a+v.ganancia,0)),   color:'text-indigo-400'},
-                { label:'Unidades Vendidas', val: ventas.reduce((a,v)=>a+v.cantidad,0).toString(), color:'text-yellow-400'},
+                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'💰' },
+                { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'🛒' },
+                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'📈' },
+                { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'📦' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
-                  <p className={`text-3xl font-bold ${k.color}`}>{k.val}</p>
+                  <div className="text-2xl mb-1">{k.icon}</div>
+                  <p className={`text-2xl font-bold ${k.color}`}>{k.val}</p>
+                  <p className="text-xs text-gray-400 mt-1">{k.label}</p>
+                </Card>
+              ))}
+            </div>
+            {/* ── KPIs Fila 2: Detalles de Ventas ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'👕' },
+                { label:'Costo de Ventas',    val: cop(ventasFiltradas.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'💸' },
+                { label:'Margen (%)',          val: (() => { const ing=ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasFiltradas.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : '—'; })(), color:'text-purple-400', icon:'%' },
+              ].map(k => (
+                <Card key={k.label} className="text-center">
+                  <div className="text-xl mb-1">{k.icon}</div>
+                  <p className={`text-xl font-bold ${k.color}`}>{k.val}</p>
                   <p className="text-xs text-gray-400 mt-1">{k.label}</p>
                 </Card>
               ))}
@@ -1534,13 +1621,13 @@ export default function App() {
               <Card>
                 <CardTitle text="Últimas 5 Ventas" />
                 <div className="space-y-2">
-                  {ventas.slice(0,5).map(v => (
+                  {ventasFiltradas.slice(0,5).map(v => (
                     <div key={v.id} className="flex justify-between items-center text-sm">
                       <div><span className="text-gray-200">{v.ref}</span><span className="text-gray-500 ml-2">{v.talla} / {v.color}</span></div>
                       <span className="text-green-400">{cop(v.totalVenta)}</span>
                     </div>
                   ))}
-                  {ventas.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aún</p>}
+                  {ventasFiltradas.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aún</p>}
                 </div>
               </Card>
               <Card>
