@@ -163,6 +163,7 @@ export default function App() {
   const [tab, setTab]           = useState<Tab>('cotizador');
   const [refs, setRefs]         = useState<Ref[]>(REFS_DEFAULT);
   const [colorMap, setColorMap] = useState<Record<string,string[]>>(() => loadLS('colorMap', {}));
+  const [coloresDrive, setColoresDrive] = useState<string[]>(() => loadLS('coloresDrive', []));
   const [ventas, setVentas]     = useState<Venta[]>([]);  const [searchVentas, setSearchVentas] = useState('');
   const [filterEstadoVentas, setFilterEstadoVentas] = useState('');
 
@@ -247,6 +248,10 @@ export default function App() {
           setColorMap(d.colorMap);
           localStorage.setItem('colorMap', JSON.stringify(d.colorMap));
         }
+        if (d.colores && Array.isArray(d.colores) && d.colores.length > 0) {
+          setColoresDrive(d.colores);
+          localStorage.setItem('coloresDrive', JSON.stringify(d.colores));
+        }
         if (d.ventas && d.ventas.length) {
           setVentas(d.ventas);
           localStorage.setItem('ventas', JSON.stringify(d.ventas));
@@ -265,7 +270,8 @@ export default function App() {
 
   // Derived
   const currentRef   = refs.find(r => r.id === selRef);
-  const coloresDisp  = currentRef ? (colorMap[currentRef.name] || COLORES_DEFAULT) : COLORES_DEFAULT;
+  const COLORES_ACTIVOS = coloresDrive.length > 0 ? coloresDrive : COLORES_DEFAULT;
+  const coloresDisp  = currentRef ? (colorMap[currentRef.name] || COLORES_ACTIVOS) : COLORES_ACTIVOS;
   // Tallas: si la referencia es de niño → tallas niño; adulto → tallas adulto
   // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niño, Niño, nino)
   const tallasDisp   = currentRef
@@ -276,7 +282,7 @@ export default function App() {
 
   // Compras: ref seleccionada y sus colores disponibles
   const cCurrentRef = refs.find(r => r.id === cRef);
-  const cColoresDisp = cCurrentRef ? (colorMap[cCurrentRef.name] || COLORES_DEFAULT) : COLORES_DEFAULT;
+  const cColoresDisp = cCurrentRef ? (colorMap[cCurrentRef.name] || COLORES_ACTIVOS) : COLORES_ACTIVOS;
 
 
   // Use Drive inventario when available, fall back to computed
