@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-fix: Fix title encoding, add Inv Valorizado KPI, fix filtros estado+fecha en ventas// v1.4 - Fixes: PDF unit price, cotizacion total calculation
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ DATOS REALES DEL SPREADSHEET FURIA ROCK ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ DATOS REALES DEL SPREADSHEET FURIA ROCK ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 const REFS_DEFAULT: Ref[] = [
   { id:"r1",  name:"CAMISETA ALGODON PERUANO 178G",           cost:18000, cat:"Adulto" },
   { id:"r2",  name:"CAMISETA ALGODON PERUANO 320G",           cost:37000, cat:"Adulto" },
@@ -29,7 +28,7 @@ const TIPOS_IMP        = ["DTF","DTG","Bordado"];
 const SEDES            = ["Medellin","Bogota","Cali","Online","Otra"];
 const FORMAS_CAMISETA  = ["Oversize","Regular Fit"];
 
-// Helper: detectar si una referencia es de NiÃÂÃÂ±o (acepta "Nino","niÃÂÃÂ±o","nino","NiÃÂÃÂ±o",etc.)
+// Helper: detectar si una referencia es de NiÃÂÃÂÃÂÃÂ±o (acepta "Nino","niÃÂÃÂÃÂÃÂ±o","nino","NiÃÂÃÂÃÂÃÂ±o",etc.)
 const esNino = (cat: string) =>
   cat.toLowerCase().replace(/[^a-z]/g,'').includes('nin');
 
@@ -41,7 +40,7 @@ const COSTO_PLANCHADA    = 1000;
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Types ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Types ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 interface Ref  { id:string; name:string; cost:number; cat:string }
 interface Item { ref:string; refId:string; cat:string; talla:string; color:string; forma:string; comprado:number; vendido:number; stock:number; estado:string }
 interface Venta {
@@ -72,7 +71,7 @@ interface Abono {
 }
 type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones'|'abonos'|'abonos';
 
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Helpers ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Helpers ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 const sendToGAS = async (body: object) => {
   const r = await fetch(GAS_URL, {
     method:'POST', redirect:'follow',
@@ -100,7 +99,7 @@ const calcInventario = (ventas: Venta[], compras: Compra[], refsList: Ref[] = []
   });
   Object.values(map).forEach(i => {
     i.stock = i.comprado - i.vendido;
-    i.estado = i.stock > 5 ? 'OK' : i.stock > 2 ? 'Bajo' : 'CrÃÂÃÂ­tico';
+    i.estado = i.stock > 5 ? 'OK' : i.stock > 2 ? 'Bajo' : 'CrÃÂÃÂÃÂÃÂ­tico';
     if (!i.ref || i.ref === '-' || /^r\d+$/.test(i.ref)) {
       const found = refsList.find(r => r.id === i.refId);
       if (found) i.ref = found.name;
@@ -137,7 +136,7 @@ const exportCSV = (rows: object[], name:string) => {
   a.click();
 };
 
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ UI Atoms ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ UI Atoms ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 const Card = ({children,className=''}:{children:React.ReactNode;className?:string}) => (
   <div className={`bg-gray-800 rounded-xl p-4 ${className}`}>{children}</div>
 );
@@ -170,7 +169,7 @@ const Badge = ({text,color}:{text:string;color:'green'|'yellow'|'red'}) => {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c}`}>{text}</span>;
 };
 
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Main App ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Main App ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
 export default function App() {
   const [tab, setTab]           = useState<Tab>('cotizador');
   const [refs, setRefs]         = useState<Ref[]>(REFS_DEFAULT);
@@ -179,7 +178,7 @@ export default function App() {
   const [ventas, setVentas]     = useState<Venta[]>([]);  const [searchVentas, setSearchVentas] = useState('');
   const [filterEstadoVentas, setFilterEstadoVentas] = useState('');
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Filtro Global de Fecha ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Filtro Global de Fecha ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
   const [fechaInicio,      setFechaInicio]      = useState('');
   const [fechaFin,         setFechaFin]         = useState('');
   const [filtroModo,       setFiltroModo]       = useState<'rango'|'mes'|'dia'>('rango');
@@ -235,7 +234,7 @@ export default function App() {
     fetch(GAS_URL)
       .then(r => r.json())
       .then(d => {
-        // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ REFS: normalize any column naming convention from Drive ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+        // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ REFS: normalize any column naming convention from Drive ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
         if (d.refs && Array.isArray(d.refs) && d.refs.length > 0) {
           const normalizedRefs = d.refs
             .map((r: any, i: number) => {
@@ -292,8 +291,8 @@ export default function App() {
   const currentRef   = refs.find(r => r.id === selRef);
   const COLORES_ACTIVOS = coloresDrive.length > 0 ? coloresDrive : COLORES_DEFAULT;
   const coloresDisp  = currentRef ? (colorMap[currentRef.name] || COLORES_ACTIVOS) : COLORES_ACTIVOS;
-  // Tallas: si la referencia es de niÃÂÃÂ±o ÃÂ¢ÃÂÃÂ tallas niÃÂÃÂ±o; adulto ÃÂ¢ÃÂÃÂ tallas adulto
-  // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niÃÂÃÂ±o, NiÃÂÃÂ±o, nino)
+  // Tallas: si la referencia es de niÃÂÃÂÃÂÃÂ±o ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ tallas niÃÂÃÂÃÂÃÂ±o; adulto ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ tallas adulto
+  // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niÃÂÃÂÃÂÃÂ±o, NiÃÂÃÂÃÂÃÂ±o, nino)
   const tallasDisp   = currentRef
     ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
     : TODAS_TALLAS;
@@ -330,14 +329,14 @@ export default function App() {
           comprado: Number(i.comprado || 0),
           vendido: Number(i.vendido || 0),
           stock: Number(i.stock || 0),
-          estado: i.estado || (Number(i.stock || 0) > 5 ? 'OK' : Number(i.stock || 0) > 2 ? 'Bajo' : 'CrÃÂÃÂ­tico'),
+          estado: i.estado || (Number(i.stock || 0) > 5 ? 'OK' : Number(i.stock || 0) > 2 ? 'Bajo' : 'CrÃÂÃÂÃÂÃÂ­tico'),
         };
       });
     }
     return inventario;
   }, [invDrive, inventario, refs, compras, ventas]);
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Helpers de Filtro por Fecha ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Helpers de Filtro por Fecha ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
   const inDateRange = (fecha: string): boolean => {
     if (!fecha) return true;
     if (filtroModo === 'dia' && filtroDia) return fecha.startsWith(filtroDia);
@@ -380,7 +379,7 @@ export default function App() {
   };
 
   const agregarItem = () => {
-    if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos del ÃÂÃÂ­tem'); return; }
+    if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos del ÃÂÃÂÃÂÃÂ­tem'); return; }
     if (!calc) { showToast('No hay precio calculado'); return; }
     const item = {
       ref: currentRef.name, refId: currentRef.id, cat: currentRef.cat,
@@ -391,11 +390,11 @@ export default function App() {
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0); setCostoBordado(0);
     setSelForma('');
-    showToast('ÃÂÃÂtem agregado ÃÂ¢ÃÂÃÂ');
+    showToast('ÃÂÃÂÃÂÃÂtem agregado ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
   };
 
   const generarCotizacionPDF = async () => {
-    if (cartItems.length === 0) { showToast('Agrega al menos un ÃÂÃÂ­tem para generar el PDF'); return; }
+    if (cartItems.length === 0) { showToast('Agrega al menos un ÃÂÃÂÃÂÃÂ­tem para generar el PDF'); return; }
 
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const pageW = pdf.internal.pageSize.getWidth();
@@ -419,13 +418,13 @@ export default function App() {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184);
-    pdf.text('Camisetas & DiseÃÂÃÂ±o Personalizado', ml + 2, 24);
+    pdf.text('Camisetas & DiseÃÂÃÂÃÂÃÂ±o Personalizado', ml + 2, 24);
 
     // Document type (right)
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(199, 210, 254);
-    pdf.text('COTIZACIÃÂÃÂN', pageW - mr, 17, { align: 'right' });
+    pdf.text('COTIZACIÃÂÃÂÃÂÃÂN', pageW - mr, 17, { align: 'right' });
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184);
@@ -439,7 +438,7 @@ export default function App() {
     pdf.setFontSize(7.5);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(71, 85, 105);
-    pdf.text('INFORMACIÃÂÃÂN DEL CLIENTE', ml + 4, clienteY);
+    pdf.text('INFORMACIÃÂÃÂÃÂÃÂN DEL CLIENTE', ml + 4, clienteY);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(15, 23, 42);
     pdf.setFontSize(10);
@@ -492,9 +491,9 @@ export default function App() {
         pdf.line(ml, footY - 4, pageW - mr, footY - 4);
         pdf.setFontSize(7);
         pdf.setTextColor(148, 163, 184);
-        pdf.text('FURIA ROCK ÃÂÃÂ· Camisetas & DiseÃÂÃÂ±o Personalizado', ml, footY);
-        pdf.text('CotizaciÃÂÃÂ³n sin valor fiscal. Precios en COP.', pageW / 2, footY, { align: 'center' });
-        pdf.text('PÃÂÃÂ¡g. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
+        pdf.text('FURIA ROCK ÃÂÃÂÃÂÃÂ· Camisetas & DiseÃÂÃÂÃÂÃÂ±o Personalizado', ml, footY);
+        pdf.text('CotizaciÃÂÃÂÃÂÃÂ³n sin valor fiscal. Precios en COP.', pageW / 2, footY, { align: 'center' });
+        pdf.text('PÃÂÃÂÃÂÃÂ¡g. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
       },
     });
 
@@ -505,13 +504,13 @@ export default function App() {
       pdf.setFont('helvetica', 'bold');
       pdf.text('CONDICIONES:', ml, finalY);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('ÃÂÃÂ· Esta cotizaciÃÂÃÂ³n tiene vigencia de 5 dÃÂÃÂ­as hÃÂÃÂ¡biles.', ml, finalY + 5);
-      pdf.text('ÃÂÃÂ· Los precios estÃÂÃÂ¡n sujetos a cambios sin previo aviso.', ml, finalY + 10);
-      pdf.text('ÃÂÃÂ· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
+      pdf.text('ÃÂÃÂÃÂÃÂ· Esta cotizaciÃÂÃÂÃÂÃÂ³n tiene vigencia de 5 dÃÂÃÂÃÂÃÂ­as hÃÂÃÂÃÂÃÂ¡biles.', ml, finalY + 5);
+      pdf.text('ÃÂÃÂÃÂÃÂ· Los precios estÃÂÃÂÃÂÃÂ¡n sujetos a cambios sin previo aviso.', ml, finalY + 10);
+      pdf.text('ÃÂÃÂÃÂÃÂ· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
     }
 
 
-    // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ InformaciÃÂÃÂ³n de Pago ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+    // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ InformaciÃÂÃÂÃÂÃÂ³n de Pago ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
     const bx = ml;
     const bw = pageW - ml - ml;
     const qrSize = 28;
@@ -574,7 +573,7 @@ export default function App() {
 
     const today2 = new Date().toISOString().split('T')[0];
     pdf.save('Cotizacion_FuriaRock_' + (clienteNombre || 'cliente').replace(/\s+/g, '_') + '_' + today2 + '.pdf');
-    showToast('ÃÂ¢ÃÂÃÂ PDF descargado correctamente');
+    showToast('ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ PDF descargado correctamente');
   };
 
   
@@ -598,7 +597,7 @@ export default function App() {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(148, 163, 184);
-    pdf.text('Camisetas & DiseÃÂÃÂ±o Personalizado', ml + 2, 24);
+    pdf.text('Camisetas & DiseÃÂÃÂÃÂÃÂ±o Personalizado', ml + 2, 24);
 
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
@@ -675,14 +674,14 @@ export default function App() {
         pdf.line(ml, footY - 4, pageW - mr, footY - 4);
         pdf.setFontSize(7);
         pdf.setTextColor(148, 163, 184);
-        pdf.text('FURIA ROCK ÃÂÃÂ· Camisetas & DiseÃÂÃÂ±o Personalizado', ml, footY);
-        pdf.text('Cuenta de Cobro ÃÂÃÂ· ID: ' + idVenta, pageW / 2, footY, { align: 'center' });
-        pdf.text('PÃÂÃÂ¡g. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
+        pdf.text('FURIA ROCK ÃÂÃÂÃÂÃÂ· Camisetas & DiseÃÂÃÂÃÂÃÂ±o Personalizado', ml, footY);
+        pdf.text('Cuenta de Cobro ÃÂÃÂÃÂÃÂ· ID: ' + idVenta, pageW / 2, footY, { align: 'center' });
+        pdf.text('PÃÂÃÂÃÂÃÂ¡g. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
       },
     });
 
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ InformaciÃÂÃÂ³n de Pago ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+  // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ InformaciÃÂÃÂÃÂÃÂ³n de Pago ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
   const bx2 = ml;
   const bw2 = pageW - ml - mr;
   const qrSize2 = 28;
@@ -747,7 +746,7 @@ export default function App() {
   };
 
   const registrarVenta = async () => {
-    if (cartItems.length === 0) { showToast('Agrega al menos un ÃÂÃÂ­tem al pedido'); return; }
+    if (cartItems.length === 0) { showToast('Agrega al menos un ÃÂÃÂÃÂÃÂ­tem al pedido'); return; }
     setLoading(true); setGasErr('');
     const nuevasVentas = [...ventas];
     for (const item of cartItems) {
@@ -780,7 +779,7 @@ export default function App() {
     setCartItems([]);
     setClienteNombre(''); setClienteTel(''); setClienteDoc('');
     setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden(''); setClienteEstadoPago('Pendiente de pago');
-    showToast('Pedido registrado ÃÂ¢ÃÂÃÂ');
+    showToast('Pedido registrado ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
     setLoading(false);
   };
 
@@ -805,14 +804,14 @@ export default function App() {
     setCompras(nuevasCompras);
     localStorage.setItem('compras', JSON.stringify(nuevasCompras));
     setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCProv(''); setCNotas(''); setCForma('');
-    showToast('Compra registrada ÃÂ¢ÃÂÃÂ');
+    showToast('Compra registrada ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
     setLoading(false);
   };
 
-    // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Cotizaciones ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+    // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Cotizaciones ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
 
-  // Ã¢ÂÂÃ¢ÂÂ Abonos
+  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Abonos
   const [abonos, setAbonos] = useState([]);
   const [abonoVentaId, setAbonoVentaId] = useState('');
   const [abonoData, setAbonoData] = useState({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
@@ -897,7 +896,7 @@ export default function App() {
   }
 
 
-  // Ã¢ÂÂÃ¢ÂÂ Abono Functions
+  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Abono Functions
   const cargarAbonos = async () => {
     try {
       const d = await sendToGAS({ action: 'obtenerAbonos' });
@@ -925,7 +924,7 @@ export default function App() {
     try {
       const resp = await sendToGAS(payload);
       if (resp && resp.status === 'ok') {
-        showToast('Abono guardado Ã¢ÂÂ');
+        showToast('Abono guardado ÃÂ¢ÃÂÃÂ');
         setAbonoVentaId('');
         setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
         cargarAbonos();
@@ -940,12 +939,12 @@ export default function App() {
     try {
       const resp = await sendToGAS({ action: 'actualizarEstadoPago', ventaId, nuevoEstado });
       if (resp.status === 'ok') {
-        showToast('Estado actualizado ÃÂ¢ÃÂÃÂ');
+        showToast('Estado actualizado ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
       } else {
         showToast('Guardado localmente. Actualiza Drive manualmente si es necesario.');
       }
     } catch (e: any) {
-      showToast('Sin conexiÃÂÃÂ³n - estado guardado en pantalla');
+      showToast('Sin conexiÃÂÃÂÃÂÃÂ³n - estado guardado en pantalla');
     }
   };
 
@@ -977,12 +976,12 @@ export default function App() {
     pdf.text('FURIA ROCK', ml, 15);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Camisetas & DiseÃÂÃÂ±o Personalizado', ml, 22);
+    pdf.text('Camisetas & DiseÃÂÃÂÃÂÃÂ±o Personalizado', ml, 22);
 
     // Document type
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('COTIZACIÃÂÃÂN', pageW - mr, 14, { align: 'right' });
+    pdf.text('COTIZACIÃÂÃÂÃÂÃÂN', pageW - mr, 14, { align: 'right' });
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(200, 200, 255);
@@ -999,7 +998,7 @@ export default function App() {
     pdf.setTextColor(147, 197, 253);
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('INFORMACIÃÂÃÂN DEL CLIENTE', ml + 4, clienteY - 0.5);
+    pdf.text('INFORMACIÃÂÃÂÃÂÃÂN DEL CLIENTE', ml + 4, clienteY - 0.5);
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'bold');
@@ -1095,7 +1094,7 @@ export default function App() {
     pdf.setFontSize(7.5);
     pdf.setTextColor(147, 197, 253);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('INFORMACIÃÂÃÂN DE PAGO', bx + 8, bankYStart + 7);
+    pdf.text('INFORMACIÃÂÃÂÃÂÃÂN DE PAGO', bx + 8, bankYStart + 7);
     const tx = bx + 8;
     let ty = bankYStart + 14;
     pdf.setTextColor(255, 255, 255);
@@ -1125,7 +1124,7 @@ export default function App() {
 
     const today = new Date().toISOString().split('T')[0];
     pdf.save('Cotizacion_FuriaRock_' + String(cot.id || today) + '.pdf');
-    showToast('PDF de cotizaciÃÂÃÂ³n descargado');
+    showToast('PDF de cotizaciÃÂÃÂÃÂÃÂ³n descargado');
   };
 ;
 
@@ -1176,22 +1175,22 @@ export default function App() {
       setCcStatus('found');
     } else if (ventas.length === 0) {
       setCcStatus('error');
-      setCcMsg('Los datos de ventas aÃÂÃÂºn estÃÂÃÂ¡n cargando. Espera un momento y vuelve a intentar.');
+      setCcMsg('Los datos de ventas aÃÂÃÂÃÂÃÂºn estÃÂÃÂÃÂÃÂ¡n cargando. Espera un momento y vuelve a intentar.');
     } else {
       setCcStatus('not_found');
-      setCcMsg('No se encontrÃÂÃÂ³ una venta con este ID. Verifica el nÃÂÃÂºmero.');
+      setCcMsg('No se encontrÃÂÃÂÃÂÃÂ³ una venta con este ID. Verifica el nÃÂÃÂÃÂÃÂºmero.');
     }
   };
 
   const tabs: {id:Tab; label:string}[] = [
-    {id:'cotizador',    label:'ð§² Cotizador'},
-    {id:'ventas',       label:'ð° Ventas'},
-    {id:'compras',      label:'ð¦ Compras'},
-    {id:'inventario',   label:'ð Inventario'},
-    {id:'dashboard',    label:'ð Dashboard'},
-    {id:'cuenta',       label:'ð§¾ Cuenta de Cobro'},
-    {id:'cotizaciones', label:'ð Cotizaciones'},
-    {id:'abonos',       label:'ð° Abonos'},
+    {id:'cotizador',    label:'Ã°ÂÂ§Â² Cotizador'},
+    {id:'ventas',       label:'Ã°ÂÂÂ° Ventas'},
+    {id:'compras',      label:'Ã°ÂÂÂ¦ Compras'},
+    {id:'inventario',   label:'Ã°ÂÂÂ Inventario'},
+    {id:'dashboard',    label:'Ã°ÂÂÂ Dashboard'},
+    {id:'cuenta',       label:'Ã°ÂÂ§Â¾ Cuenta de Cobro'},
+    {id:'cotizaciones', label:'Ã°ÂÂÂ Cotizaciones'},
+    {id:'abonos',       label:'Ã°ÂÂÂ° Abonos'},
   ];
 
   return (
@@ -1200,7 +1199,7 @@ export default function App() {
         <div className="fixed top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">{toast}</div>
       )}
 
-      {/* Ã¢ÂÂÃ¢ÂÂ Abono Modal Ã¢ÂÂÃ¢ÂÂ */}
+      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Abono Modal ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
       {abonoVentaId && (() => {
         const v = ventas.find(x => x.id === abonoVentaId);
         const prevAbonado = abonos.reduce((t, a) => a.ventaId === abonoVentaId ? a.totalAbonado : t, 0);
@@ -1210,7 +1209,7 @@ export default function App() {
         return (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
             <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-600 shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-1">Ã°ÂÂÂµ Registrar Abono</h3>
+              <h3 className="text-lg font-bold text-white mb-1">ÃÂ°ÃÂÃÂÃÂµ Registrar Abono</h3>
               <p className="text-xs text-gray-400 mb-1">Cliente: <span className="text-white">{v?.cliente}</span></p>
               <p className="text-xs text-gray-400 mb-3">Total: <span className="text-green-400 font-bold">{cop(totalVenta)}</span> | Abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span></p>
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -1236,13 +1235,13 @@ export default function App() {
               <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
                 <p className="text-sm text-gray-300">Total abonado: <span className="text-green-400 font-bold">{cop(prevAbonado + nuevoTotal)}</span></p>
                 <p className="text-sm text-gray-300">Saldo pendiente: <span className={saldo <= 0 ? 'text-green-400 font-bold' : 'text-yellow-400 font-bold'}>{cop(Math.max(saldo, 0))}</span></p>
-                {saldo <= 0 && <p className="text-xs text-green-400">Ã¢ÂÂ Pago completo</p>}
+                {saldo <= 0 && <p className="text-xs text-green-400">ÃÂ¢ÃÂÃÂ Pago completo</p>}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setAbonoVentaId('')} className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm">Cancelar</button>
                 <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || nuevoTotal === 0}
                   className="flex-1 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-lg text-sm font-bold">
-                  {savingAbono ? 'Guardando...' : 'Ã°ÂÂÂ¾ Guardar Abono'}
+                  {savingAbono ? 'Guardando...' : 'ÃÂ°ÃÂÃÂÃÂ¾ Guardar Abono'}
                 </button>
               </div>
             </div>
@@ -1262,22 +1261,22 @@ export default function App() {
         ))}
       </div>
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ BARRA DE FILTRO POR FECHA GLOBAL ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ BARRA DE FILTRO POR FECHA GLOBAL ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
       <div className="bg-gray-800 border-b border-gray-600 px-4 py-2">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-3">
-          <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider whitespace-nowrap">ÃÂ°ÃÂÃÂÃÂ Filtrar por fecha:</span>
+          <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider whitespace-nowrap">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Filtrar por fecha:</span>
           <div className="flex gap-1 rounded-lg overflow-hidden border border-gray-600">
             {(['rango','mes','dia'] as const).map(m => (
               <button key={m} onClick={() => { setFiltroModo(m); setFechaInicio(''); setFechaFin(''); setFiltroMes(''); setFiltroDia(''); }}
                 className={`px-3 py-1 text-xs font-medium transition-colors ${filtroModo===m ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
-                {m==='rango' ? 'Rango' : m==='mes' ? 'Mes' : 'DÃÂÃÂ­a'}
+                {m==='rango' ? 'Rango' : m==='mes' ? 'Mes' : 'DÃÂÃÂÃÂÃÂ­a'}
               </button>
             ))}
           </div>
           {filtroModo === 'rango' && (<>
             <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
               className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
-            <span className="text-gray-500 text-xs">ÃÂ¢ÃÂÃÂ</span>
+            <span className="text-gray-500 text-xs">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ</span>
             <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
               className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
           </>)}
@@ -1291,11 +1290,11 @@ export default function App() {
           )}
           {hasFiltroFecha && (
             <button onClick={() => { setFechaInicio(''); setFechaFin(''); setFiltroMes(''); setFiltroDia(''); }}
-              className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">ÃÂ¢ÃÂÃÂ Limpiar</button>
+              className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Limpiar</button>
           )}
           {hasFiltroFecha && (
             <span className="text-xs text-indigo-300 font-medium">
-              {ventasFiltradas.length} ventas ÃÂÃÂ· {comprasFiltradas.length} compras
+              {ventasFiltradas.length} ventas ÃÂÃÂÃÂÃÂ· {comprasFiltradas.length} compras
             </span>
           )}
         </div>
@@ -1304,7 +1303,7 @@ export default function App() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
 
-        {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ COTIZADOR ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ COTIZADOR ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
         {tab === 'cotizador' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1317,16 +1316,16 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">ÃÂ¢ÃÂÃÂ ÃÂ¯ÃÂ¸ÃÂ Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ ÃÂÃÂ¯ÃÂÃÂ¸ÃÂÃÂ Cargando referencias desde Drive...</p>
         )}
         {selRef && !currentRef && (
-          <p className="text-red-400 text-xs mt-1">ÃÂ¢ÃÂÃÂ ÃÂ¯ÃÂ¸ÃÂ La referencia no existe en la base de datos del Drive.</p>
+          <p className="text-red-400 text-xs mt-1">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ ÃÂÃÂ¯ÃÂÃÂ¸ÃÂÃÂ La referencia no existe en la base de datos del Drive.</p>
         )}
                 <FG label="Color">
                   <Sel options={coloresDisp} value={selColor} onChange={e => setSelColor(e.target.value)} />
                 </FG>
                 <div className="grid grid-cols-2 gap-3">
-                  <FG label={`Talla${currentRef ? ' (' + (esNino(currentRef.cat) ? 'NiÃÂÃÂ±o' : 'Adulto') + ')' : ''}`}>
+                  <FG label={`Talla${currentRef ? ' (' + (esNino(currentRef.cat) ? 'NiÃÂÃÂÃÂÃÂ±o' : 'Adulto') + ')' : ''}`}>
                     <Sel options={tallasDisp} value={selTalla} onChange={e => setSelTalla(e.target.value)} />
                   </FG>
                   <FG label="Forma de la camiseta">
@@ -1347,7 +1346,7 @@ export default function App() {
                 </FG>
                 {selTipoImp === 'DTF' && (
                   <div className="grid grid-cols-2 gap-3">
-                    <FG label="ÃÂÃÂrea DTF (cmÃÂÃÂ²)" hint="170 COP/cmÃÂÃÂ²">
+                    <FG label="ÃÂÃÂÃÂÃÂrea DTF (cmÃÂÃÂÃÂÃÂ²)" hint="170 COP/cmÃÂÃÂÃÂÃÂ²">
                       <Inp type="number" min={0} value={cmDTF} onChange={e => setCmDTF(Number(e.target.value))} />
                     </FG>
                     <FG label="Num. planchadas" hint="1.000 COP c/u">
@@ -1380,11 +1379,11 @@ export default function App() {
               <CardTitle text="Datos del Cliente" />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <FG label="Nombre del cliente"><Inp value={clienteNombre} onChange={e => setClienteNombre(e.target.value)} placeholder="Nombre completo" /></FG>
-                <FG label="TelÃÂÃÂ©fono / Contacto"><Inp value={clienteTel} onChange={e => setClienteTel(e.target.value)} placeholder="Ej: 3001234567" /></FG>
+                <FG label="TelÃÂÃÂÃÂÃÂ©fono / Contacto"><Inp value={clienteTel} onChange={e => setClienteTel(e.target.value)} placeholder="Ej: 3001234567" /></FG>
                 <FG label="Documento"><Inp value={clienteDoc} onChange={e => setClienteDoc(e.target.value)} placeholder="CC / NIT" /></FG>
-                <FG label="DirecciÃÂÃÂ³n"><Inp value={clienteDireccion} onChange={e => setClienteDireccion(e.target.value)} placeholder="DirecciÃÂÃÂ³n de entrega" /></FG>
+                <FG label="DirecciÃÂÃÂÃÂÃÂ³n"><Inp value={clienteDireccion} onChange={e => setClienteDireccion(e.target.value)} placeholder="DirecciÃÂÃÂÃÂÃÂ³n de entrega" /></FG>
                 <FG label="Sede / Punto de venta"><Sel options={SEDES} value={clienteSede} onChange={e => setClienteSede(e.target.value)} /></FG>
-                <FG label="DiseÃÂÃÂ±o"><Inp value={clienteDiseno} onChange={e => setClienteDiseno(e.target.value)} placeholder="Nombre del diseÃÂÃÂ±o" /></FG>
+                <FG label="DiseÃÂÃÂÃÂÃÂ±o"><Inp value={clienteDiseno} onChange={e => setClienteDiseno(e.target.value)} placeholder="Nombre del diseÃÂÃÂÃÂÃÂ±o" /></FG>
                 <FG label="Orden interna"><Inp value={clienteOrden} onChange={e => setClienteOrden(e.target.value)} placeholder="Ej: ORD-001" /></FG>
               <FG label="Estado de pago"><Sel options={['Pendiente de pago','Pagado']} value={clienteEstadoPago} onChange={e => setClienteEstadoPago(e.target.value)} /></FG>
               </div>
@@ -1400,7 +1399,7 @@ export default function App() {
                         <th className="text-left py-1 pr-2">Forma</th>
                         <th className="text-right py-1 pr-2">Cant</th>
                         <th className="text-right py-1 pr-2">Precio</th>
-                        <th className="text-right py-1">AcciÃÂÃÂ³n</th>
+                        <th className="text-right py-1">AcciÃÂÃÂÃÂÃÂ³n</th>
                       </tr></thead>
                       <tbody>
                         {cartItems.map((item, idx) => (
@@ -1412,7 +1411,7 @@ export default function App() {
                             <td className="py-1 pr-2 text-right text-gray-300">{item.qty}</td>
                             <td className="py-1 pr-2 text-right text-green-400">{cop(item.precio)}</td>
                             <td className="py-1 text-right">
-                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">ÃÂ¢ÃÂÃÂ</button>
+                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ</button>
                             </td>
                           </tr>
                         ))}
@@ -1427,16 +1426,16 @@ export default function App() {
                 )}
                 <div className="flex gap-2 flex-wrap">
                   <Btn onClick={agregarItem} disabled={loading || !currentRef || !selColor || !selTalla} variant="secondary">
-                    + Agregar ÃÂÃÂ­tem
+                    + Agregar ÃÂÃÂÃÂÃÂ­tem
                   </Btn>
                   <Btn onClick={generarCotizacionPDF} disabled={cartItems.length === 0} variant="secondary">
-                    ÃÂ°ÃÂÃÂÃÂ Descargar PDF
+                    ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Descargar PDF
                   </Btn>
                   <Btn onClick={guardarCotizacion} disabled={loadingCot || cartItems.length === 0} variant="secondary">
-                    ÃÂ°ÃÂÃÂÃÂ¾ Guardar CotizaciÃÂÃÂ³n
+                    ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¾ Guardar CotizaciÃÂÃÂÃÂÃÂ³n
                   </Btn>
                   <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
-                    {loading ? 'GuardandoÃÂ¢ÃÂÃÂ¦' : `ÃÂ¢ÃÂÃÂ Registrar Pedido (${cartItems.length})`}
+                    {loading ? 'GuardandoÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦' : `ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Registrar Pedido (${cartItems.length})`}
                   </Btn>
                 </div>
               </div>
@@ -1444,44 +1443,44 @@ export default function App() {
           </div>
         )}
 
-{/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ VENTAS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+{/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ VENTAS ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
         {tab === 'ventas' && (
           <div className="space-y-4">
-            {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Tarjetas Resumen ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Tarjetas Resumen ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-gray-800 border border-gray-700 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">VENTAS TOTALES</p>
                   <p className="text-2xl font-bold text-white">{ventasFiltradas.length}</p>
                 </div>
-                <span className="text-3xl opacity-60">ÃÂ°ÃÂÃÂÃÂ</span>
+                <span className="text-3xl opacity-60">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ</span>
               </div>
               <div className="bg-gray-800 border border-yellow-600 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-yellow-400 uppercase tracking-wider mb-1">PENDIENTE</p>
                   <p className="text-2xl font-bold text-yellow-400">{cop(ventasFiltradas.filter(v=>(v.estadoPago||'Pendiente de pago')!=='Pagado'&&(v.estadoPago||'Pendiente de pago')!=='Cancelado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
                 </div>
-                <span className="text-3xl opacity-60">ÃÂ¢ÃÂÃÂ³</span>
+                <span className="text-3xl opacity-60">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ³</span>
               </div>
               <div className="bg-gray-800 border border-emerald-600 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-emerald-400 uppercase tracking-wider mb-1">COBRADO</p>
                   <p className="text-2xl font-bold text-emerald-400">{cop(ventasFiltradas.filter(v=>(v.estadoPago||'Pendiente de pago')==='Pagado').reduce((s,v)=>s+(v.totalVenta||0),0))}</p>
                 </div>
-                <span className="text-3xl opacity-60">ÃÂ¢ÃÂÃÂ</span>
+                <span className="text-3xl opacity-60">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ</span>
               </div>
             </div>
 
             <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text={`Historial de Ventas (${ventasFiltradas.length})`} />
-              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>ÃÂ°ÃÂÃÂÃÂ CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ CSV</Btn>
             </div>
 
-            {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Buscador y Filtro ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Buscador y Filtro ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">ÃÂ°ÃÂÃÂÃÂ</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ</span>
                 <input
                   type="text"
                   value={searchVentas}
@@ -1532,23 +1531,23 @@ export default function App() {
                       <tr key={v.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                         <td className="py-2 pr-3">
                           <div className="flex flex-col gap-1 items-start">
-                            <span className="text-xs font-mono text-indigo-400">{v.id || 'ÃÂ¢ÃÂÃÂ'}</span>
+                            <span className="text-xs font-mono text-indigo-400">{v.id || 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'}</span>
                             <button
                               onClick={() => { setTab('cuenta'); setCcId(String(v.id)); setTimeout(() => buscarCuentaCobro(String(v.id)), 150); }}
                               className="text-xs px-2 py-0.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded transition-colors whitespace-nowrap"
-                            >ÃÂ°ÃÂÃÂ§ÃÂ¾ Cobro</button>
+                            >ÃÂÃÂ°ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¾ Cobro</button>
                             <button
                               onClick={() => { setAbonoVentaId(v.id); setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' }); }}
                               className="text-xs px-2 py-0.5 bg-green-700 hover:bg-green-600 text-white rounded transition-colors whitespace-nowrap mt-1"
-                            >Ã°ÂÂÂµ Abonar</button>
+                            >ÃÂ°ÃÂÃÂÃÂµ Abonar</button>
                           </div>
                         </td>
                         <td className="py-2 pr-3 text-gray-300">{v.fecha}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.cliente || 'ÃÂ¢ÃÂÃÂ'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.cliente || 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'}</td>
                         <td className="py-2 pr-3 text-gray-200">{v.ref || resolveRefName(v.refId)}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.color}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.talla}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.forma || 'ÃÂ¢ÃÂÃÂ'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.forma || 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'}</td>
                         <td className="py-2 pr-3 text-right text-gray-300">{v.cantidad}</td>
                         <td className="py-2 pr-3 text-right text-green-400 font-semibold text-xs">{cop(v.totalVenta)}</td>
                         <td className="py-2 text-right text-indigo-400">{cop(v.ganancia)}</td>
@@ -1562,8 +1561,8 @@ export default function App() {
                                 : 'bg-yellow-900/40 border-yellow-600 text-yellow-300'
                             }`}
                           >
-                            <option value="Pendiente de pago">ÃÂ¢ÃÂÃÂ³ Pendiente</option>
-                            <option value="Pagado">ÃÂ¢ÃÂÃÂ Pagado</option>
+                            <option value="Pendiente de pago">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ³ Pendiente</option>
+                            <option value="Pagado">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Pagado</option>
                           </select>
                         </td>
                       </tr>
@@ -1575,7 +1574,7 @@ export default function App() {
           </Card>
           </div>
         )}
-                {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ COMPRAS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+                {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ COMPRAS ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
         {tab === 'compras' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1588,7 +1587,7 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">ÃÂ¢ÃÂÃÂ ÃÂ¯ÃÂ¸ÃÂ Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ ÃÂÃÂ¯ÃÂÃÂ¸ÃÂÃÂ Cargando referencias desde Drive...</p>
         )}
                 {!(refs.find(x => x.id === cRef)?.cat === 'Accesorio') && (
                   <>
@@ -1607,13 +1606,13 @@ export default function App() {
                 </div>
                 <FG label="Proveedor"><Inp value={cProv} onChange={e => setCProv(e.target.value)} placeholder="Nombre del proveedor" /></FG>
                 <FG label="Notas"><Inp value={cNotas} onChange={e => setCNotas(e.target.value)} placeholder="Observaciones" /></FG>
-                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'GuardandoÃÂ¢ÃÂÃÂ¦' : '+ Registrar Compra'}</Btn>
+                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'GuardandoÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦' : '+ Registrar Compra'}</Btn>
               </div>
             </Card>
             <Card>
               <div className="flex items-center justify-between mb-3">
                 <CardTitle text={`Historial de Compras (${comprasFiltradas.length})`} />
-                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>ÃÂ¢ÃÂ¬ÃÂ CSV</Btn>
+                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>ÃÂÃÂ¢ÃÂÃÂ¬ÃÂÃÂ CSV</Btn>
               </div>
               {comprasFiltradas.length === 0 ? <p className="text-gray-500 text-sm">No hay compras registradas.</p> : (
                 <div className="overflow-x-auto">
@@ -1643,19 +1642,19 @@ export default function App() {
           </div>
         )}
 
-        {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ INVENTARIO ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ INVENTARIO ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
         {tab === 'inventario' && (
           <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text="Inventario en Tiempo Real" />
-              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>ÃÂ¢ÃÂ¬ÃÂ CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>ÃÂÃÂ¢ÃÂÃÂ¬ÃÂÃÂ CSV</Btn>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
                 { label:'En stock', val: displayInventario.reduce((a,i)=>a+Math.max(i.stock,0),0), color:'text-white' },
                 { label:'OK (>5)',   val: displayInventario.filter(i=>i.stock>5).length, color:'text-green-400' },
-                { label:'Bajo (ÃÂ¢ÃÂÃÂ¤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
-                { label:'CrÃÂÃÂ­tico (ÃÂ¢ÃÂÃÂ¤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
+                { label:'Bajo (ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
+                { label:'CrÃÂÃÂÃÂÃÂ­tico (ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
               ].map(k => (
                 <div key={k.label} className="bg-gray-700 rounded-lg p-3 text-center">
                   <p className={`text-2xl font-bold ${k.color}`}>{k.val}</p>
@@ -1687,7 +1686,7 @@ export default function App() {
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
-                      <td className="py-2"><Badge text={i.estado==='OK'?'ÃÂ¢ÃÂÃÂ OK':i.estado==='Bajo'?'ÃÂ¢ÃÂÃÂ ÃÂ¯ÃÂ¸ÃÂ Bajo':'ÃÂ°ÃÂÃÂÃÂ´ CrÃÂÃÂ­tico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
+                      <td className="py-2"><Badge text={i.estado==='OK'?'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ OK':i.estado==='Bajo'?'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ ÃÂÃÂ¯ÃÂÃÂ¸ÃÂÃÂ Bajo':'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ´ CrÃÂÃÂÃÂÃÂ­tico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1696,24 +1695,24 @@ export default function App() {
           </Card>
         )}
 
-        {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ DASHBOARD ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ DASHBOARD ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
         {tab === 'dashboard' && (
           <div className="space-y-4">
-            {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Label de filtro activo ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Label de filtro activo ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
             {hasFiltroFecha && (
               <div className="bg-indigo-900/30 border border-indigo-700 rounded-xl px-4 py-2 text-sm text-indigo-300">
-                ÃÂ°ÃÂÃÂÃÂ Mostrando datos filtrados: <strong>{ventasFiltradas.length}</strong> ventas ÃÂÃÂ· <strong>{comprasFiltradas.length}</strong> compras
+                ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Mostrando datos filtrados: <strong>{ventasFiltradas.length}</strong> ventas ÃÂÃÂÃÂÃÂ· <strong>{comprasFiltradas.length}</strong> compras
               </div>
             )}
-            {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ KPIs Fila 1: Ventas e Inventario ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ KPIs Fila 1: Ventas e Inventario ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'ÃÂ°ÃÂÃÂÃÂ°' },
-                { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'ÃÂ°ÃÂÃÂÃÂ' },
-                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'ÃÂ°ÃÂÃÂÃÂ' },
-                { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'ÃÂ°ÃÂÃÂÃÂ¦' },
-                { label:'Inventario Valorizado',   val: cop(inventarioValorizado), color:'text-cyan-400', icon:'💸' },
-                { label:'Inventario Valorizado',   val: cop(inventarioValorizado),                               color:'text-cyan-400',   icon:'ð¸' },
+                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ°' },
+                { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ' },
+                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ' },
+                { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¦' },
+                { label:'Inventario Valorizado',   val: cop(inventarioValorizado), color:'text-cyan-400', icon:'ð¸' },
+                { label:'Inventario Valorizado',   val: cop(inventarioValorizado),                               color:'text-cyan-400',   icon:'Ã°ÂÂÂ¸' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
                   <div className="text-2xl mb-1">{k.icon}</div>
@@ -1722,12 +1721,12 @@ export default function App() {
                 </Card>
               ))}
             </div>
-            {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ KPIs Fila 2: Detalles de Ventas ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ KPIs Fila 2: Detalles de Ventas ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'ÃÂ°ÃÂÃÂÃÂ' },
-                { label:'Costo de Ventas',    val: cop(ventasFiltradas.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'ÃÂ°ÃÂÃÂÃÂ¸' },
-                { label:'Margen (%)',          val: (() => { const ing=ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasFiltradas.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : 'ÃÂ¢ÃÂÃÂ'; })(), color:'text-purple-400', icon:'%' },
+                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ' },
+                { label:'Costo de Ventas',    val: cop(ventasFiltradas.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¸' },
+                { label:'Margen (%)',          val: (() => { const ing=ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasFiltradas.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'; })(), color:'text-purple-400', icon:'%' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
                   <div className="text-xl mb-1">{k.icon}</div>
@@ -1738,7 +1737,7 @@ export default function App() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
-                <CardTitle text="ÃÂÃÂltimas 5 Ventas" />
+                <CardTitle text="ÃÂÃÂÃÂÃÂltimas 5 Ventas" />
                 <div className="space-y-2">
                   {ventasFiltradas.slice(0,5).map(v => (
                     <div key={v.id} className="flex justify-between items-center text-sm">
@@ -1746,11 +1745,11 @@ export default function App() {
                       <span className="text-green-400">{cop(v.totalVenta)}</span>
                     </div>
                   ))}
-                  {ventasFiltradas.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aÃÂÃÂºn</p>}
+                  {ventasFiltradas.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aÃÂÃÂÃÂÃÂºn</p>}
                 </div>
               </Card>
               <Card>
-                <CardTitle text="Stock CrÃÂÃÂ­tico" />
+                <CardTitle text="Stock CrÃÂÃÂÃÂÃÂ­tico" />
                 <div className="space-y-2">
                   {displayInventario.filter(i=>i.stock<=2).map((i,idx) => (
                     <div key={idx} className="flex justify-between items-center text-sm">
@@ -1758,14 +1757,14 @@ export default function App() {
                       <Badge text={String(i.stock)} color="red" />
                     </div>
                   ))}
-                  {displayInventario.filter(i=>i.stock<=2).length === 0 && <p className="text-gray-500 text-sm">Sin items crÃÂÃÂ­ticos ÃÂ¢ÃÂÃÂ</p>}
+                  {displayInventario.filter(i=>i.stock<=2).length === 0 && <p className="text-gray-500 text-sm">Sin items crÃÂÃÂÃÂÃÂ­ticos ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ</p>}
                 </div>
               </Card>
             </div>
           </div>
         )}
 
-        {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ CUENTA DE COBRO ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ CUENTA DE COBRO ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
         {tab === 'cuenta' && (
           <div className="space-y-4">
             <Card>
@@ -1778,12 +1777,12 @@ export default function App() {
                   }} placeholder="Ingresa el ID de la venta (ej: 1779063838818)" className="w-80" />
                 </FG>
                 <Btn onClick={() => buscarCuentaCobro(ccId)} disabled={!ccId.trim() || ccStatus==='loading'}>
-                  {ccStatus === 'loading' ? 'BuscandoÃÂ¢ÃÂÃÂ¦' : 'ÃÂ°ÃÂÃÂÃÂ Buscar'}
+                  {ccStatus === 'loading' ? 'BuscandoÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦' : 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Buscar'}
                 </Btn>
               </div>
-              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google DriveÃÂ¢ÃÂÃÂ¦</p>}
-              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">ÃÂ¢ÃÂÃÂ ÃÂ¯ÃÂ¸ÃÂ {ccMsg}</p></div>}
-              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">ÃÂ¢ÃÂÃÂ ÃÂ¯ÃÂ¸ÃÂ {ccMsg}</p></div>}
+              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google DriveÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦</p>}
+              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ ÃÂÃÂ¯ÃÂÃÂ¸ÃÂÃÂ {ccMsg}</p></div>}
+              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ ÃÂÃÂ¯ÃÂÃÂ¸ÃÂÃÂ {ccMsg}</p></div>}
             </Card>
 
             {ccStatus === 'found' && ccData && ccData.length > 0 && (() => {
@@ -1804,7 +1803,7 @@ export default function App() {
                   <Card className="border border-indigo-700">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <h2 className="text-lg font-bold text-white">ÃÂ°ÃÂÃÂ§ÃÂ¾ Cuenta de Cobro</h2>
+                        <h2 className="text-lg font-bold text-white">ÃÂÃÂ°ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¾ Cuenta de Cobro</h2>
                         <p className="text-xs text-gray-400">ID: {idVenta} &nbsp;|&nbsp; Fecha: {fecha}</p>
                       </div>
                       <div className="text-right">
@@ -1815,14 +1814,14 @@ export default function App() {
                 onClick={() => generarCuentaCobroPDF({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData })}
                 className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors"
               >
-                ÃÂ°ÃÂÃÂÃÂ Descargar PDF
+                ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Descargar PDF
               </button>
                     </div>
                   </Card>
                   <Card>
                     <CardTitle text="A. Datos del Cliente" />
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                      {[{label:'Cliente',val:clienteNom},{label:'TelÃÂÃÂ©fono',val:clienteFon},{label:'Documento',val:clienteDoc2},{label:'DirecciÃÂÃÂ³n',val:clienteDir},{label:'Sede',val:clienteS}].map(item => (
+                      {[{label:'Cliente',val:clienteNom},{label:'TelÃÂÃÂÃÂÃÂ©fono',val:clienteFon},{label:'Documento',val:clienteDoc2},{label:'DirecciÃÂÃÂÃÂÃÂ³n',val:clienteDir},{label:'Sede',val:clienteS}].map(item => (
                         <div key={item.label}>
                           <p className="text-xs text-gray-400">{item.label}</p>
                           <p className="text-sm text-white font-medium mt-0.5">{item.val}</p>
@@ -1874,7 +1873,7 @@ export default function App() {
                     <CardTitle text="C. Resumen" />
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <p className="text-sm text-gray-400">LÃÂÃÂ­neas en el pedido: <span className="text-white">{ccData.length}</span></p>
+                        <p className="text-sm text-gray-400">LÃÂÃÂÃÂÃÂ­neas en el pedido: <span className="text-white">{ccData.length}</span></p>
                         <p className="text-sm text-gray-400">Unidades totales: <span className="text-white">{ccData.reduce((a:number,r:any) => a + Number(r['Cantidad']||r['cantidad']||0), 0)}</span></p>
                       </div>
                       <div className="text-right">
@@ -1889,14 +1888,14 @@ export default function App() {
           </div>
         )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ COTIZACIONES ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ COTIZACIONES ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
       {tab === 'cotizaciones' && (
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">ÃÂ°ÃÂÃÂÃÂ REGISTRO DE COTIZACIONES</h2>
+            <h2 className="text-xl font-bold text-white">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ REGISTRO DE COTIZACIONES</h2>
             <button onClick={cargarCotizaciones} className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-500">
-              ÃÂ°ÃÂÃÂÃÂ Actualizar
+              ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Actualizar
             </button>
           </div>
 
@@ -1912,7 +1911,7 @@ export default function App() {
             />
             {cotBusqueda && (
               <button onClick={() => setCotBusqueda('')} className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded-lg hover:bg-slate-500">
-                ÃÂ¢ÃÂÃÂ Limpiar
+                ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Limpiar
               </button>
             )}
           </div>
@@ -1930,7 +1929,7 @@ export default function App() {
                     <th className="px-3 py-2">Referencias</th>
                     <th className="px-3 py-2 text-right">Total</th>
                     <th className="px-3 py-2 text-center">Estado</th>
-                    <th className="px-3 py-2 text-center">AcciÃÂÃÂ³n</th>
+                    <th className="px-3 py-2 text-center">AcciÃÂÃÂÃÂÃÂ³n</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1949,7 +1948,7 @@ export default function App() {
                         <span className={String(cot.estado) === 'Convertida en Venta'
                           ? 'px-2 py-0.5 rounded-full text-xs bg-emerald-900 text-emerald-300'
                           : 'px-2 py-0.5 rounded-full text-xs bg-indigo-900 text-indigo-300'}>
-                          {String(cot.estado || 'CotizaciÃÂÃÂ³n')}
+                          {String(cot.estado || 'CotizaciÃÂÃÂÃÂÃÂ³n')}
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center">
@@ -1958,7 +1957,7 @@ export default function App() {
                             onClick={() => descargarCotizacionPDF(cot)}
                             className="px-3 py-1 bg-indigo-700 text-white text-xs rounded-lg hover:bg-indigo-600"
                           >
-                            ÃÂ°ÃÂÃÂÃÂ PDF
+                            ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ PDF
                           </button>
                           {String(cot.estado) !== 'Convertida en Venta' && (
                           <button
@@ -1966,7 +1965,7 @@ export default function App() {
                             disabled={loading}
                             className="px-3 py-1 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-500 disabled:opacity-50"
                           >
-                            ÃÂ¢ÃÂÃÂ Convertir en Venta
+                            ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Convertir en Venta
                           </button>
                           )}
                           {String(cot.estado) === 'Convertida en Venta' && (
@@ -1974,7 +1973,7 @@ export default function App() {
                             onClick={() => { setTab('cuenta'); setCcId(String(cot.ventaId || cot.id)); setTimeout(() => buscarCuentaCobro(String(cot.ventaId || cot.id)), 150); }}
                             className="px-3 py-1 bg-teal-700 text-white text-xs rounded-lg hover:bg-teal-600"
                           >
-                            ÃÂ°ÃÂÃÂ§ÃÂ¾ Ver Cobro
+                            ÃÂÃÂ°ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¾ Ver Cobro
                           </button>
                           )}
                         </div>
@@ -1989,15 +1988,15 @@ export default function App() {
       )}
     </div>
 
-        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ ABONOS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+        {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ ABONOS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
         {tab === 'abonos' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold text-white">Ã°ÂÂÂ° ABONOS Y PAGOS PARCIALES</h2>
-              <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">Ã°ÂÂÂ Recargar</button>
+              <h2 className="text-xl font-bold text-white">ÃÂ°ÃÂÃÂÃÂ° ABONOS Y PAGOS PARCIALES</h2>
+              <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">ÃÂ°ÃÂÃÂÃÂ Recargar</button>
             </div>
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-white mb-3">Ã°ÂÂÂ Registrar Abono por ID de Venta</h3>
+              <h3 className="text-sm font-bold text-white mb-3">ÃÂ°ÃÂÃÂÃÂ Registrar Abono por ID de Venta</h3>
               <div className="flex gap-3 items-end flex-wrap mb-4">
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">ID de Venta</label>
@@ -2024,7 +2023,7 @@ export default function App() {
                 </div>
                 <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || !abonoVentaId}
                   className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold"
-                >{savingAbono ? 'Guardando...' : 'Ã°ÂÂÂ¾ Guardar'}</button>
+                >{savingAbono ? 'Guardando...' : 'ÃÂ°ÃÂÃÂÃÂ¾ Guardar'}</button>
               </div>
               {abonoVentaId && (() => {
                 const v = ventas.find(x => x.id === abonoVentaId);
@@ -2035,17 +2034,17 @@ export default function App() {
                 return (
                   <div className="bg-gray-700/50 rounded-lg p-3 text-sm">
                     <p className="text-gray-300">Cliente: <span className="text-white font-bold">{v.cliente}</span> | Total: <span className="text-green-400 font-bold">{cop(v.totalVenta)}</span></p>
-                    <p className="text-gray-300">Ya abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span> | Saldo: <span className={saldo<=0?'text-green-400 font-bold':'text-yellow-400 font-bold'}>{cop(Math.max(saldo,0))}</span> {saldo<=0&&'Ã¢ÂÂ'}</p>
+                    <p className="text-gray-300">Ya abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span> | Saldo: <span className={saldo<=0?'text-green-400 font-bold':'text-yellow-400 font-bold'}>{cop(Math.max(saldo,0))}</span> {saldo<=0&&'ÃÂ¢ÃÂÃÂ'}</p>
                   </div>
                 );
               })()}
             </div>
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-white mb-3">Ã°ÂÂÂ Historial de Abonos</h3>
+              <h3 className="text-sm font-bold text-white mb-3">ÃÂ°ÃÂÃÂÃÂ Historial de Abonos</h3>
               {abonos.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-500 text-sm mb-2">No hay abonos registrados.</p>
-                  <button onClick={cargarAbonos} className="text-xs text-indigo-400 hover:text-indigo-300">Ã°ÂÂÂ Cargar desde Drive</button>
+                  <button onClick={cargarAbonos} className="text-xs text-indigo-400 hover:text-indigo-300">ÃÂ°ÃÂÃÂÃÂ Cargar desde Drive</button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
