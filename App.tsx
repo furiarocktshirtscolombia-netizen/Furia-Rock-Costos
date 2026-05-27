@@ -1,57 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
-
-      {/* ── Abono Modal ── */}
-      {abonoVentaId && (() => {
-        const v = ventas.find(x => x.id === abonoVentaId);
-        const existente = abonos.find((a: Abono) => a.ventaId === abonoVentaId);
-        const prevAbonado = existente ? existente.totalAbonado : 0;
-        const totalVenta = v ? v.totalVenta : 0;
-        const nuevoTotal = (abonoData.a1||0)+(abonoData.a2||0)+(abonoData.a3||0)+(abonoData.a4||0)+(abonoData.a5||0);
-        const saldo = totalVenta - prevAbonado - nuevoTotal;
-        return (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-600 shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-1">💵 Registrar Abono</h3>
-              <p className="text-xs text-gray-400 mb-1">Cliente: <span className="text-white">{v?.cliente}</span></p>
-              <p className="text-xs text-gray-400 mb-3">Total venta: <span className="text-green-400 font-bold">{cop(totalVenta)}</span> | Ya abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span></p>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {[1,2,3,4,5].map(n => (
-                  <div key={n}>
-                    <label className="text-xs text-gray-400">Abono {n}</label>
-                    <input type="number" min="0"
-                      value={(abonoData as any)['a'+n] || ''}
-                      onChange={e => setAbonoData({...abonoData, ['a'+n]: Number(e.target.value)})}
-                      className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:border-green-400"
-                    />
-                  </div>
-                ))}
-                <div className="col-span-2">
-                  <label className="text-xs text-gray-400">Observaciones</label>
-                  <input type="text"
-                    value={abonoData.obs}
-                    onChange={e => setAbonoData({...abonoData, obs: e.target.value})}
-                    placeholder="Nota opcional..."
-                    className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:border-green-400"
-                  />
-                </div>
-              </div>
-              <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
-                <p className="text-sm text-gray-300">Nuevo total abonado: <span className="text-green-400 font-bold">{cop(prevAbonado + nuevoTotal)}</span></p>
-                <p className="text-sm text-gray-300">Saldo pendiente: <span className={saldo <= 0 ? 'text-green-400 font-bold' : 'text-yellow-400 font-bold'}>{cop(Math.max(saldo, 0))}</span></p>
-                {saldo <= 0 && <p className="text-xs text-green-400 mt-1">✅ Pago completo</p>}
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setAbonoVentaId('')} className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm transition-colors">Cancelar</button>
-                <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || nuevoTotal === 0} className="flex-1 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-lg text-sm font-bold transition-colors">
-                  {savingAbono ? 'Guardando...' : '💾 Guardar Abono'}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
 import 'jspdf-autotable';
 
 // v1.4 - Fixes: PDF unit price, cotizacion total calculation
@@ -117,17 +65,13 @@ interface Abono {
   cliente: string;
   totalVenta: number;
   fecha: string;
-  abono1: number;
-  abono2: number;
-  abono3: number;
-  abono4: number;
-  abono5: number;
+  abono1: number; abono2: number; abono3: number; abono4: number; abono5: number;
   totalAbonado: number;
   saldoPendiente: number;
   estado: string;
   observaciones: string;
 }
-type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones'|'abonos';
+type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones'|'abonos'|'abonos';
 
 // âââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const sendToGAS = async (body: object) => {
@@ -862,15 +806,15 @@ export default function App() {
 
     // ââ Cotizaciones âââââââââââââââââââââââââââââââââââââââââââââââââ
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
-  const [loadingCot, setLoadingCot] = useState(false);
-  const [cotBusqueda, setCotBusqueda] = useState('');
 
-
-  // ── Abonos ────────────────────────────────────────────────────────────
-  const [abonos, setAbonos] = useState<Abono[]>([]);
+  // ── Abonos
+  const [abonos, setAbonos] = useState([]);
   const [abonoVentaId, setAbonoVentaId] = useState('');
   const [abonoData, setAbonoData] = useState({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
   const [savingAbono, setSavingAbono] = useState(false);
+  const [loadingCot, setLoadingCot] = useState(false);
+  const [cotBusqueda, setCotBusqueda] = useState('');
+
   const guardarCotizacion = async () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un item al carrito'); return; }
     setLoadingCot(true);
@@ -948,24 +892,23 @@ export default function App() {
   }
 
 
-  // ── Abono Functions ─────────────────────────────────────────────
+  // ── Abono Functions
   const cargarAbonos = async () => {
     try {
       const d = await sendToGAS({ action: 'obtenerAbonos' });
-      if (d.abonos) setAbonos(d.abonos);
+      if (d && d.abonos) setAbonos(d.abonos);
     } catch (_e) { /* ignore */ }
   };
 
-  const guardarAbono = async (ventaId: string) => {
+  const guardarAbono = async (ventaId) => {
     setSavingAbono(true);
     const venta = ventas.find(v => v.id === ventaId);
     if (!venta) { setSavingAbono(false); return; }
-    const totalVenta = venta.totalVenta;
     const payload = {
       action: 'guardarAbono',
       ventaId,
       cliente: venta.cliente,
-      totalVenta,
+      totalVenta: venta.totalVenta,
       fecha: today(),
       abono1: abonoData.a1 || 0,
       abono2: abonoData.a2 || 0,
@@ -976,13 +919,13 @@ export default function App() {
     };
     try {
       const resp = await sendToGAS(payload);
-      if (resp.status === 'ok') {
+      if (resp && resp.status === 'ok') {
         showToast('Abono guardado ✓');
         setAbonoVentaId('');
         setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
         cargarAbonos();
-      } else { showToast('Error: ' + (resp.msg || 'desconocido')); }
-    } catch (e: any) { showToast('Error al guardar abono: ' + e.message); }
+      } else { showToast('Error: ' + ((resp && resp.msg) || 'desconocido')); }
+    } catch (e) { showToast('Error al guardar: ' + e.message); }
     setSavingAbono(false);
   };
 
@@ -1251,6 +1194,56 @@ export default function App() {
       {toast && (
         <div className="fixed top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">{toast}</div>
       )}
+
+      {/* ── Abono Modal ── */}
+      {abonoVentaId && (() => {
+        const v = ventas.find(x => x.id === abonoVentaId);
+        const prevAbonado = abonos.reduce((t, a) => a.ventaId === abonoVentaId ? a.totalAbonado : t, 0);
+        const totalVenta = v ? v.totalVenta : 0;
+        const nuevoTotal = (abonoData.a1||0)+(abonoData.a2||0)+(abonoData.a3||0)+(abonoData.a4||0)+(abonoData.a5||0);
+        const saldo = totalVenta - prevAbonado - nuevoTotal;
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-600 shadow-2xl">
+              <h3 className="text-lg font-bold text-white mb-1">💵 Registrar Abono</h3>
+              <p className="text-xs text-gray-400 mb-1">Cliente: <span className="text-white">{v?.cliente}</span></p>
+              <p className="text-xs text-gray-400 mb-3">Total: <span className="text-green-400 font-bold">{cop(totalVenta)}</span> | Abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span></p>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {[1,2,3,4,5].map(n => (
+                  <div key={n}>
+                    <label className="text-xs text-gray-400">Abono {n}</label>
+                    <input type="number" min="0"
+                      value={abonoData['a'+n] || ''}
+                      onChange={e => setAbonoData({...abonoData, ['a'+n]: Number(e.target.value)})}
+                      className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:border-green-400"
+                    />
+                  </div>
+                ))}
+                <div className="col-span-3">
+                  <label className="text-xs text-gray-400">Observaciones</label>
+                  <input type="text" value={abonoData.obs}
+                    onChange={e => setAbonoData({...abonoData, obs: e.target.value})}
+                    placeholder="Nota opcional..."
+                    className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:border-green-400"
+                  />
+                </div>
+              </div>
+              <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
+                <p className="text-sm text-gray-300">Total abonado: <span className="text-green-400 font-bold">{cop(prevAbonado + nuevoTotal)}</span></p>
+                <p className="text-sm text-gray-300">Saldo pendiente: <span className={saldo <= 0 ? 'text-green-400 font-bold' : 'text-yellow-400 font-bold'}>{cop(Math.max(saldo, 0))}</span></p>
+                {saldo <= 0 && <p className="text-xs text-green-400">✅ Pago completo</p>}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setAbonoVentaId('')} className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm">Cancelar</button>
+                <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || nuevoTotal === 0}
+                  className="flex-1 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-lg text-sm font-bold">
+                  {savingAbono ? 'Guardando...' : '💾 Guardar Abono'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
         <h1 className="text-xl font-bold text-white">â¡ FURIA ROCK â GestiÃ³n de Costos</h1>
         <p className="text-xs text-gray-400 mt-0.5">Sincronizado con Google Drive</p>
@@ -1987,62 +1980,59 @@ export default function App() {
           )}
         </div>
       )}
+    </div>
 
         {/* ─── ABONOS ─── */}
         {tab === 'abonos' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-bold text-white">💰 ABONOS Y PAGOS PARCIALES</h2>
-              <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">🔄 Recargar</button>
+              <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">🔄 Recargar</button>
             </div>
-            {/* Registrar nuevo abono */}
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
               <h3 className="text-sm font-bold text-white mb-3">📝 Registrar Abono por ID de Venta</h3>
-              <div className="flex gap-3 items-end mb-4 flex-wrap">
+              <div className="flex gap-3 items-end flex-wrap mb-4">
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">ID de Venta</label>
                   <input type="text" value={abonoVentaId} onChange={e => setAbonoVentaId(e.target.value)}
-                    placeholder="Ej: 1779063838818" className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-green-400 w-52"
+                    placeholder="Ej: 1779063838818"
+                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-green-400 w-52"
                   />
                 </div>
                 {[1,2,3,4,5].map(n => (
                   <div key={n}>
                     <label className="text-xs text-gray-400 block mb-1">Abono {n}</label>
                     <input type="number" min="0"
-                      value={(abonoData as any)['a'+n] || ''}
+                      value={abonoData['a'+n] || ''}
                       onChange={e => setAbonoData({...abonoData, ['a'+n]: Number(e.target.value)})}
-                      className="w-28 px-2 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-green-400"
+                      className="w-24 px-2 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-green-400"
                     />
                   </div>
                 ))}
-                <div className="flex-1 min-w-40">
+                <div>
                   <label className="text-xs text-gray-400 block mb-1">Observaciones</label>
                   <input type="text" value={abonoData.obs} onChange={e => setAbonoData({...abonoData, obs: e.target.value})}
-                    placeholder="Nota..." className="w-full px-2 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-green-400"
+                    placeholder="Nota..." className="px-2 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-green-400 w-40"
                   />
                 </div>
                 <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || !abonoVentaId}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-colors"
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold"
                 >{savingAbono ? 'Guardando...' : '💾 Guardar'}</button>
               </div>
-              {/* Preview saldo */}
               {abonoVentaId && (() => {
                 const v = ventas.find(x => x.id === abonoVentaId);
-                if (!v) return <p className="text-xs text-red-400">ID no encontrado en ventas</p>;
-                const existente = abonos.find((a: Abono) => a.ventaId === abonoVentaId);
-                const prevAbonado = existente ? existente.totalAbonado : 0;
+                if (!v) return <p className="text-xs text-red-400">ID no encontrado</p>;
+                const prevAbonado = abonos.reduce((t, a) => a.ventaId === abonoVentaId ? a.totalAbonado : t, 0);
                 const nuevoTotal = (abonoData.a1||0)+(abonoData.a2||0)+(abonoData.a3||0)+(abonoData.a4||0)+(abonoData.a5||0);
                 const saldo = v.totalVenta - prevAbonado - nuevoTotal;
                 return (
                   <div className="bg-gray-700/50 rounded-lg p-3 text-sm">
-                    <p className="text-gray-300">Cliente: <span className="text-white font-bold">{v.cliente}</span></p>
-                    <p className="text-gray-300">Total venta: <span className="text-green-400 font-bold">{cop(v.totalVenta)}</span> | Ya abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span></p>
-                    <p className="text-gray-300">Saldo pendiente: <span className={saldo <= 0 ? 'text-green-400 font-bold' : 'text-yellow-400 font-bold'}>{cop(Math.max(saldo,0))}</span> {saldo <= 0 && '✅ Pagado'}</p>
+                    <p className="text-gray-300">Cliente: <span className="text-white font-bold">{v.cliente}</span> | Total: <span className="text-green-400 font-bold">{cop(v.totalVenta)}</span></p>
+                    <p className="text-gray-300">Ya abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span> | Saldo: <span className={saldo<=0?'text-green-400 font-bold':'text-yellow-400 font-bold'}>{cop(Math.max(saldo,0))}</span> {saldo<=0&&'✅'}</p>
                   </div>
                 );
               })()}
             </div>
-            {/* Historial de abonos */}
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
               <h3 className="text-sm font-bold text-white mb-3">📋 Historial de Abonos</h3>
               {abonos.length === 0 ? (
@@ -2053,25 +2043,25 @@ export default function App() {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead><tr className="text-gray-400 border-b border-gray-700 text-xs uppercase tracking-wider">
+                    <thead><tr className="text-gray-400 border-b border-gray-700 text-xs uppercase">
                       <th className="text-left py-2 pr-3">ID Venta</th>
                       <th className="text-left py-2 pr-3">Fecha</th>
                       <th className="text-left py-2 pr-3">Cliente</th>
                       <th className="text-right py-2 pr-3">Total Venta</th>
                       <th className="text-right py-2 pr-3">Total Abonado</th>
-                      <th className="text-right py-2 pr-3">Saldo Pendiente</th>
+                      <th className="text-right py-2 pr-3">Saldo</th>
                       <th className="text-center py-2">Estado</th>
                     </tr></thead>
                     <tbody>
-                      {abonos.map((a: Abono) => (
-                        <tr key={a.id || a.ventaId} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                      {abonos.map((a, idx) => (
+                        <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                           <td className="py-2 pr-3 text-xs font-mono text-indigo-400">{a.ventaId}</td>
                           <td className="py-2 pr-3 text-gray-300">{a.fecha}</td>
                           <td className="py-2 pr-3 text-gray-200">{a.cliente}</td>
                           <td className="py-2 pr-3 text-right text-gray-200">{cop(a.totalVenta)}</td>
                           <td className="py-2 pr-3 text-right text-green-400 font-bold">{cop(a.totalAbonado)}</td>
-                          <td className="py-2 pr-3 text-right font-bold" style={{color: a.saldoPendiente <= 0 ? '#4ade80' : '#fbbf24'}}>{cop(Math.max(a.saldoPendiente,0))}</td>
-                          <td className="py-2 text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${a.estado === 'PAGADO' ? 'bg-green-900 text-green-300' : 'bg-yellow-900 text-yellow-300'}`}>{a.estado}</span></td>
+                          <td className="py-2 pr-3 text-right font-bold" style={{color: a.saldoPendiente<=0?'#4ade80':'#fbbf24'}}>{cop(Math.max(a.saldoPendiente,0))}</td>
+                          <td className="py-2 text-center"><span className={'text-xs px-2 py-0.5 rounded-full '+(a.estado==='PAGADO'?'bg-green-900 text-green-300':'bg-yellow-900 text-yellow-300')}>{a.estado}</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -2081,8 +2071,6 @@ export default function App() {
             </div>
           </div>
         )}
-
-    </div>
     </div>
   );
 }
