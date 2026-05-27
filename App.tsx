@@ -1711,7 +1711,7 @@ export default function App() {
                 { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'🛒' },
                 { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'📈' },
                 { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'📦' },
-                { label:'Inventario Valorizado',   val: cop(inventarioValorizado), color:'text-cyan-400', icon:'💸' },
+                { label:'Inventario Valorizado',   val: cop(inventarioValorizado), color:'text-cyan-400', icon:'ðÂÂ¸' },
                 { label:'Inventario Valorizado',   val: cop(inventarioValorizado),                               color:'text-cyan-400',   icon:'💸' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
