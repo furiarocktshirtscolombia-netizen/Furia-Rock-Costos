@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ DATOS REALES DEL SPREADSHEET FURIA ROCK ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+
+// v1.4 - Fixes: PDF unit price, cotizacion total calculation
+// Ã¢ÂÂÃ¢ÂÂ DATOS REALES DEL SPREADSHEET FURIA ROCK Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const REFS_DEFAULT: Ref[] = [
   { id:"r1",  name:"CAMISETA ALGODON PERUANO 178G",           cost:18000, cat:"Adulto" },
   { id:"r2",  name:"CAMISETA ALGODON PERUANO 320G",           cost:37000, cat:"Adulto" },
@@ -40,7 +42,7 @@ const COSTO_PLANCHADA    = 1000;
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
-// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Types ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Types Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 interface Ref  { id:string; name:string; cost:number; cat:string }
 interface Item { ref:string; refId:string; cat:string; talla:string; color:string; forma:string; comprado:number; vendido:number; stock:number; estado:string }
 interface Venta {
@@ -71,7 +73,7 @@ interface Abono {
 }
 type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones'|'abonos'|'abonos';
 
-// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Helpers ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Helpers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const sendToGAS = async (body: object) => {
   const r = await fetch(GAS_URL, {
     method:'POST', redirect:'follow',
@@ -136,7 +138,7 @@ const exportCSV = (rows: object[], name:string) => {
   a.click();
 };
 
-// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ UI Atoms ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ UI Atoms Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 const Card = ({children,className=''}:{children:React.ReactNode;className?:string}) => (
   <div className={`bg-gray-800 rounded-xl p-4 ${className}`}>{children}</div>
 );
@@ -169,7 +171,7 @@ const Badge = ({text,color}:{text:string;color:'green'|'yellow'|'red'}) => {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c}`}>{text}</span>;
 };
 
-// ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Main App ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Main App Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 export default function App() {
   const [tab, setTab]           = useState<Tab>('cotizador');
   const [refs, setRefs]         = useState<Ref[]>(REFS_DEFAULT);
@@ -178,7 +180,7 @@ export default function App() {
   const [ventas, setVentas]     = useState<Venta[]>([]);  const [searchVentas, setSearchVentas] = useState('');
   const [filterEstadoVentas, setFilterEstadoVentas] = useState('');
 
-  // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Filtro Global de Fecha ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+  // Ã¢ÂÂÃ¢ÂÂ Filtro Global de Fecha Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   const [fechaInicio,      setFechaInicio]      = useState('');
   const [fechaFin,         setFechaFin]         = useState('');
   const [filtroModo,       setFiltroModo]       = useState<'rango'|'mes'|'dia'>('rango');
@@ -234,7 +236,7 @@ export default function App() {
     fetch(GAS_URL)
       .then(r => r.json())
       .then(d => {
-        // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ REFS: normalize any column naming convention from Drive ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+        // Ã¢ÂÂÃ¢ÂÂ REFS: normalize any column naming convention from Drive Ã¢ÂÂÃ¢ÂÂ
         if (d.refs && Array.isArray(d.refs) && d.refs.length > 0) {
           const normalizedRefs = d.refs
             .map((r: any, i: number) => {
@@ -291,7 +293,7 @@ export default function App() {
   const currentRef   = refs.find(r => r.id === selRef);
   const COLORES_ACTIVOS = coloresDrive.length > 0 ? coloresDrive : COLORES_DEFAULT;
   const coloresDisp  = currentRef ? (colorMap[currentRef.name] || COLORES_ACTIVOS) : COLORES_ACTIVOS;
-  // Tallas: si la referencia es de niño ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ tallas niño; adulto ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ tallas adulto
+  // Tallas: si la referencia es de niño Ã¢ÂÂ tallas niño; adulto Ã¢ÂÂ tallas adulto
   // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niño, Niño, nino)
   const tallasDisp   = currentRef
     ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
@@ -336,7 +338,7 @@ export default function App() {
     return inventario;
   }, [invDrive, inventario, refs, compras, ventas]);
 
-  // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Helpers de Filtro por Fecha ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+  // Ã¢ÂÂÃ¢ÂÂ Helpers de Filtro por Fecha Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   const inDateRange = (fecha: string): boolean => {
     if (!fecha) return true;
     if (filtroModo === 'dia' && filtroDia) return fecha.startsWith(filtroDia);
@@ -355,7 +357,6 @@ export default function App() {
   });
   const comprasFiltradas = hasFiltroFecha ? compras.filter(c => inDateRange(c.fecha)) : compras;
   const stockTotal = displayInventario.reduce((a, i) => a + Math.max(0, i.stock), 0);
-  const inventarioValorizado = displayInventario.reduce((a, i) => a + Math.max(0, i.stock) * (compras.filter(c => c.refId === i.refId).slice(-1)[0]?.precio || 0), 0);
   const inventarioValorizado = displayInventario.reduce((a, i) => a + Math.max(0, i.stock) * (compras.filter(c => c.refId === i.refId).slice(-1)[0]?.precio || 0), 0);
   const totalComprasGlobal = compras.reduce((a, c) => a + (c.total || 0), 0);
 
@@ -390,7 +391,7 @@ export default function App() {
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0); setCostoBordado(0);
     setSelForma('');
-    showToast('ÃÂÃÂÃÂÃÂtem agregado ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
+    showToast('ÃÂtem agregado Ã¢ÂÂ');
   };
 
   const generarCotizacionPDF = async () => {
@@ -491,7 +492,7 @@ export default function App() {
         pdf.line(ml, footY - 4, pageW - mr, footY - 4);
         pdf.setFontSize(7);
         pdf.setTextColor(148, 163, 184);
-        pdf.text('FURIA ROCK ÃÂÃÂÃÂÃÂ· Camisetas & Diseño Personalizado', ml, footY);
+        pdf.text('FURIA ROCK ÃÂ· Camisetas & Diseño Personalizado', ml, footY);
         pdf.text('Cotización sin valor fiscal. Precios en COP.', pageW / 2, footY, { align: 'center' });
         pdf.text('Pág. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
       },
@@ -504,13 +505,13 @@ export default function App() {
       pdf.setFont('helvetica', 'bold');
       pdf.text('CONDICIONES:', ml, finalY);
       pdf.setFont('helvetica', 'normal');
-      pdf.text('ÃÂÃÂÃÂÃÂ· Esta cotización tiene vigencia de 5 días hábiles.', ml, finalY + 5);
-      pdf.text('ÃÂÃÂÃÂÃÂ· Los precios están sujetos a cambios sin previo aviso.', ml, finalY + 10);
-      pdf.text('ÃÂÃÂÃÂÃÂ· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
+      pdf.text('ÃÂ· Esta cotización tiene vigencia de 5 días hábiles.', ml, finalY + 5);
+      pdf.text('ÃÂ· Los precios están sujetos a cambios sin previo aviso.', ml, finalY + 10);
+      pdf.text('ÃÂ· Para confirmar el pedido se requiere abono del 50%.', ml, finalY + 15);
     }
 
 
-    // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Información de Pago ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+    // Ã¢ÂÂÃ¢ÂÂ Información de Pago Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     const bx = ml;
     const bw = pageW - ml - ml;
     const qrSize = 28;
@@ -674,14 +675,14 @@ export default function App() {
         pdf.line(ml, footY - 4, pageW - mr, footY - 4);
         pdf.setFontSize(7);
         pdf.setTextColor(148, 163, 184);
-        pdf.text('FURIA ROCK ÃÂÃÂÃÂÃÂ· Camisetas & Diseño Personalizado', ml, footY);
-        pdf.text('Cuenta de Cobro ÃÂÃÂÃÂÃÂ· ID: ' + idVenta, pageW / 2, footY, { align: 'center' });
+        pdf.text('FURIA ROCK ÃÂ· Camisetas & Diseño Personalizado', ml, footY);
+        pdf.text('Cuenta de Cobro ÃÂ· ID: ' + idVenta, pageW / 2, footY, { align: 'center' });
         pdf.text('Pág. ' + data.pageNumber, pageW - mr, footY, { align: 'right' });
       },
     });
 
 
-  // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Información de Pago ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+  // Ã¢ÂÂÃ¢ÂÂ Información de Pago Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   const bx2 = ml;
   const bw2 = pageW - ml - mr;
   const qrSize2 = 28;
@@ -779,7 +780,7 @@ export default function App() {
     setCartItems([]);
     setClienteNombre(''); setClienteTel(''); setClienteDoc('');
     setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden(''); setClienteEstadoPago('Pendiente de pago');
-    showToast('Pedido registrado ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
+    showToast('Pedido registrado Ã¢ÂÂ');
     setLoading(false);
   };
 
@@ -804,14 +805,14 @@ export default function App() {
     setCompras(nuevasCompras);
     localStorage.setItem('compras', JSON.stringify(nuevasCompras));
     setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCProv(''); setCNotas(''); setCForma('');
-    showToast('Compra registrada ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
+    showToast('Compra registrada Ã¢ÂÂ');
     setLoading(false);
   };
 
-    // ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Cotizaciones ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ
+    // Ã¢ÂÂÃ¢ÂÂ Cotizaciones Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Abonos
+  // ââ Abonos
   const [abonos, setAbonos] = useState([]);
   const [abonoVentaId, setAbonoVentaId] = useState('');
   const [abonoData, setAbonoData] = useState({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
@@ -896,7 +897,7 @@ export default function App() {
   }
 
 
-  // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Abono Functions
+  // ââ Abono Functions
   const cargarAbonos = async () => {
     try {
       const d = await sendToGAS({ action: 'obtenerAbonos' });
@@ -924,7 +925,7 @@ export default function App() {
     try {
       const resp = await sendToGAS(payload);
       if (resp && resp.status === 'ok') {
-        showToast('Abono guardado ÃÂ¢ÃÂÃÂ');
+        showToast('Abono guardado â');
         setAbonoVentaId('');
         setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
         cargarAbonos();
@@ -939,7 +940,7 @@ export default function App() {
     try {
       const resp = await sendToGAS({ action: 'actualizarEstadoPago', ventaId, nuevoEstado });
       if (resp.status === 'ok') {
-        showToast('Estado actualizado ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ');
+        showToast('Estado actualizado Ã¢ÂÂ');
       } else {
         showToast('Guardado localmente. Actualiza Drive manualmente si es necesario.');
       }
@@ -1183,15 +1184,15 @@ export default function App() {
   };
 
   const tabs: {id:Tab; label:string}[] = [
-    {id:'cotizador',    label:'🧠 Cotizador'},
+    {id:'cotizador',    label:'🧲 Cotizador'},
     {id:'ventas',       label:'💰 Ventas'},
-    {id:'compras',      label:'🛒 Compras'},
-    {id:'inventario',   label:'📦 Inventario'},
-    {id:'dashboard',    label:'📊 Dashboard'},
+    {id:'compras',      label:'📦 Compras'},
+    {id:'inventario',   label:'📊 Inventario'},
+    {id:'dashboard',    label:'📈 Dashboard'},
     {id:'cuenta',       label:'🧾 Cuenta de Cobro'},
     {id:'cotizaciones', label:'📋 Cotizaciones'},
-    {id:'abonos',       label:'💵 Abonos'},
-];
+    {id:'abonos',       label:'💰 Abonos'},
+  ];
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -1199,7 +1200,7 @@ export default function App() {
         <div className="fixed top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">{toast}</div>
       )}
 
-      {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Abono Modal ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+      {/* ââ Abono Modal ââ */}
       {abonoVentaId && (() => {
         const v = ventas.find(x => x.id === abonoVentaId);
         const prevAbonado = abonos.reduce((t, a) => a.ventaId === abonoVentaId ? a.totalAbonado : t, 0);
@@ -1209,7 +1210,7 @@ export default function App() {
         return (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
             <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-600 shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-1">ÃÂ°ÃÂÃÂÃÂµ Registrar Abono</h3>
+              <h3 className="text-lg font-bold text-white mb-1">ðµ Registrar Abono</h3>
               <p className="text-xs text-gray-400 mb-1">Cliente: <span className="text-white">{v?.cliente}</span></p>
               <p className="text-xs text-gray-400 mb-3">Total: <span className="text-green-400 font-bold">{cop(totalVenta)}</span> | Abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span></p>
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -1241,7 +1242,7 @@ export default function App() {
                 <button onClick={() => setAbonoVentaId('')} className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm">Cancelar</button>
                 <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || nuevoTotal === 0}
                   className="flex-1 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-lg text-sm font-bold">
-                  {savingAbono ? 'Guardando...' : 'ÃÂ°ÃÂÃÂÃÂ¾ Guardar Abono'}
+                  {savingAbono ? 'Guardando...' : 'ð¾ Guardar Abono'}
                 </button>
               </div>
             </div>
@@ -1261,10 +1262,10 @@ export default function App() {
         ))}
       </div>
 
-      {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ BARRA DE FILTRO POR FECHA GLOBAL ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+      {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ BARRA DE FILTRO POR FECHA GLOBAL Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
       <div className="bg-gray-800 border-b border-gray-600 px-4 py-2">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-3">
-          <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider whitespace-nowrap">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Filtrar por fecha:</span>
+          <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider whitespace-nowrap">📅 Filtrar por fecha:</span>
           <div className="flex gap-1 rounded-lg overflow-hidden border border-gray-600">
             {(['rango','mes','dia'] as const).map(m => (
               <button key={m} onClick={() => { setFiltroModo(m); setFechaInicio(''); setFechaFin(''); setFiltroMes(''); setFiltroDia(''); }}
@@ -1276,7 +1277,7 @@ export default function App() {
           {filtroModo === 'rango' && (<>
             <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
               className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
-            <span className="text-gray-500 text-xs">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ</span>
+            <span className="text-gray-500 text-xs">Ã¢ÂÂ</span>
             <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
               className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
           </>)}
@@ -1290,11 +1291,11 @@ export default function App() {
           )}
           {hasFiltroFecha && (
             <button onClick={() => { setFechaInicio(''); setFechaFin(''); setFiltroMes(''); setFiltroDia(''); }}
-              className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Limpiar</button>
+              className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">Ã¢ÂÂ Limpiar</button>
           )}
           {hasFiltroFecha && (
             <span className="text-xs text-indigo-300 font-medium">
-              {ventasFiltradas.length} ventas ÃÂÃÂÃÂÃÂ· {comprasFiltradas.length} compras
+              {ventasFiltradas.length} ventas ÃÂ· {comprasFiltradas.length} compras
             </span>
           )}
         </div>
@@ -1303,7 +1304,7 @@ export default function App() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
 
-        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ COTIZADOR ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ COTIZADOR Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
         {tab === 'cotizador' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1411,7 +1412,7 @@ export default function App() {
                             <td className="py-1 pr-2 text-right text-gray-300">{item.qty}</td>
                             <td className="py-1 pr-2 text-right text-green-400">{cop(item.precio)}</td>
                             <td className="py-1 text-right">
-                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ</button>
+                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">Ã¢ÂÂ</button>
                             </td>
                           </tr>
                         ))}
@@ -1429,13 +1430,13 @@ export default function App() {
                     + Agregar ítem
                   </Btn>
                   <Btn onClick={generarCotizacionPDF} disabled={cartItems.length === 0} variant="secondary">
-                    ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Descargar PDF
+                    Ã°ÂÂÂ Descargar PDF
                   </Btn>
                   <Btn onClick={guardarCotizacion} disabled={loadingCot || cartItems.length === 0} variant="secondary">
-                    ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¾ Guardar Cotización
+                    Ã°ÂÂÂ¾ Guardar Cotización
                   </Btn>
                   <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
-                    {loading ? 'GuardandoÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦' : `ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Registrar Pedido (${cartItems.length})`}
+                    {loading ? 'GuardandoÃ¢ÂÂ¦' : `Ã¢ÂÂ Registrar Pedido (${cartItems.length})`}
                   </Btn>
                 </div>
               </div>
@@ -1443,17 +1444,17 @@ export default function App() {
           </div>
         )}
 
-{/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ VENTAS ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+{/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ VENTAS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
         {tab === 'ventas' && (
           <div className="space-y-4">
-            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Tarjetas Resumen ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+            {/* Ã¢ÂÂÃ¢ÂÂ Tarjetas Resumen Ã¢ÂÂÃ¢ÂÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-gray-800 border border-gray-700 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">VENTAS TOTALES</p>
                   <p className="text-2xl font-bold text-white">{ventasFiltradas.length}</p>
                 </div>
-                <span className="text-3xl opacity-60">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ</span>
+                <span className="text-3xl opacity-60">Ã°ÂÂÂ</span>
               </div>
               <div className="bg-gray-800 border border-yellow-600 rounded-2xl p-4 flex items-center justify-between">
                 <div>
@@ -1474,13 +1475,13 @@ export default function App() {
             <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text={`Historial de Ventas (${ventasFiltradas.length})`} />
-              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>Ã°ÂÂÂ CSV</Btn>
             </div>
 
-            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Buscador y Filtro ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+            {/* Ã¢ÂÂÃ¢ÂÂ Buscador y Filtro Ã¢ÂÂÃ¢ÂÂ */}
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔍</span>
                 <input
                   type="text"
                   value={searchVentas}
@@ -1531,23 +1532,23 @@ export default function App() {
                       <tr key={v.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
                         <td className="py-2 pr-3">
                           <div className="flex flex-col gap-1 items-start">
-                            <span className="text-xs font-mono text-indigo-400">{v.id || 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'}</span>
+                            <span className="text-xs font-mono text-indigo-400">{v.id || '–'}</span>
                             <button
                               onClick={() => { setTab('cuenta'); setCcId(String(v.id)); setTimeout(() => buscarCuentaCobro(String(v.id)), 150); }}
                               className="text-xs px-2 py-0.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded transition-colors whitespace-nowrap"
-                            >ÃÂÃÂ°ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¾ Cobro</button>
+                            >Ã°ÂÂ§Â¾ Cobro</button>
                             <button
                               onClick={() => { setAbonoVentaId(v.id); setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' }); }}
                               className="text-xs px-2 py-0.5 bg-green-700 hover:bg-green-600 text-white rounded transition-colors whitespace-nowrap mt-1"
-                            >ÃÂ°ÃÂÃÂÃÂµ Abonar</button>
+                            >ðµ Abonar</button>
                           </div>
                         </td>
                         <td className="py-2 pr-3 text-gray-300">{v.fecha}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.cliente || 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.cliente || '–'}</td>
                         <td className="py-2 pr-3 text-gray-200">{v.ref || resolveRefName(v.refId)}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.color}</td>
                         <td className="py-2 pr-3 text-gray-300">{v.talla}</td>
-                        <td className="py-2 pr-3 text-gray-300">{v.forma || 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'}</td>
+                        <td className="py-2 pr-3 text-gray-300">{v.forma || '–'}</td>
                         <td className="py-2 pr-3 text-right text-gray-300">{v.cantidad}</td>
                         <td className="py-2 pr-3 text-right text-green-400 font-semibold text-xs">{cop(v.totalVenta)}</td>
                         <td className="py-2 text-right text-indigo-400">{cop(v.ganancia)}</td>
@@ -1574,7 +1575,7 @@ export default function App() {
           </Card>
           </div>
         )}
-                {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ COMPRAS ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+                {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ COMPRAS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
         {tab === 'compras' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1606,13 +1607,13 @@ export default function App() {
                 </div>
                 <FG label="Proveedor"><Inp value={cProv} onChange={e => setCProv(e.target.value)} placeholder="Nombre del proveedor" /></FG>
                 <FG label="Notas"><Inp value={cNotas} onChange={e => setCNotas(e.target.value)} placeholder="Observaciones" /></FG>
-                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'GuardandoÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦' : '+ Registrar Compra'}</Btn>
+                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'GuardandoÃ¢ÂÂ¦' : '+ Registrar Compra'}</Btn>
               </div>
             </Card>
             <Card>
               <div className="flex items-center justify-between mb-3">
                 <CardTitle text={`Historial de Compras (${comprasFiltradas.length})`} />
-                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>ÃÂÃÂ¢ÃÂÃÂ¬ÃÂÃÂ CSV</Btn>
+                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>Ã¢Â¬Â CSV</Btn>
               </div>
               {comprasFiltradas.length === 0 ? <p className="text-gray-500 text-sm">No hay compras registradas.</p> : (
                 <div className="overflow-x-auto">
@@ -1642,19 +1643,19 @@ export default function App() {
           </div>
         )}
 
-        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ INVENTARIO ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ INVENTARIO Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
         {tab === 'inventario' && (
           <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text="Inventario en Tiempo Real" />
-              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>ÃÂÃÂ¢ÃÂÃÂ¬ÃÂÃÂ CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>Ã¢Â¬Â CSV</Btn>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
                 { label:'En stock', val: displayInventario.reduce((a,i)=>a+Math.max(i.stock,0),0), color:'text-white' },
                 { label:'OK (>5)',   val: displayInventario.filter(i=>i.stock>5).length, color:'text-green-400' },
-                { label:'Bajo (ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
-                { label:'Crítico (ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
+                { label:'Bajo (Ã¢ÂÂ¤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
+                { label:'Crítico (Ã¢ÂÂ¤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
               ].map(k => (
                 <div key={k.label} className="bg-gray-700 rounded-lg p-3 text-center">
                   <p className={`text-2xl font-bold ${k.color}`}>{k.val}</p>
@@ -1686,7 +1687,7 @@ export default function App() {
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
-                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠️ Bajo':'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ´ Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
+                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠️ Bajo':'Ã°ÂÂÂ´ Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1695,23 +1696,22 @@ export default function App() {
           </Card>
         )}
 
-        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ DASHBOARD ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ DASHBOARD Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
         {tab === 'dashboard' && (
           <div className="space-y-4">
-            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Label de filtro activo ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+            {/* Ã¢ÂÂÃ¢ÂÂ Label de filtro activo Ã¢ÂÂÃ¢ÂÂ */}
             {hasFiltroFecha && (
               <div className="bg-indigo-900/30 border border-indigo-700 rounded-xl px-4 py-2 text-sm text-indigo-300">
-                ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Mostrando datos filtrados: <strong>{ventasFiltradas.length}</strong> ventas ÃÂÃÂÃÂÃÂ· <strong>{comprasFiltradas.length}</strong> compras
+                📅 Mostrando datos filtrados: <strong>{ventasFiltradas.length}</strong> ventas ÃÂ· <strong>{comprasFiltradas.length}</strong> compras
               </div>
             )}
-            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ KPIs Fila 1: Ventas e Inventario ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+            {/* Ã¢ÂÂÃ¢ÂÂ KPIs Fila 1: Ventas e Inventario Ã¢ÂÂÃ¢ÂÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ°' },
-                { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ' },
-                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ' },
-                { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¦' },
-                { label:'Inventario Valorizado',   val: cop(inventarioValorizado), color:'text-cyan-400', icon:'ð¸' },
+                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'Ã°ÂÂÂ°' },
+                { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'Ã°ÂÂÂ' },
+                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'Ã°ÂÂÂ' },
+                { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'Ã°ÂÂÂ¦' },
                 { label:'Inventario Valorizado',   val: cop(inventarioValorizado),                               color:'text-cyan-400',   icon:'💸' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
@@ -1721,12 +1721,12 @@ export default function App() {
                 </Card>
               ))}
             </div>
-            {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ KPIs Fila 2: Detalles de Ventas ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+            {/* Ã¢ÂÂÃ¢ÂÂ KPIs Fila 2: Detalles de Ventas Ã¢ÂÂÃ¢ÂÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ' },
-                { label:'Costo de Ventas',    val: cop(ventasFiltradas.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ¸' },
-                { label:'Margen (%)',          val: (() => { const ing=ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasFiltradas.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ'; })(), color:'text-purple-400', icon:'%' },
+                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'Ã°ÂÂÂ' },
+                { label:'Costo de Ventas',    val: cop(ventasFiltradas.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'💸' },
+                { label:'Margen (%)',          val: (() => { const ing=ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasFiltradas.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : '—'; })(), color:'text-purple-400', icon:'%' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
                   <div className="text-xl mb-1">{k.icon}</div>
@@ -1737,7 +1737,7 @@ export default function App() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
-                <CardTitle text="ÃÂÃÂÃÂÃÂltimas 5 Ventas" />
+                <CardTitle text="ÃÂltimas 5 Ventas" />
                 <div className="space-y-2">
                   {ventasFiltradas.slice(0,5).map(v => (
                     <div key={v.id} className="flex justify-between items-center text-sm">
@@ -1764,7 +1764,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ CUENTA DE COBRO ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ CUENTA DE COBRO Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
         {tab === 'cuenta' && (
           <div className="space-y-4">
             <Card>
@@ -1777,10 +1777,10 @@ export default function App() {
                   }} placeholder="Ingresa el ID de la venta (ej: 1779063838818)" className="w-80" />
                 </FG>
                 <Btn onClick={() => buscarCuentaCobro(ccId)} disabled={!ccId.trim() || ccStatus==='loading'}>
-                  {ccStatus === 'loading' ? 'BuscandoÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦' : 'ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Buscar'}
+                  {ccStatus === 'loading' ? 'BuscandoÃ¢ÂÂ¦' : '🔍 Buscar'}
                 </Btn>
               </div>
-              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google DriveÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¦</p>}
+              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google DriveÃ¢ÂÂ¦</p>}
               {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">⚠️ {ccMsg}</p></div>}
               {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">⚠️ {ccMsg}</p></div>}
             </Card>
@@ -1803,7 +1803,7 @@ export default function App() {
                   <Card className="border border-indigo-700">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <h2 className="text-lg font-bold text-white">ÃÂÃÂ°ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¾ Cuenta de Cobro</h2>
+                        <h2 className="text-lg font-bold text-white">Ã°ÂÂ§Â¾ Cuenta de Cobro</h2>
                         <p className="text-xs text-gray-400">ID: {idVenta} &nbsp;|&nbsp; Fecha: {fecha}</p>
                       </div>
                       <div className="text-right">
@@ -1814,7 +1814,7 @@ export default function App() {
                 onClick={() => generarCuentaCobroPDF({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData })}
                 className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors"
               >
-                ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Descargar PDF
+                Ã°ÂÂÂ Descargar PDF
               </button>
                     </div>
                   </Card>
@@ -1888,14 +1888,14 @@ export default function App() {
           </div>
         )}
 
-      {/* ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ COTIZACIONES ÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂ */}
+      {/* Ã¢ÂÂÃ¢ÂÂ COTIZACIONES Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
       {tab === 'cotizaciones' && (
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ REGISTRO DE COTIZACIONES</h2>
+            <h2 className="text-xl font-bold text-white">Ã°ÂÂÂ REGISTRO DE COTIZACIONES</h2>
             <button onClick={cargarCotizaciones} className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-500">
-              ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ Actualizar
+              🔄 Actualizar
             </button>
           </div>
 
@@ -1911,7 +1911,7 @@ export default function App() {
             />
             {cotBusqueda && (
               <button onClick={() => setCotBusqueda('')} className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded-lg hover:bg-slate-500">
-                ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ Limpiar
+                Ã¢ÂÂ Limpiar
               </button>
             )}
           </div>
@@ -1957,7 +1957,7 @@ export default function App() {
                             onClick={() => descargarCotizacionPDF(cot)}
                             className="px-3 py-1 bg-indigo-700 text-white text-xs rounded-lg hover:bg-indigo-600"
                           >
-                            ÃÂÃÂ°ÃÂÃÂÃÂÃÂÃÂÃÂ PDF
+                            Ã°ÂÂÂ PDF
                           </button>
                           {String(cot.estado) !== 'Convertida en Venta' && (
                           <button
@@ -1973,7 +1973,7 @@ export default function App() {
                             onClick={() => { setTab('cuenta'); setCcId(String(cot.ventaId || cot.id)); setTimeout(() => buscarCuentaCobro(String(cot.ventaId || cot.id)), 150); }}
                             className="px-3 py-1 bg-teal-700 text-white text-xs rounded-lg hover:bg-teal-600"
                           >
-                            ÃÂÃÂ°ÃÂÃÂÃÂÃÂ§ÃÂÃÂ¾ Ver Cobro
+                            Ã°ÂÂ§Â¾ Ver Cobro
                           </button>
                           )}
                         </div>
@@ -1988,15 +1988,15 @@ export default function App() {
       )}
     </div>
 
-        {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ ABONOS ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
+        {/* âââ ABONOS âââ */}
         {tab === 'abonos' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold text-white">ÃÂ°ÃÂÃÂÃÂ° ABONOS Y PAGOS PARCIALES</h2>
-              <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">ÃÂ°ÃÂÃÂÃÂ Recargar</button>
+              <h2 className="text-xl font-bold text-white">ð° ABONOS Y PAGOS PARCIALES</h2>
+              <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">🔄 Recargar</button>
             </div>
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-white mb-3">ÃÂ°ÃÂÃÂÃÂ Registrar Abono por ID de Venta</h3>
+              <h3 className="text-sm font-bold text-white mb-3">ð Registrar Abono por ID de Venta</h3>
               <div className="flex gap-3 items-end flex-wrap mb-4">
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">ID de Venta</label>
@@ -2023,7 +2023,7 @@ export default function App() {
                 </div>
                 <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || !abonoVentaId}
                   className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold"
-                >{savingAbono ? 'Guardando...' : 'ÃÂ°ÃÂÃÂÃÂ¾ Guardar'}</button>
+                >{savingAbono ? 'Guardando...' : 'ð¾ Guardar'}</button>
               </div>
               {abonoVentaId && (() => {
                 const v = ventas.find(x => x.id === abonoVentaId);
@@ -2040,11 +2040,11 @@ export default function App() {
               })()}
             </div>
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-white mb-3">ÃÂ°ÃÂÃÂÃÂ Historial de Abonos</h3>
+              <h3 className="text-sm font-bold text-white mb-3">ð Historial de Abonos</h3>
               {abonos.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-500 text-sm mb-2">No hay abonos registrados.</p>
-                  <button onClick={cargarAbonos} className="text-xs text-indigo-400 hover:text-indigo-300">ÃÂ°ÃÂÃÂÃÂ Cargar desde Drive</button>
+                  <button onClick={cargarAbonos} className="text-xs text-indigo-400 hover:text-indigo-300">🔄 Cargar desde Drive</button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
