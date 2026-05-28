@@ -391,7 +391,7 @@ export default function App() {
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0); setCostoBordado(0);
     setSelForma('');
-    showToast('ÃÂtem agregado Ã¢ÂÂ');
+    showToast('Ítem agregado Ã¢ÂÂ');
   };
 
   const generarCotizacionPDF = async () => {
@@ -1242,7 +1242,7 @@ export default function App() {
                 <button onClick={() => setAbonoVentaId('')} className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm">Cancelar</button>
                 <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || nuevoTotal === 0}
                   className="flex-1 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-lg text-sm font-bold">
-                  {savingAbono ? 'Guardando...' : 'ð¾ Guardar Abono'}
+                  {savingAbono ? 'Guardando...' : '💾 Guardar Abono'}
                 </button>
               </div>
             </div>
@@ -1317,10 +1317,10 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">⚠Ã¯Â¸Â Cargando referencias desde Drive...</p>
         )}
         {selRef && !currentRef && (
-          <p className="text-red-400 text-xs mt-1">⚠️ La referencia no existe en la base de datos del Drive.</p>
+          <p className="text-red-400 text-xs mt-1">⚠Ã¯Â¸Â La referencia no existe en la base de datos del Drive.</p>
         )}
                 <FG label="Color">
                   <Sel options={coloresDisp} value={selColor} onChange={e => setSelColor(e.target.value)} />
@@ -1430,10 +1430,10 @@ export default function App() {
                     + Agregar ítem
                   </Btn>
                   <Btn onClick={generarCotizacionPDF} disabled={cartItems.length === 0} variant="secondary">
-                    Ã°ÂÂÂ Descargar PDF
+                    📄 Descargar PDF
                   </Btn>
                   <Btn onClick={guardarCotizacion} disabled={loadingCot || cartItems.length === 0} variant="secondary">
-                    Ã°ÂÂÂ¾ Guardar Cotización
+                    💾 Guardar Cotización
                   </Btn>
                   <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
                     {loading ? 'GuardandoÃ¢ÂÂ¦' : `Ã¢ÂÂ Registrar Pedido (${cartItems.length})`}
@@ -1454,7 +1454,7 @@ export default function App() {
                   <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">VENTAS TOTALES</p>
                   <p className="text-2xl font-bold text-white">{ventasFiltradas.length}</p>
                 </div>
-                <span className="text-3xl opacity-60">Ã°ÂÂÂ</span>
+                <span className="text-3xl opacity-60">🛒</span>
               </div>
               <div className="bg-gray-800 border border-yellow-600 rounded-2xl p-4 flex items-center justify-between">
                 <div>
@@ -1475,7 +1475,7 @@ export default function App() {
             <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text={`Historial de Ventas (${ventasFiltradas.length})`} />
-              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>Ã°ÂÂÂ CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>📊 CSV</Btn>
             </div>
 
             {/* Ã¢ÂÂÃ¢ÂÂ Buscador y Filtro Ã¢ÂÂÃ¢ÂÂ */}
@@ -1536,7 +1536,7 @@ export default function App() {
                             <button
                               onClick={() => { setTab('cuenta'); setCcId(String(v.id)); setTimeout(() => buscarCuentaCobro(String(v.id)), 150); }}
                               className="text-xs px-2 py-0.5 bg-indigo-700 hover:bg-indigo-600 text-white rounded transition-colors whitespace-nowrap"
-                            >Ã°ÂÂ§Â¾ Cobro</button>
+                            >🧾 Cobro</button>
                             <button
                               onClick={() => { setAbonoVentaId(v.id); setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' }); }}
                               className="text-xs px-2 py-0.5 bg-green-700 hover:bg-green-600 text-white rounded transition-colors whitespace-nowrap mt-1"
@@ -1588,7 +1588,7 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">⚠Ã¯Â¸Â Cargando referencias desde Drive...</p>
         )}
                 {!(refs.find(x => x.id === cRef)?.cat === 'Accesorio') && (
                   <>
@@ -1687,7 +1687,7 @@ export default function App() {
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
-                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠️ Bajo':'Ã°ÂÂÂ´ Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
+                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠Ã¯Â¸Â Bajo':'Ã°ÂÂÂ´ Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1708,8 +1708,8 @@ export default function App() {
             {/* Ã¢ÂÂÃ¢ÂÂ KPIs Fila 1: Ventas e Inventario Ã¢ÂÂÃ¢ÂÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'Ã°ÂÂÂ°' },
-                { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'Ã°ÂÂÂ' },
+                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'💰' },
+                { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'🛒' },
                 { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'Ã°ÂÂÂ' },
                 { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'Ã°ÂÂÂ¦' },
                 { label:'Inventario Valorizado',   val: cop(inventarioValorizado),                               color:'text-cyan-400',   icon:'💸' },
@@ -1724,7 +1724,7 @@ export default function App() {
             {/* Ã¢ÂÂÃ¢ÂÂ KPIs Fila 2: Detalles de Ventas Ã¢ÂÂÃ¢ÂÂ */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'Ã°ÂÂÂ' },
+                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'👕' },
                 { label:'Costo de Ventas',    val: cop(ventasFiltradas.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'💸' },
                 { label:'Margen (%)',          val: (() => { const ing=ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasFiltradas.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : '—'; })(), color:'text-purple-400', icon:'%' },
               ].map(k => (
@@ -1737,7 +1737,7 @@ export default function App() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Card>
-                <CardTitle text="ÃÂltimas 5 Ventas" />
+                <CardTitle text="Últimas 5 Ventas" />
                 <div className="space-y-2">
                   {ventasFiltradas.slice(0,5).map(v => (
                     <div key={v.id} className="flex justify-between items-center text-sm">
@@ -1781,8 +1781,8 @@ export default function App() {
                 </Btn>
               </div>
               {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google DriveÃ¢ÂÂ¦</p>}
-              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">⚠️ {ccMsg}</p></div>}
-              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">⚠️ {ccMsg}</p></div>}
+              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">⚠Ã¯Â¸Â {ccMsg}</p></div>}
+              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">⚠Ã¯Â¸Â {ccMsg}</p></div>}
             </Card>
 
             {ccStatus === 'found' && ccData && ccData.length > 0 && (() => {
@@ -1803,7 +1803,7 @@ export default function App() {
                   <Card className="border border-indigo-700">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <h2 className="text-lg font-bold text-white">Ã°ÂÂ§Â¾ Cuenta de Cobro</h2>
+                        <h2 className="text-lg font-bold text-white">🧾 Cuenta de Cobro</h2>
                         <p className="text-xs text-gray-400">ID: {idVenta} &nbsp;|&nbsp; Fecha: {fecha}</p>
                       </div>
                       <div className="text-right">
@@ -1814,7 +1814,7 @@ export default function App() {
                 onClick={() => generarCuentaCobroPDF({ clienteNom, clienteFon, clienteDoc2, clienteDir, clienteS, fecha, idVenta, totalGeneral, ccData })}
                 className="mt-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors"
               >
-                Ã°ÂÂÂ Descargar PDF
+                📄 Descargar PDF
               </button>
                     </div>
                   </Card>
@@ -1893,7 +1893,7 @@ export default function App() {
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Ã°ÂÂÂ REGISTRO DE COTIZACIONES</h2>
+            <h2 className="text-xl font-bold text-white">📋 REGISTRO DE COTIZACIONES</h2>
             <button onClick={cargarCotizaciones} className="px-3 py-1 bg-indigo-600 text-white text-xs rounded-lg hover:bg-indigo-500">
               🔄 Actualizar
             </button>
@@ -1957,7 +1957,7 @@ export default function App() {
                             onClick={() => descargarCotizacionPDF(cot)}
                             className="px-3 py-1 bg-indigo-700 text-white text-xs rounded-lg hover:bg-indigo-600"
                           >
-                            Ã°ÂÂÂ PDF
+                            📄 PDF
                           </button>
                           {String(cot.estado) !== 'Convertida en Venta' && (
                           <button
@@ -1973,7 +1973,7 @@ export default function App() {
                             onClick={() => { setTab('cuenta'); setCcId(String(cot.ventaId || cot.id)); setTimeout(() => buscarCuentaCobro(String(cot.ventaId || cot.id)), 150); }}
                             className="px-3 py-1 bg-teal-700 text-white text-xs rounded-lg hover:bg-teal-600"
                           >
-                            Ã°ÂÂ§Â¾ Ver Cobro
+                            🧾 Ver Cobro
                           </button>
                           )}
                         </div>
@@ -1992,7 +1992,7 @@ export default function App() {
         {tab === 'abonos' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-bold text-white">ð° ABONOS Y PAGOS PARCIALES</h2>
+              <h2 className="text-xl font-bold text-white">💰 ABONOS Y PAGOS PARCIALES</h2>
               <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">🔄 Recargar</button>
             </div>
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
@@ -2023,7 +2023,7 @@ export default function App() {
                 </div>
                 <button onClick={() => guardarAbono(abonoVentaId)} disabled={savingAbono || !abonoVentaId}
                   className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl text-sm font-bold"
-                >{savingAbono ? 'Guardando...' : 'ð¾ Guardar'}</button>
+                >{savingAbono ? 'Guardando...' : '💾 Guardar'}</button>
               </div>
               {abonoVentaId && (() => {
                 const v = ventas.find(x => x.id === abonoVentaId);
@@ -2040,7 +2040,7 @@ export default function App() {
               })()}
             </div>
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-white mb-3">ð Historial de Abonos</h3>
+              <h3 className="text-sm font-bold text-white mb-3">📋 Historial de Abonos</h3>
               {abonos.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-500 text-sm mb-2">No hay abonos registrados.</p>
