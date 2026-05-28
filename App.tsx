@@ -812,7 +812,7 @@ export default function App() {
     // Ã¢ÂÂÃ¢ÂÂ Cotizaciones Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
 
-  // ââ Abonos
+  // ── Abonos
   const [abonos, setAbonos] = useState([]);
   const [abonoVentaId, setAbonoVentaId] = useState('');
   const [abonoData, setAbonoData] = useState({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
@@ -897,7 +897,7 @@ export default function App() {
   }
 
 
-  // ââ Abono Functions
+  // ── Abono Functions
   const cargarAbonos = async () => {
     try {
       const d = await sendToGAS({ action: 'obtenerAbonos' });
@@ -925,7 +925,7 @@ export default function App() {
     try {
       const resp = await sendToGAS(payload);
       if (resp && resp.status === 'ok') {
-        showToast('Abono guardado â');
+        showToast('Abono guardado ✓');
         setAbonoVentaId('');
         setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' });
         cargarAbonos();
@@ -1200,7 +1200,7 @@ export default function App() {
         <div className="fixed top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm">{toast}</div>
       )}
 
-      {/* ââ Abono Modal ââ */}
+      {/* ── Abono Modal ── */}
       {abonoVentaId && (() => {
         const v = ventas.find(x => x.id === abonoVentaId);
         const prevAbonado = abonos.reduce((t, a) => a.ventaId === abonoVentaId ? a.totalAbonado : t, 0);
@@ -1210,7 +1210,7 @@ export default function App() {
         return (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
             <div className="bg-gray-800 rounded-2xl p-6 w-full max-w-md border border-gray-600 shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-1">ðµ Registrar Abono</h3>
+              <h3 className="text-lg font-bold text-white mb-1">💵 Registrar Abono</h3>
               <p className="text-xs text-gray-400 mb-1">Cliente: <span className="text-white">{v?.cliente}</span></p>
               <p className="text-xs text-gray-400 mb-3">Total: <span className="text-green-400 font-bold">{cop(totalVenta)}</span> | Abonado: <span className="text-yellow-400">{cop(prevAbonado)}</span></p>
               <div className="grid grid-cols-3 gap-2 mb-3">
@@ -1540,7 +1540,7 @@ export default function App() {
                             <button
                               onClick={() => { setAbonoVentaId(v.id); setAbonoData({ a1:0, a2:0, a3:0, a4:0, a5:0, obs:'' }); }}
                               className="text-xs px-2 py-0.5 bg-green-700 hover:bg-green-600 text-white rounded transition-colors whitespace-nowrap mt-1"
-                            >ðµ Abonar</button>
+                            >💵 Abonar</button>
                           </div>
                         </td>
                         <td className="py-2 pr-3 text-gray-300">{v.fecha}</td>
@@ -1988,7 +1988,7 @@ export default function App() {
       )}
     </div>
 
-        {/* âââ ABONOS âââ */}
+        {/* ─── ABONOS ─── */}
         {tab === 'abonos' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
@@ -1996,7 +1996,7 @@ export default function App() {
               <button onClick={cargarAbonos} className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg">🔄 Recargar</button>
             </div>
             <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-              <h3 className="text-sm font-bold text-white mb-3">ð Registrar Abono por ID de Venta</h3>
+              <h3 className="text-sm font-bold text-white mb-3">📝 Registrar Abono por ID de Venta</h3>
               <div className="flex gap-3 items-end flex-wrap mb-4">
                 <div>
                   <label className="text-xs text-gray-400 block mb-1">ID de Venta</label>
