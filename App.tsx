@@ -913,7 +913,7 @@ export default function App() {
       action: 'guardarAbono',
       ventaId,
       cliente: venta.cliente,
-      totalVenta: venta.totalVenta,
+      totalVenta: ventas.filter(v => v.id === ventaId).reduce((s,v) => s + (v.totalVenta||0), 0),
       fecha: today(),
       abono1: abonoData.a1 || 0,
       abono2: abonoData.a2 || 0,
@@ -1204,7 +1204,7 @@ export default function App() {
       {abonoVentaId && (() => {
         const v = ventas.find(x => x.id === abonoVentaId);
         const prevAbonado = abonos.reduce((t, a) => a.ventaId === abonoVentaId ? a.totalAbonado : t, 0);
-        const totalVenta = v ? v.totalVenta : 0;
+        const totalVenta = ventas.filter(x => x.id === abonoVentaId).reduce((s,x) => s + (x.totalVenta||0), 0);
         const nuevoTotal = (abonoData.a1||0)+(abonoData.a2||0)+(abonoData.a3||0)+(abonoData.a4||0)+(abonoData.a5||0);
         const saldo = totalVenta - prevAbonado - nuevoTotal;
         return (
