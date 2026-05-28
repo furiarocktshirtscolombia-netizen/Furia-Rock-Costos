@@ -3,7 +3,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 // v1.4 - Fixes: PDF unit price, cotizacion total calculation
-// Ã¢ÂÂÃ¢ÂÂ DATOS REALES DEL SPREADSHEET FURIA ROCK Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ══ DATOS REALES DEL SPREADSHEET FURIA ROCK ══════════════════════════
 const REFS_DEFAULT: Ref[] = [
   { id:"r1",  name:"CAMISETA ALGODON PERUANO 178G",           cost:18000, cat:"Adulto" },
   { id:"r2",  name:"CAMISETA ALGODON PERUANO 320G",           cost:37000, cat:"Adulto" },
@@ -42,7 +42,7 @@ const COSTO_PLANCHADA    = 1000;
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Types Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ─── Types ────────────────────────────────────────────────────────────
 interface Ref  { id:string; name:string; cost:number; cat:string }
 interface Item { ref:string; refId:string; cat:string; talla:string; color:string; forma:string; comprado:number; vendido:number; stock:number; estado:string }
 interface Venta {
@@ -73,7 +73,7 @@ interface Abono {
 }
 type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones'|'abonos'|'abonos';
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Helpers Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ─── Helpers ──────────────────────────────────────────────────────────
 const sendToGAS = async (body: object) => {
   const r = await fetch(GAS_URL, {
     method:'POST', redirect:'follow',
@@ -138,7 +138,7 @@ const exportCSV = (rows: object[], name:string) => {
   a.click();
 };
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ UI Atoms Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ─── UI Atoms ─────────────────────────────────────────────────────────
 const Card = ({children,className=''}:{children:React.ReactNode;className?:string}) => (
   <div className={`bg-gray-800 rounded-xl p-4 ${className}`}>{children}</div>
 );
@@ -171,7 +171,7 @@ const Badge = ({text,color}:{text:string;color:'green'|'yellow'|'red'}) => {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c}`}>{text}</span>;
 };
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ Main App Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ─── Main App ─────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab]           = useState<Tab>('cotizador');
   const [refs, setRefs]         = useState<Ref[]>(REFS_DEFAULT);
@@ -180,7 +180,7 @@ export default function App() {
   const [ventas, setVentas]     = useState<Venta[]>([]);  const [searchVentas, setSearchVentas] = useState('');
   const [filterEstadoVentas, setFilterEstadoVentas] = useState('');
 
-  // Ã¢ÂÂÃ¢ÂÂ Filtro Global de Fecha Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+  // ── Filtro Global de Fecha ─────────────────────────────
   const [fechaInicio,      setFechaInicio]      = useState('');
   const [fechaFin,         setFechaFin]         = useState('');
   const [filtroModo,       setFiltroModo]       = useState<'rango'|'mes'|'dia'>('rango');
@@ -236,7 +236,7 @@ export default function App() {
     fetch(GAS_URL)
       .then(r => r.json())
       .then(d => {
-        // Ã¢ÂÂÃ¢ÂÂ REFS: normalize any column naming convention from Drive Ã¢ÂÂÃ¢ÂÂ
+        // ── REFS: normalize any column naming convention from Drive ──
         if (d.refs && Array.isArray(d.refs) && d.refs.length > 0) {
           const normalizedRefs = d.refs
             .map((r: any, i: number) => {
@@ -293,7 +293,7 @@ export default function App() {
   const currentRef   = refs.find(r => r.id === selRef);
   const COLORES_ACTIVOS = coloresDrive.length > 0 ? coloresDrive : COLORES_DEFAULT;
   const coloresDisp  = currentRef ? (colorMap[currentRef.name] || COLORES_ACTIVOS) : COLORES_ACTIVOS;
-  // Tallas: si la referencia es de niño Ã¢ÂÂ tallas niño; adulto Ã¢ÂÂ tallas adulto
+  // Tallas: si la referencia es de niño → tallas niño; adulto → tallas adulto
   // Se usa esNino() para que funcione con cualquier variante del texto (Nino, niño, Niño, nino)
   const tallasDisp   = currentRef
     ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
@@ -338,7 +338,7 @@ export default function App() {
     return inventario;
   }, [invDrive, inventario, refs, compras, ventas]);
 
-  // Ã¢ÂÂÃ¢ÂÂ Helpers de Filtro por Fecha Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+  // ── Helpers de Filtro por Fecha ─────────────────────────
   const inDateRange = (fecha: string): boolean => {
     if (!fecha) return true;
     if (filtroModo === 'dia' && filtroDia) return fecha.startsWith(filtroDia);
@@ -391,7 +391,7 @@ export default function App() {
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
     setSelTipoImp('DTF'); setCmDTF(100); setNumPlanchadas(3); setCostoDTG(0); setCostoBordado(0);
     setSelForma('');
-    showToast('Ítem agregado Ã¢ÂÂ');
+    showToast('Ítem agregado ✓');
   };
 
   const generarCotizacionPDF = async () => {
@@ -511,7 +511,7 @@ export default function App() {
     }
 
 
-    // Ã¢ÂÂÃ¢ÂÂ Información de Pago Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+    // ── Información de Pago ──────────────────────────────────────
     const bx = ml;
     const bw = pageW - ml - ml;
     const qrSize = 28;
@@ -682,7 +682,7 @@ export default function App() {
     });
 
 
-  // Ã¢ÂÂÃ¢ÂÂ Información de Pago Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+  // ── Información de Pago ──────────────────────────────────────
   const bx2 = ml;
   const bw2 = pageW - ml - mr;
   const qrSize2 = 28;
@@ -780,7 +780,7 @@ export default function App() {
     setCartItems([]);
     setClienteNombre(''); setClienteTel(''); setClienteDoc('');
     setClienteDireccion(''); setClienteSede(''); setClienteDiseno(''); setClienteOrden(''); setClienteEstadoPago('Pendiente de pago');
-    showToast('Pedido registrado Ã¢ÂÂ');
+    showToast('Pedido registrado ✓');
     setLoading(false);
   };
 
@@ -805,11 +805,11 @@ export default function App() {
     setCompras(nuevasCompras);
     localStorage.setItem('compras', JSON.stringify(nuevasCompras));
     setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCProv(''); setCNotas(''); setCForma('');
-    showToast('Compra registrada Ã¢ÂÂ');
+    showToast('Compra registrada ✓');
     setLoading(false);
   };
 
-    // Ã¢ÂÂÃ¢ÂÂ Cotizaciones Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+    // ── Cotizaciones ─────────────────────────────────────────────────
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
 
   // ── Abonos
@@ -940,7 +940,7 @@ export default function App() {
     try {
       const resp = await sendToGAS({ action: 'actualizarEstadoPago', ventaId, nuevoEstado });
       if (resp.status === 'ok') {
-        showToast('Estado actualizado Ã¢ÂÂ');
+        showToast('Estado actualizado ✓');
       } else {
         showToast('Guardado localmente. Actualiza Drive manualmente si es necesario.');
       }
@@ -1262,7 +1262,7 @@ export default function App() {
         ))}
       </div>
 
-      {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ BARRA DE FILTRO POR FECHA GLOBAL Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+      {/* ═══ BARRA DE FILTRO POR FECHA GLOBAL ═══ */}
       <div className="bg-gray-800 border-b border-gray-600 px-4 py-2">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-3">
           <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider whitespace-nowrap">📅 Filtrar por fecha:</span>
@@ -1277,7 +1277,7 @@ export default function App() {
           {filtroModo === 'rango' && (<>
             <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
               className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
-            <span className="text-gray-500 text-xs">Ã¢ÂÂ</span>
+            <span className="text-gray-500 text-xs">→</span>
             <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
               className="px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-400" />
           </>)}
@@ -1291,7 +1291,7 @@ export default function App() {
           )}
           {hasFiltroFecha && (
             <button onClick={() => { setFechaInicio(''); setFechaFin(''); setFiltroMes(''); setFiltroDia(''); }}
-              className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">Ã¢ÂÂ Limpiar</button>
+              className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">✕ Limpiar</button>
           )}
           {hasFiltroFecha && (
             <span className="text-xs text-indigo-300 font-medium">
@@ -1304,7 +1304,7 @@ export default function App() {
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
 
-        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ COTIZADOR Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+        {/* ═══ COTIZADOR ═══ */}
         {tab === 'cotizador' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1317,10 +1317,10 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">⚠Ã¯Â¸Â Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
         )}
         {selRef && !currentRef && (
-          <p className="text-red-400 text-xs mt-1">⚠Ã¯Â¸Â La referencia no existe en la base de datos del Drive.</p>
+          <p className="text-red-400 text-xs mt-1">⚠️ La referencia no existe en la base de datos del Drive.</p>
         )}
                 <FG label="Color">
                   <Sel options={coloresDisp} value={selColor} onChange={e => setSelColor(e.target.value)} />
@@ -1412,7 +1412,7 @@ export default function App() {
                             <td className="py-1 pr-2 text-right text-gray-300">{item.qty}</td>
                             <td className="py-1 pr-2 text-right text-green-400">{cop(item.precio)}</td>
                             <td className="py-1 text-right">
-                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">Ã¢ÂÂ</button>
+                              <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">✕</button>
                             </td>
                           </tr>
                         ))}
@@ -1436,7 +1436,7 @@ export default function App() {
                     💾 Guardar Cotización
                   </Btn>
                   <Btn onClick={registrarVenta} disabled={loading || cartItems.length === 0}>
-                    {loading ? 'GuardandoÃ¢ÂÂ¦' : `Ã¢ÂÂ Registrar Pedido (${cartItems.length})`}
+                    {loading ? 'Guardando…' : `✓ Registrar Pedido (${cartItems.length})`}
                   </Btn>
                 </div>
               </div>
@@ -1444,10 +1444,10 @@ export default function App() {
           </div>
         )}
 
-{/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ VENTAS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+{/* ═══ VENTAS ═══ */}
         {tab === 'ventas' && (
           <div className="space-y-4">
-            {/* Ã¢ÂÂÃ¢ÂÂ Tarjetas Resumen Ã¢ÂÂÃ¢ÂÂ */}
+            {/* ── Tarjetas Resumen ── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-gray-800 border border-gray-700 rounded-2xl p-4 flex items-center justify-between">
                 <div>
@@ -1478,7 +1478,7 @@ export default function App() {
               <Btn variant="secondary" onClick={() => exportCSV(ventas,'ventas')}>📊 CSV</Btn>
             </div>
 
-            {/* Ã¢ÂÂÃ¢ÂÂ Buscador y Filtro Ã¢ÂÂÃ¢ÂÂ */}
+            {/* ── Buscador y Filtro ── */}
             <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">🔍</span>
@@ -1575,7 +1575,7 @@ export default function App() {
           </Card>
           </div>
         )}
-                {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ COMPRAS Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+                {/* ═══ COMPRAS ═══ */}
         {tab === 'compras' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
@@ -1588,7 +1588,7 @@ export default function App() {
                   }} />
                 </FG>
         {refs.length === 0 && (
-          <p className="text-yellow-400 text-xs mt-1">⚠Ã¯Â¸Â Cargando referencias desde Drive...</p>
+          <p className="text-yellow-400 text-xs mt-1">⚠️ Cargando referencias desde Drive...</p>
         )}
                 {!(refs.find(x => x.id === cRef)?.cat === 'Accesorio') && (
                   <>
@@ -1607,13 +1607,13 @@ export default function App() {
                 </div>
                 <FG label="Proveedor"><Inp value={cProv} onChange={e => setCProv(e.target.value)} placeholder="Nombre del proveedor" /></FG>
                 <FG label="Notas"><Inp value={cNotas} onChange={e => setCNotas(e.target.value)} placeholder="Observaciones" /></FG>
-                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'GuardandoÃ¢ÂÂ¦' : '+ Registrar Compra'}</Btn>
+                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'Guardando…' : '+ Registrar Compra'}</Btn>
               </div>
             </Card>
             <Card>
               <div className="flex items-center justify-between mb-3">
                 <CardTitle text={`Historial de Compras (${comprasFiltradas.length})`} />
-                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>Ã¢Â¬Â CSV</Btn>
+                <Btn variant="secondary" onClick={() => exportCSV(compras,'compras')}>⬇ CSV</Btn>
               </div>
               {comprasFiltradas.length === 0 ? <p className="text-gray-500 text-sm">No hay compras registradas.</p> : (
                 <div className="overflow-x-auto">
@@ -1643,19 +1643,19 @@ export default function App() {
           </div>
         )}
 
-        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ INVENTARIO Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+        {/* ═══ INVENTARIO ═══ */}
         {tab === 'inventario' && (
           <Card>
             <div className="flex items-center justify-between mb-3">
               <CardTitle text="Inventario en Tiempo Real" />
-              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>Ã¢Â¬Â CSV</Btn>
+              <Btn variant="secondary" onClick={() => exportCSV(inventario,'inventario')}>⬇ CSV</Btn>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
                 { label:'En stock', val: displayInventario.reduce((a,i)=>a+Math.max(i.stock,0),0), color:'text-white' },
                 { label:'OK (>5)',   val: displayInventario.filter(i=>i.stock>5).length, color:'text-green-400' },
-                { label:'Bajo (Ã¢ÂÂ¤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
-                { label:'Crítico (Ã¢ÂÂ¤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
+                { label:'Bajo (≤5)', val: displayInventario.filter(i=>i.stock>2&&i.stock<=5).length, color:'text-yellow-400' },
+                { label:'Crítico (≤2)', val: displayInventario.filter(i=>i.stock<=2).length, color:'text-red-400' },
               ].map(k => (
                 <div key={k.label} className="bg-gray-700 rounded-lg p-3 text-center">
                   <p className={`text-2xl font-bold ${k.color}`}>{k.val}</p>
@@ -1687,7 +1687,7 @@ export default function App() {
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
-                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠Ã¯Â¸Â Bajo':'Ã°ÂÂÂ´ Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
+                      <td className="py-2"><Badge text={i.estado==='OK'?'✅ OK':i.estado==='Bajo'?'⚠️ Bajo':'🔴 Crítico'} color={i.estado==='OK'?'green':i.estado==='Bajo'?'yellow':'red'} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1696,22 +1696,22 @@ export default function App() {
           </Card>
         )}
 
-        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ DASHBOARD Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+        {/* ═══ DASHBOARD ═══ */}
         {tab === 'dashboard' && (
           <div className="space-y-4">
-            {/* Ã¢ÂÂÃ¢ÂÂ Label de filtro activo Ã¢ÂÂÃ¢ÂÂ */}
+            {/* ── Label de filtro activo ── */}
             {hasFiltroFecha && (
               <div className="bg-indigo-900/30 border border-indigo-700 rounded-xl px-4 py-2 text-sm text-indigo-300">
                 📅 Mostrando datos filtrados: <strong>{ventasFiltradas.length}</strong> ventas ÃÂ· <strong>{comprasFiltradas.length}</strong> compras
               </div>
             )}
-            {/* Ã¢ÂÂÃ¢ÂÂ KPIs Fila 1: Ventas e Inventario Ã¢ÂÂÃ¢ÂÂ */}
+            {/* ── KPIs Fila 1: Ventas e Inventario ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'💰' },
                 { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'🛒' },
-                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'Ã°ÂÂÂ' },
-                { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'Ã°ÂÂÂ¦' },
+                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'📈' },
+                { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'📦' },
                 { label:'Inventario Valorizado',   val: cop(inventarioValorizado),                               color:'text-cyan-400',   icon:'💸' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
@@ -1721,7 +1721,7 @@ export default function App() {
                 </Card>
               ))}
             </div>
-            {/* Ã¢ÂÂÃ¢ÂÂ KPIs Fila 2: Detalles de Ventas Ã¢ÂÂÃ¢ÂÂ */}
+            {/* ── KPIs Fila 2: Detalles de Ventas ── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'👕' },
@@ -1764,7 +1764,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ CUENTA DE COBRO Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+        {/* ═══ CUENTA DE COBRO ═══ */}
         {tab === 'cuenta' && (
           <div className="space-y-4">
             <Card>
@@ -1777,12 +1777,12 @@ export default function App() {
                   }} placeholder="Ingresa el ID de la venta (ej: 1779063838818)" className="w-80" />
                 </FG>
                 <Btn onClick={() => buscarCuentaCobro(ccId)} disabled={!ccId.trim() || ccStatus==='loading'}>
-                  {ccStatus === 'loading' ? 'BuscandoÃ¢ÂÂ¦' : '🔍 Buscar'}
+                  {ccStatus === 'loading' ? 'Buscando…' : '🔍 Buscar'}
                 </Btn>
               </div>
-              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google DriveÃ¢ÂÂ¦</p>}
-              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">⚠Ã¯Â¸Â {ccMsg}</p></div>}
-              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">⚠Ã¯Â¸Â {ccMsg}</p></div>}
+              {ccStatus === 'loading' && <p className="text-indigo-400 text-sm mt-3 animate-pulse">Consultando en Google Drive…</p>}
+              {ccStatus === 'not_found' && <div className="mt-3 p-3 bg-red-900/40 border border-red-700 rounded-lg"><p className="text-red-300 text-sm">⚠️ {ccMsg}</p></div>}
+              {ccStatus === 'error' && <div className="mt-3 p-3 bg-yellow-900/40 border border-yellow-700 rounded-lg"><p className="text-yellow-300 text-sm">⚠️ {ccMsg}</p></div>}
             </Card>
 
             {ccStatus === 'found' && ccData && ccData.length > 0 && (() => {
@@ -1888,7 +1888,7 @@ export default function App() {
           </div>
         )}
 
-      {/* Ã¢ÂÂÃ¢ÂÂ COTIZACIONES Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ */}
+      {/* ── COTIZACIONES ──────────────────────────────────────── */}
       {tab === 'cotizaciones' && (
         <div className="space-y-4">
           {/* Header */}
@@ -1911,7 +1911,7 @@ export default function App() {
             />
             {cotBusqueda && (
               <button onClick={() => setCotBusqueda('')} className="px-2 py-1 bg-slate-600 text-slate-300 text-xs rounded-lg hover:bg-slate-500">
-                Ã¢ÂÂ Limpiar
+                ✕ Limpiar
               </button>
             )}
           </div>
