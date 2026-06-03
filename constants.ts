@@ -15,37 +15,44 @@ export const PRODUCT_REFERENCES_INITIAL: ProductReference[] = [
   { id: 'set-per-j', name: 'Conjunto Niño Camiseta Peruana y Jogger 100% Algodón', baseCost: 43000 },
   { id: 'set-acid-j', name: 'Conjunto Niño Camiseta Acid Wash y Jogger 100% Algodón', baseCost: 43000 },
   { id: 'set-nac-j', name: 'Conjunto Niño Camiseta Jogger 100% Algodón Nacional', baseCost: 33500 }
-];
+  ];
 
 export const TALLAS_NINO = ['2', '4', '6', '8', '10', '12', '14', '16'];
 export const TALLAS_ADULTO = ['S', 'M', 'L', 'XL', 'XXL'];
 
 export const COLORES_CAMISETA = [
-  "No aplica", "Blanco", "Negro", "Arena", "Rojo", "Verde", "Café",
-  "Acid Wash Café", "Acid Wash Negro", "Acid Wash Verde", "Acid Wash Azul", "Acid Wash Gris"
-];
+    "No aplica", "Blanco", "Negro", "Arena", "Rojo", "Verde", "Café",
+    "Acid Wash Café", "Acid Wash Negro", "Acid Wash Verde", "Acid Wash Azul", "Acid Wash Gris"
+  ];
 
 export const COLORES_BERMUDA = [
-  "No aplica", "Blanco", "Negro", "Gris Oscuro", "Gris Claro", "Azul Rey", "Palo de Rosa", "Guayaba",
-  "Azul Cielo", "Azul Oscuro", "Lila", "Verde Antioquia", "Camel", "Fucsia", "Fantasía",
-  "Verde Oliva", "Café"
-];
+    "No aplica", "Blanco", "Negro", "Gris Oscuro", "Gris Claro", "Azul Rey", "Palo de Rosa", "Guayaba",
+    "Azul Cielo", "Azul Oscuro", "Lila", "Verde Antioquia", "Camel", "Fucsia", "Fantasía",
+    "Verde Oliva", "Café"
+  ];
 
-export const COSTO_CM2 = 170; 
+export const COSTO_CM2 = 170;
 export const COSTO_PLANCHADO = 1000;
 export const COSTO_EMPAQUE = 1500;
-export const GANANCIA_NINO = 35000; // legacy
+export const COSTO_DOMICILIO = 0; // Costo de domicilio configurable (0 = sin domicilio por defecto)
+
+// Márgenes de ganancia configurables
+// MARGEN_PCT: Margen estándar del 55%
 export const MARGEN_PCT = 0.55;
+// MARGEN_PCT_ALT: Margen alternativo del 53%
+export const MARGEN_PCT_ALT = 0.53;
+
+// Legacy (mantenidos por compatibilidad)
+export const GANANCIA_NINO = 35000; // legacy
 export const GANANCIA_ADULTO = 30000; // legacy
-export const MARGEN_PCT = 0.55; // Margen del 55% // legacy, reemplazado por MARGEN_PCT
 
 export const CATEGORIAS = ["Niño", "Adulto"];
 export const CATEGORIAS_COMPRA = [
-  "Tela", "Camisetas base", "Joggers", "Tinta", "Vinilo", "Empaque", "Etiquetas", "Transporte", "Otros"
-];
+    "Tela", "Camisetas base", "Joggers", "Tinta", "Vinilo", "Empaque", "Etiquetas", "Transporte", "Otros"
+  ];
 
 export const METODOS_PAGO = [
-  "Efectivo", "Transferencia", "Nequi", "Daviplata", "Tarjeta"
-];
+    "Efectivo", "Transferencia", "Nequi", "Daviplata", "Tarjeta"
+  ];
 
 export const ESTADOS_VENTA = ["Pagado", "Pendiente", "Entregado"];
