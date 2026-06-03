@@ -33,9 +33,11 @@ export const COLORES_BERMUDA = [
 
 export const COSTO_CM2 = 170; 
 export const COSTO_PLANCHADO = 1000;
-export const COSTO_EMPAQUE = 1300;
-export const GANANCIA_NINO = 35000;
-export const GANANCIA_ADULTO = 30000;
+export const COSTO_EMPAQUE = 1500;
+export const GANANCIA_NINO = 35000; // legacy
+export const MARGEN_PCT = 0.55;
+export const GANANCIA_ADULTO = 30000; // legacy
+export const MARGEN_PCT = 0.55; // Margen del 55% // legacy, reemplazado por MARGEN_PCT
 
 export const CATEGORIAS = ["Niño", "Adulto"];
 export const CATEGORIAS_COMPRA = [
