@@ -37,7 +37,7 @@ const esNino = (cat: string) =>
 // COSTOS FIJOS DE PRODUCCION
 const GANANCIA_NETA_FIJA = 30000;
 const DTF_POR_CM2        = 170;
-const COSTO_EMPAQUE      = 1700;
+const COSTO_EMPAQUE      = 1500;
 const COSTO_PLANCHADA    = 1000;
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
@@ -121,7 +121,7 @@ const calcPrice = (ref: Ref, qty: number, tipoImp: string, cmDTF: number, numPla
   if (tipoImp === 'DTG') impresion = costoDTG;
   if (tipoImp === 'Bordado') impresion = costoBordado;
   const costoUnit  = base + empaque + impresion;
-  const precioUnit = Math.ceil((costoUnit + GANANCIA_NETA_FIJA) / 500) * 500;
+  const precioUnit = Math.ceil((costoUnit / 0.45) / 500) * 500; // Margen 55%
   return { costo: costoUnit * qty, precio: precioUnit * qty };
 };
 
