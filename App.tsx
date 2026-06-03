@@ -223,6 +223,8 @@ export default function App() {
   const [cProv,   setCProv]   = useState('');
   const [cNotas,  setCNotas]  = useState('');
   const [cForma,  setCForma]  = useState('');
+  const [cartCompras, setCartCompras] = useState<any[]>([]);
+  const [facturaCompraId, setFacturaCompraId] = useState<string>('FC-' + Date.now());
 
   // Cuenta de Cobro
   const [ccId,     setCcId]     = useState('');
@@ -353,11 +355,13 @@ export default function App() {
   const ventasFiltradas  = ventas.filter(v => {
     const passDate = !hasFiltroFecha || inDateRange(v.fecha);
     const passEstado = !filterEstadoVentas || (v.estadoPago || 'Pendiente de pago') === filterEstadoVentas;
-    return passDate && passEstado;
+    const qv = searchVentas.toLowerCase().trim();
+    const passSearch = !qv || (v.cliente||'').toLowerCase().includes(qv) || String(v.id||'').toLowerCase().includes(qv) || (v.ref||'').toLowerCase().includes(qv) || (v.documento||'').toLowerCase().includes(qv) || (v.telefono||'').toLowerCase().includes(qv);
+    return passDate && passEstado && passSearch;
   });
   const comprasFiltradas = hasFiltroFecha ? compras.filter(c => inDateRange(c.fecha)) : compras;
   const stockTotal = displayInventario.reduce((a, i) => a + Math.max(0, i.stock), 0);
-  const inventarioValorizado = displayInventario.reduce((a, i) => a + Math.max(0, i.stock) * (compras.filter(c => c.refId === i.refId).slice(-1)[0]?.precio || 0), 0);
+  const inventarioValorizado = displayInventario.reduce((a, i) => a + Math.max(0, i.stock) * (compras.filter(c => c.ref === i.referencia).slice(-1)[0]?.precio || 0), 0);
   const totalComprasGlobal = compras.reduce((a, c) => a + (c.total || 0), 0);
 
   const sincrResultados = async (v: Venta[], c: Compra[], inv: Item[]) => {
@@ -784,30 +788,42 @@ export default function App() {
     setLoading(false);
   };
 
-  const registrarCompra = async () => {
+  const agregarAlCarritoCompra = () => {
     const r = refs.find(x => x.id === cRef);
-    const esAccesorio = r.cat === 'Accesorio';
-    if (!r || (!esAccesorio && (!cColor || !cTalla)) || cQty < 1) { showToast('Completa todos los campos'); return; }
-    setLoading(true);
-    const c: Compra = {
+    const esAccesorio = r?.cat === 'Accesorio';
+    if (!r || (!esAccesorio && (!cColor || !cTalla)) || cQty < 1 || cPrecio <= 0) { showToast('Completa todos los campos'); return; }
+    const item = {
       id: uid(), fecha: today(), refId: r.id, ref: r.name, cat: r.cat,
       color: cColor, talla: cTalla, cantidad: cQty,
       precio: cPrecio, total: cPrecio * cQty,
       proveedor: cProv, notas: cNotas, forma: cForma
     };
-    const nuevasCompras = [c, ...compras];
+    setCartCompras(prev => [...prev, item]);
+    setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCNotas(''); setCForma('');
+    showToast('Ítem agregado al carrito ✓');
+  };
+
+  const enviarFacturaCompra = async () => {
+    if (cartCompras.length === 0) { showToast('Agrega al menos un ítem'); return; }
+    setLoading(true);
+    const nuevasCompras = [...cartCompras, ...compras];
     const nuevoInv      = calcInventario(ventas, nuevasCompras);
     try {
-      await sendToGAS({ action:'guardarCompra', ...c });
+      await sendToGAS({ action:'guardarCompra', facturaId: facturaCompraId, items: cartCompras });
       await sendToGAS({ action:'sincronizarInventarioBatch', rows: nuevoInv });
       await sincrResultados(ventas, nuevasCompras, nuevoInv);
     } catch {}
     setCompras(nuevasCompras);
     localStorage.setItem('compras', JSON.stringify(nuevasCompras));
-    setCRef(''); setCColor(''); setCTalla(''); setCQty(1); setCPrecio(0); setCProv(''); setCNotas(''); setCForma('');
-    showToast('Compra registrada ✓');
+    setCartCompras([]);
+    setFacturaCompraId('FC-' + Date.now());
+    setCProv('');
+    showToast('Factura de compra registrada (' + cartCompras.length + ' ítems) ✓');
     setLoading(false);
   };
+
+  // Keep registrarCompra as alias for single-item (backwards compat)
+  const registrarCompra = agregarAlCarritoCompra;
 
     // ── Cotizaciones ─────────────────────────────────────────────────
   const [cotizaciones, setCotizaciones] = useState<any[]>([]);
@@ -1517,6 +1533,7 @@ export default function App() {
                     <th className="text-right py-2 pr-3">Cant.</th>
                     <th className="text-right py-2 pr-3">Total</th>
                     <th className="text-right py-2">Ganancia</th>
+                        <th className="text-right py-2">Margen %</th>
                     <th className="text-center py-2 pl-3">Estado</th>
                   </tr></thead>
                   <tbody>
@@ -1552,6 +1569,7 @@ export default function App() {
                         <td className="py-2 pr-3 text-right text-gray-300">{v.cantidad}</td>
                         <td className="py-2 pr-3 text-right text-green-400 font-semibold text-xs">{cop(v.totalVenta)}</td>
                         <td className="py-2 text-right text-indigo-400">{cop(v.ganancia)}</td>
+                        <td className="py-2 text-right text-purple-400 text-xs font-semibold">{v.totalVenta > 0 ? Math.round(v.ganancia / v.totalVenta * 100) + '%' : '-'}</td>
                         <td className="py-2 pl-3 text-center">
                           <select
                             value={v.estadoPago || 'Pendiente de pago'}
@@ -1607,7 +1625,37 @@ export default function App() {
                 </div>
                 <FG label="Proveedor"><Inp value={cProv} onChange={e => setCProv(e.target.value)} placeholder="Nombre del proveedor" /></FG>
                 <FG label="Notas"><Inp value={cNotas} onChange={e => setCNotas(e.target.value)} placeholder="Observaciones" /></FG>
-                <Btn onClick={registrarCompra} disabled={loading}>{loading ? 'Guardando…' : '+ Registrar Compra'}</Btn>
+                <Btn onClick={agregarAlCarritoCompra} disabled={loading}>+ Agregar al Carrito</Btn>
+          {cartCompras.length > 0 && (
+            <div className="mt-3 border border-gray-600 rounded-xl p-3">
+              <p className="text-xs text-yellow-400 font-semibold mb-2">Carrito ({cartCompras.length} items)</p>
+              <table className="w-full text-xs text-gray-300 mb-2">
+                <thead><tr className="text-gray-500">
+                  <th className="text-left py-1">Referencia</th>
+                  <th className="text-left py-1">Color/Talla</th>
+                  <th className="text-right py-1">Cant.</th>
+                  <th className="text-right py-1">Precio</th>
+                  <th className="py-1"></th>
+                </tr></thead>
+                <tbody>
+                  {cartCompras.map((item: any, idx: number) => (
+                    <tr key={idx} className="border-t border-gray-700">
+                      <td className="py-1">{item.ref.split(' ').slice(0,3).join(' ')}</td>
+                      <td className="py-1">{item.color}/{item.talla}</td>
+                      <td className="py-1 text-right">{item.cantidad}</td>
+                      <td className="py-1 text-right text-green-400">{cop(item.precio)}</td>
+                      <td className="py-1 text-right">
+                        <button onClick={() => setCartCompras((prev: any[]) => prev.filter((_: any, i: number) => i !== idx))} className="text-red-400 text-xs px-1">X</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Btn onClick={enviarFacturaCompra} disabled={loading}>
+                {loading ? 'Enviando...' : 'Registrar Factura (' + cartCompras.length + ' items)'}
+              </Btn>
+            </div>
+          )}
               </div>
             </Card>
             <Card>
