@@ -359,6 +359,7 @@ export default function App() {
     const passSearch = !qv || (v.cliente||'').toLowerCase().includes(qv) || String(v.id||'').toLowerCase().includes(qv) || (v.ref||'').toLowerCase().includes(qv) || (v.documento||'').toLowerCase().includes(qv) || (v.telefono||'').toLowerCase().includes(qv);
     return passDate && passEstado && passSearch;
   });
+  const ventasDashboard = ventas.filter(v => !hasFiltroFecha || inDateRange(v.fecha));
   const comprasFiltradas = hasFiltroFecha ? compras.filter(c => inDateRange(c.fecha)) : compras;
   const stockTotal = displayInventario.reduce((a, i) => a + Math.max(0, i.stock), 0);
   const inventarioValorizado = displayInventario.reduce((a, i) => a + Math.max(0, i.stock) * (compras.filter(c => c.ref === (i.ref || i.referencia)).slice(-1)[0]?.precio || 0), 0);
@@ -1750,15 +1751,15 @@ export default function App() {
             {/* ── Label de filtro activo ── */}
             {hasFiltroFecha && (
               <div className="bg-indigo-900/30 border border-indigo-700 rounded-xl px-4 py-2 text-sm text-indigo-300">
-                📅 Mostrando datos filtrados: <strong>{ventasFiltradas.length}</strong> ventas ÃÂ· <strong>{comprasFiltradas.length}</strong> compras
+                📅 Mostrando datos filtrados: <strong>{ventasDashboard.length}</strong> ventas ÃÂ· <strong>{comprasFiltradas.length}</strong> compras
               </div>
             )}
             {/* ── KPIs Fila 1: Ventas e Inventario ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label:'Total Ventas (COP)',     val: cop(ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'💰' },
+                { label:'Total Ventas (COP)',     val: cop(ventasDashboard.reduce((a,v)=>a+v.totalVenta,0)),       color:'text-green-400',  icon:'💰' },
                 { label:'Total Compras (COP)',    val: cop(comprasFiltradas.reduce((a,c)=>a+(c.total||0),0)),     color:'text-orange-400', icon:'🛒' },
-                { label:'Ganancia General (COP)', val: cop(ventasFiltradas.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'📈' },
+                { label:'Ganancia General (COP)', val: cop(ventasDashboard.reduce((a,v)=>a+v.ganancia,0)),        color:'text-indigo-400', icon:'📈' },
                 { label:'Inventario Total (uds)', val: stockTotal.toString(),                                     color:'text-yellow-400', icon:'📦' },
                 { label:'Inventario Valorizado',   val: cop(inventarioValorizado),                               color:'text-cyan-400',   icon:'💸' },
               ].map(k => (
@@ -1772,9 +1773,9 @@ export default function App() {
             {/* ── KPIs Fila 2: Detalles de Ventas ── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label:'Unidades Vendidas',  val: ventasFiltradas.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'👕' },
-                { label:'Costo de Ventas',    val: cop(ventasFiltradas.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'💸' },
-                { label:'Margen (%)',          val: (() => { const ing=ventasFiltradas.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasFiltradas.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : '—'; })(), color:'text-purple-400', icon:'%' },
+                { label:'Unidades Vendidas',  val: ventasDashboard.reduce((a,v)=>a+v.cantidad,0).toString(),   color:'text-cyan-400',   icon:'👕' },
+                { label:'Costo de Ventas',    val: cop(ventasDashboard.reduce((a,v)=>a+v.costo,0)),            color:'text-red-400',    icon:'💸' },
+                { label:'Margen (%)',          val: (() => { const ing=ventasDashboard.reduce((a,v)=>a+v.totalVenta,0); const gan=ventasDashboard.reduce((a,v)=>a+v.ganancia,0); return ing>0 ? (gan/ing*100).toFixed(1)+'%' : '—'; })(), color:'text-purple-400', icon:'%' },
               ].map(k => (
                 <Card key={k.label} className="text-center">
                   <div className="text-xl mb-1">{k.icon}</div>
@@ -1787,13 +1788,13 @@ export default function App() {
               <Card>
                 <CardTitle text="Últimas 5 Ventas" />
                 <div className="space-y-2">
-                  {ventasFiltradas.slice(0,5).map(v => (
+                  {ventasDashboard.slice(0,5).map(v => (
                     <div key={v.id} className="flex justify-between items-center text-sm">
                       <div><span className="text-gray-200">{v.ref}</span><span className="text-gray-500 ml-2">{v.talla} / {v.color}</span></div>
                       <span className="text-green-400">{cop(v.totalVenta)}</span>
                     </div>
                   ))}
-                  {ventasFiltradas.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aún</p>}
+                  {ventasDashboard.length === 0 && <p className="text-gray-500 text-sm">Sin ventas aún</p>}
                 </div>
               </Card>
               <Card>
