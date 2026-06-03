@@ -39,6 +39,8 @@ const GANANCIA_NETA_FIJA = 30000;
 const DTF_POR_CM2        = 170;
 const COSTO_EMPAQUE      = 1500;
 const COSTO_PLANCHADA    = 1000;
+const MARGEN_PCT     = 0.55; // Margen de ganancia estandar (55%)
+const MARGEN_PCT_ALT = 0.53; // Margen de ganancia alternativo (53%)
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
