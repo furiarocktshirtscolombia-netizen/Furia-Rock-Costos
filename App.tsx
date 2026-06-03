@@ -115,7 +115,7 @@ const cop  = (n:number) => '$' + Math.round(n).toLocaleString('es-CO');
 const today = () => new Date().toISOString().split('T')[0];
 const uid   = () => Date.now().toString();
 
-const calcPrice = (ref: Ref, qty: number, tipoImp: string, cmDTF: number, numPlanchadas: number, costoDTG: number, costoBordado: number): Calc => {
+const calcPrice = (ref: Ref, qty: number, tipoImp: string, cmDTF: number, numPlanchadas: number, costoDTG: number, costoBordado: number, margen: number = MARGEN_PCT): Calc => {
   const base       = ref.cost;
   const empaque    = COSTO_EMPAQUE;
   let impresion    = 0;
@@ -123,7 +123,7 @@ const calcPrice = (ref: Ref, qty: number, tipoImp: string, cmDTF: number, numPla
   if (tipoImp === 'DTG') impresion = costoDTG;
   if (tipoImp === 'Bordado') impresion = costoBordado;
   const costoUnit  = base + empaque + impresion;
-  const gananciaUnit = Math.round(costoUnit * MARGEN_PCT);
+  const gananciaUnit = Math.round(costoUnit * margen);
   const precioUnit    = costoUnit + gananciaUnit;
   return { costo: costoUnit * qty, ganancia: gananciaUnit * qty, precio: precioUnit * qty };
 };
@@ -201,6 +201,7 @@ export default function App() {
   const [selTalla,      setSelTalla]      = useState('');
   const [selQty,        setSelQty]        = useState(1);
   const [selTipoImp,    setSelTipoImp]    = useState('DTF');
+  const [selMargenPct,  setSelMargenPct]  = useState<number>(MARGEN_PCT);
   const [selForma,      setSelForma]      = useState('');
   const [cmDTF,         setCmDTF]         = useState(100);
   const [numPlanchadas, setNumPlanchadas] = useState(3);
@@ -303,7 +304,7 @@ export default function App() {
   const tallasDisp   = currentRef
     ? (esNino(currentRef.cat) ? TALLAS_NINO : TALLAS_ADULTO)
     : TODAS_TALLAS;
-  const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG, costoBordado) : null;
+  const calc         = currentRef ? calcPrice(currentRef, selQty, selTipoImp, cmDTF, numPlanchadas, costoDTG, costoBordado, selMargenPct) : null;
   const inventario   = useMemo(() => calcInventario(ventas, compras, refs), [ventas, compras, refs]);
 
   // Compras: ref seleccionada y sus colores disponibles
@@ -1362,7 +1363,8 @@ export default function App() {
             <Card>
               <CardTitle text="Costos de Produccion" />
               <div className="space-y-3">
-                <FG label="Tipo de impresion">
+                <FG label="Margen de ganancia" hint="55% = estandar, 53% = alternativo"><Sel options={["55%","53%"]} value={selMargenPct===MARGEN_PCT?"55%":"53%"} onChange={(v)=>setSelMargenPct(v==="55%"?MARGEN_PCT:MARGEN_PCT_ALT)} /></FG>
+              <FG label="Tipo de impresion">
                   <Sel options={TIPOS_IMP} value={selTipoImp} onChange={e => { setSelTipoImp(e.target.value); setCostoDTG(0); setCostoBordado(0); }} />
                 </FG>
                 {selTipoImp === 'DTF' && (
