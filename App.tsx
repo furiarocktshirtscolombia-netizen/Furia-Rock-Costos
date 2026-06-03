@@ -354,7 +354,7 @@ export default function App() {
   const hasFiltroFecha = filtroModo === 'dia' ? !!filtroDia : filtroModo === 'mes' ? !!filtroMes : !!(fechaInicio || fechaFin);
   const ventasFiltradas  = ventas.filter(v => {
     const passDate = !hasFiltroFecha || inDateRange(v.fecha);
-    const passEstado = !filterEstadoVentas || (v.estadoPago || 'Pendiente de pago') === filterEstadoVentas;
+    const passEstado = !filterEstadoVentas || ((v.estadoPago || 'Pendiente') === filterEstadoVentas || (v.estadoPago?.toLowerCase() === filterEstadoVentas.toLowerCase()));
     const qv = searchVentas.toLowerCase().trim();
     const passSearch = !qv || (v.cliente||'').toLowerCase().includes(qv) || String(v.id||'').toLowerCase().includes(qv) || (v.ref||'').toLowerCase().includes(qv) || (v.documento||'').toLowerCase().includes(qv) || (v.telefono||'').toLowerCase().includes(qv);
     return passDate && passEstado && passSearch;
@@ -1513,7 +1513,8 @@ export default function App() {
                 className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-400 transition-all duration-200"
               >
                 <option value="">Todos los estados</option>
-                <option value="Pendiente de pago">Pendiente</option>
+                <option value="Pendiente">Pendiente</option>
+                <option value="Abonado">Abonado</option>
                 <option value="Pagado">Pagado</option>
                 <option value="Cancelado">Cancelado</option>
               </select>
