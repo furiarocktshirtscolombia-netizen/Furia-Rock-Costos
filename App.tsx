@@ -361,7 +361,7 @@ export default function App() {
   });
   const comprasFiltradas = hasFiltroFecha ? compras.filter(c => inDateRange(c.fecha)) : compras;
   const stockTotal = displayInventario.reduce((a, i) => a + Math.max(0, i.stock), 0);
-  const inventarioValorizado = displayInventario.reduce((a, i) => a + Math.max(0, i.stock) * (compras.filter(c => c.ref === i.referencia).slice(-1)[0]?.precio || 0), 0);
+  const inventarioValorizado = displayInventario.reduce((a, i) => a + Math.max(0, i.stock) * (compras.filter(c => c.ref === (i.ref || i.referencia)).slice(-1)[0]?.precio || 0), 0);
   const totalComprasGlobal = compras.reduce((a, c) => a + (c.total || 0), 0);
 
   const sincrResultados = async (v: Venta[], c: Compra[], inv: Item[]) => {
