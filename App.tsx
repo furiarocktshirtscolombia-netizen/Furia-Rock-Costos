@@ -1,4 +1,4 @@
-undefinedimport { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -315,7 +315,7 @@ export default function App() {
   const cColoresDisp = cCurrentRef ? (colorMap[cCurrentRef.name] || COLORES_ACTIVOS) : COLORES_ACTIVOS;
 
 
-  // Always use locally computed inventario (real-time, based on ventas+compras state)
+  // Always use locally computed inventario (real-time, from ventas+compras state)
   const displayInventario = useMemo(() => {
     return inventario;
   }, [invDrive, inventario, refs, compras, ventas]);
@@ -371,7 +371,7 @@ export default function App() {
     const invItem = inventario.find(i => i.sku === skuKey);
     const stockDisp = invItem ? invItem.stock : 0;
     if (stockDisp < selQty) {
-      showToast(`Stock insuficiente: ${skuKey} — Disponible: ${stockDisp} u., Solicitado: ${selQty} u.`);
+      showToast('Stock insuficiente: ' + skuKey + ' — Disponible: ' + stockDisp + ' u., Solicitado: ' + selQty + ' u.');
       return;
     }
     const item = {
@@ -741,7 +741,7 @@ export default function App() {
   const registrarVenta = async () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un ítem al pedido'); return; }
     for (const item of cartItems) {
-      const skuKey = `${item.refId}|${item.talla}|${item.color}|${item.forma||'_'}`;
+      const skuKey = item.refId+'|'+item.talla+'|'+item.color+'|'+(item.forma||'_');
       const invItem = inventario.find(i => i.sku === skuKey);
       const stockDisp = invItem ? invItem.stock : 0;
       if (stockDisp < item.qty) {
@@ -1418,7 +1418,7 @@ export default function App() {
                       </tr></thead>
                       <tbody>
                         {cartItems.map((item, idx) => {
-                          const skuK = `${item.refId}|${item.talla}|${item.color}|${item.forma||'_'}`;
+                          const skuK = item.refId+'|'+item.talla+'|'+item.color+'|'+(item.forma||'_');
                           const invRow = inventario.find(i => i.sku === skuK);
                           const st = invRow ? invRow.stock : 0;
                           const stColor = st > 5 ? 'text-green-400' : st > 2 ? 'text-yellow-400' : 'text-red-400';
@@ -1438,7 +1438,7 @@ export default function App() {
                           </tr>
                           <tr className="border-b border-gray-700/50">
                             <td colSpan={7} className="py-0.5 pb-1 text-xs text-gray-500 pl-1">
-                              SKU: <span className="text-gray-400 font-mono">{skuK}</span> · Stock: <span className={stColor}>{st} u. · {stLabel}</span>
+                              SKU: <span className="text-gray-400 font-mono">{skuK}</span> {'·'} Stock: <span className={stColor}>{st} u. {'·'} {stLabel}</span>
                             </td>
                           </tr>
                           </React.Fragment>
