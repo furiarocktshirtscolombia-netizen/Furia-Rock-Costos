@@ -5,21 +5,36 @@ import 'jspdf-autotable';
 // v1.4 - Fixes: PDF unit price, cotizacion total calculation
 // ══ DATOS REALES DEL SPREADSHEET FURIA ROCK ══════════════════════════
 const REFS_DEFAULT: Ref[] = [
-  { id:"r1",  name:"CAMISETA ALGODON PERUANO 178G",           cost:18000, cat:"Adulto" },
-  { id:"r2",  name:"CAMISETA ALGODON PERUANO 320G",           cost:37000, cat:"Adulto" },
-  { id:"r3",  name:"CAMISETA ALGODON PERUANO 270G",           cost:33000, cat:"Adulto" },
-  { id:"r4",  name:"CAMISETA CATAR",                          cost:37000, cat:"Adulto" },
-  { id:"r5",  name:"CAMISETA C4 ALGODON NACIONAL 200G",       cost:19000, cat:"Adulto" },
-  { id:"r6",  name:"HOODIE PERUANO 400G",                     cost:82000, cat:"Adulto" },
-  { id:"r7",  name:"CAMISETA NINO ALGODON PERUANO 200G",      cost:24000, chat:"Nino"   },
-  { id:"r8",  name:"CAMISETA NINO NACIONAL 200G",             cost:14000, cat:"Nino"   },
-  { id:"r9",  name:"CAMISETA ACID WASH NINO",                 cost:18000, cath:"Nino"   },
-  { id:"r10", name:"BERMUDA NINO ALGODON PERCHADO",           cost:13500, cat:"Nino"   },
-  { id:"r11", name:"SUDADERA NINOS ALGODON PERCHADO",         cost:19000, cat:"Nino"   },
-  { id:"r12", name:"CONJUNTO NINO CAMISETA PERUANO + BERMUDA",cost:37500, cat:"Nino"   },
-  { id:"r13", name:"CONJUNTO NINO CAMISETA NACIONAL + BERMUDA",cost:27500,cat:"Nino"   },
-  { id:"r14", name:"CONJUNTO NINO CAMISETA PERUANO + JOGGER", cost:43000, cat:"Nino"   },
-  { id:"r15", name:"CONJUNTO NINO CAMISETA NACIONAL + JOGGER",cost:33000, cat:"Nino"   },
+{ id:"r1",  name:"CAMISETA EN ALGODON PERUANO 178 GRAMOS",                     cost:19500, cat:"Adulto" },
+{ id:"r2",  name:"CAMISETA EN ALGODON PERUANO 320 GRAMOS",                     cost:38500, cat:"Adulto" },
+{ id:"r3",  name:"CAMISETA EN ALGODON PERUANO 270 GRAMOS",                     cost:34500, cat:"Adulto" },
+{ id:"r4",  name:"CAMISETA CATAR",                                              cost:38500, cat:"Adulto" },
+{ id:"r5",  name:"CAMISETA C4 ALGODON NACIONAL DEL 200 GRAMOS",               cost:20500, cat:"Adulto" },
+{ id:"r6",  name:"HOODIE PERUANO DE 400 GRAMOS",                               cost:83500, cat:"Adulto" },
+{ id:"r7",  name:"CAMISETA PARA NIÑO ALGODON PERUANO DE 20 GRAMOS",          cost:25500, cat:"Niño" },
+{ id:"r8",  name:"CAMISETA PARA NIÑO NACIONAL DE 200 GRAMOS",                cost:15500, cat:"Niño" },
+{ id:"r9",  name:"CAMISETA ACID WASH NIÑO",                                    cost:19500, cat:"Niño" },
+{ id:"r10", name:"BERMUDA PARA NIÑO ALDODON PERCHADO",                        cost:15000, cat:"Niño" },
+{ id:"r11", name:"SUDADERA PARA NIÑOS ALDON PERCHADO",                        cost:20500, cat:"Niño" },
+{ id:"r12", name:"CONJUNTO PARA NIÑO CAMISETA DE ALGODON PERUANO + BERMUDA",  cost:39000, cat:"Niño" },
+{ id:"r13", name:"CONJUNTO PARA NIÑO CAMISETA DE ALGODON NACIONAL + BERMUDA", cost:29000, cat:"Niño" },
+{ id:"r14", name:"CONJUNTO PARA NIÑO CAMISETA DE ALGODON PERUANO + JOGGER",   cost:44500, cat:"Niño" },
+{ id:"r15", name:"CONJUNTO PARA NIÑO CAMISETA DE ALGODON NACIONAL + JOGGER",  cost:34500, cat:"Niño" },
+{ id:"r16", name:"BERMUDA PARA ADULTO",                                         cost:36500, cat:"Adulto" },
+{ id:"r17", name:"DTF",                                                         cost:170,   cat:"Accesorio" },
+{ id:"r18", name:"DTG",                                                         cost:0,     cat:"Accesorio" },
+{ id:"r19", name:"BOLSA REUTILIZABLE",                                          cost:2800,  cat:"Accesorio" },
+{ id:"r20", name:"BOLSA DE SEGURIDAD",                                          cost:1600,  cat:"Accesorio" },
+{ id:"r21", name:"BOLSA TRANSPARENTE EMPAQUE",                                  cost:1700,  cat:"Accesorio" },
+{ id:"r22", name:"CAMISETA ACID WASH ADULTO",                                   cost:29000, cat:"Adulto" },
+{ id:"r23", name:"CAMISETA RANDY 200 GR",                                       cost:27500, cat:"Adulto" },
+{ id:"r24", name:"CAMISETA C3 ALGODON NACIONAL DEL 180 GRAMOS",               cost:17500, cat:"Adulto" },
+{ id:"r25", name:"POLOS",                                                       cost:28500, cat:"Adulto" },
+{ id:"r26", name:"CAMISETA ALGODON NACIONAL DEL 200 GRAMOS OVER SIZE",        cost:27500, cat:"Adulto" },
+{ id:"r27", name:"BORDADOS PUNTO CORAZON",                                      cost:7500,  cat:"Accesorio" },
+{ id:"r28", name:"DOMICILIO",                                                   cost:1500,  cat:"Accesorio" },
+{ id:"r29", name:"BOLSA 25X33 ADH CAL 1,5 X100",                               cost:14500, cat:"Accesorio" },
+{ id:"r30", name:"BOLSA 30X40 ADD CAL 1,5 X 100",                              cost:19100, cat:"Accesorio" },
 ]
 
 const COLORES_DEFAULT  = ["NEGRO","BLANCO","VERDE PINO","VERDE NACIONAL","AZUL CIELO","ROJO","GRIS","AZUL MARINO","ROSADO","MOSTAZA","VAINILLA"];
@@ -95,8 +110,13 @@ const calcInventario = (ventas: Venta[], compras: Compra[], refsList: Ref[] = []
   };
   const map: Record<string, Item> = {};
   compras.forEach(c => {
-    const k = `${c.refId}|${c.talla}|${c.color}|${c.forma || '_'}`;
-    if (!map[k]) map[k] = { ref: resolveRef(c.ref, c.refId), refId: c.refId, cat: c.cat, talla: c.talla, color: c.color, forma: c.forma || '-', comprado: 0, vendido: 0, stock: 0, estado: '', sku: k };
+    // Resolve correct refId: compras may store a timestamp as refId; match by ref name first
+    const matchedRef = refsList.find(r => r.name === c.ref);
+    const resolvedRefId = matchedRef ? matchedRef.id
+      : (/^r\d+$/.test(c.refId) ? c.refId
+        : (c.proveedor && /^r\d+$/.test(c.proveedor) ? c.proveedor : c.refId));
+    const k = `${resolvedRefId}|${c.talla}|${c.color}|${c.forma || '_'}`;
+    if (!map[k]) map[k] = { ref: resolveRef(c.ref, resolvedRefId), refId: resolvedRefId, cat: c.cat, talla: c.talla, color: c.color, forma: c.forma || '-', comprado: 0, vendido: 0, stock: 0, estado: '', sku: k };
     map[k].comprado += c.cantidad;
   });
   ventas.forEach(v => {
