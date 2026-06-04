@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+undefinedimport { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -49,7 +49,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW
 
 // ─── Types ────────────────────────────────────────────────────────────
 interface Ref  { id:string; name:string; cost:number; cat:string }
-interface Item { ref:string; refId:string; cat:string; talla:string; color:string; forma:string; comprado:number; vendido:number; stock:number; estado:string }
+interface Item { ref:string; refId:string; cat:string; talla:string; color:string; forma:string; comprado:number; vendido:number; stock:number; estado:string; sku:string }
 interface Venta {
   id:string; fecha:string; cliente:string; ref:string; refId:string;
   talla:string; color:string; cantidad:number; cat:string;
@@ -96,12 +96,12 @@ const calcInventario = (ventas: Venta[], compras: Compra[], refsList: Ref[] = []
   const map: Record<string, Item> = {};
   compras.forEach(c => {
     const k = `${c.refId}|${c.talla}|${c.color}|${c.forma || '_'}`;
-    if (!map[k]) map[k] = { ref: resolveRef(c.ref, c.refId), refId: c.refId, cat: c.cat, talla: c.talla, color: c.color, forma: c.forma || '-', comprado: 0, vendido: 0, stock: 0, estado: '' };
+    if (!map[k]) map[k] = { ref: resolveRef(c.ref, c.refId), refId: c.refId, cat: c.cat, talla: c.talla, color: c.color, forma: c.forma || '-', comprado: 0, vendido: 0, stock: 0, estado: '', sku: k };
     map[k].comprado += c.cantidad;
   });
   ventas.forEach(v => {
     const k = `${v.refId}|${v.talla}|${v.color}|${v.forma || '_'}`;
-    if (!map[k]) map[k] = { ref: resolveRef(v.ref, v.refId), refId: v.refId, cat: v.cat, talla: v.talla, color: v.color, forma: v.forma || '-', comprado: 0, vendido: 0, stock: 0, estado: '' };
+    if (!map[k]) map[k] = { ref: resolveRef(v.ref, v.refId), refId: v.refId, cat: v.cat, talla: v.talla, color: v.color, forma: v.forma || '-', comprado: 0, vendido: 0, stock: 0, estado: '', sku: k };
     map[k].vendido += v.cantidad;
   });
   Object.values(map).forEach(i => {
@@ -315,35 +315,8 @@ export default function App() {
   const cColoresDisp = cCurrentRef ? (colorMap[cCurrentRef.name] || COLORES_ACTIVOS) : COLORES_ACTIVOS;
 
 
-  // Use Drive inventario when available, fall back to computed
+  // Always use locally computed inventario (real-time, based on ventas+compras state)
   const displayInventario = useMemo(() => {
-    if (invDrive && invDrive.length > 0) {
-      return invDrive.map((i: any) => {
-        // Resolve ref name: invDrive has 'referencia' field
-        let refName = i.referencia || i.ref || '';
-        if (!refName || /^rd+$/.test(refName)) {
-          // Try to match by cross-referencing compras/ventas
-          const fromCompras = compras.find(c => c.talla === i.talla && c.color === i.color && c.forma === i.forma);
-          const fromVentas = ventas.find(v => v.talla === i.talla && v.color === i.color && v.forma === i.forma);
-          const refId = fromCompras?.refId || fromVentas?.refId || '';
-          if (refId) {
-            const found = refs.find(r => r.id === refId);
-            if (found) refName = found.name;
-          }
-        }
-        return {
-          ref: refName || '-',
-          cat: i.cat || i.cat || '',
-          talla: i.talla || '',
-          color: i.color || '',
-          forma: i.forma || '-',
-          comprado: Number(i.comprado || 0),
-          vendido: Number(i.vendido || 0),
-          stock: Number(i.stock || 0),
-          estado: i.estado || (Number(i.stock || 0) > 5 ? 'OK' : Number(i.stock || 0) > 2 ? 'Bajo' : 'Crítico'),
-        };
-      });
-    }
     return inventario;
   }, [invDrive, inventario, refs, compras, ventas]);
 
@@ -394,6 +367,13 @@ export default function App() {
   const agregarItem = () => {
     if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos del ítem'); return; }
     if (!calc) { showToast('No hay precio calculado'); return; }
+    const skuKey = `${currentRef.id}|${selTalla}|${selColor}|${selForma||'_'}`;
+    const invItem = inventario.find(i => i.sku === skuKey);
+    const stockDisp = invItem ? invItem.stock : 0;
+    if (stockDisp < selQty) {
+      showToast(`Stock insuficiente: ${skuKey} — Disponible: ${stockDisp} u., Solicitado: ${selQty} u.`);
+      return;
+    }
     const item = {
       ref: currentRef.name, refId: currentRef.id, cat: currentRef.cat,
       color: selColor, talla: selTalla, forma: selForma,
@@ -760,6 +740,15 @@ export default function App() {
 
   const registrarVenta = async () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un ítem al pedido'); return; }
+    for (const item of cartItems) {
+      const skuKey = `${item.refId}|${item.talla}|${item.color}|${item.forma||'_'}`;
+      const invItem = inventario.find(i => i.sku === skuKey);
+      const stockDisp = invItem ? invItem.stock : 0;
+      if (stockDisp < item.qty) {
+        showToast('No hay inventario suficiente. SKU: ' + skuKey + ' — Disponible: ' + stockDisp + ' u. Solicitado: ' + item.qty + ' u.');
+        return;
+      }
+    }
     setLoading(true); setGasErr('');
     const nuevasVentas = [...ventas];
     for (const item of cartItems) {
@@ -1428,8 +1417,15 @@ export default function App() {
                         <th className="text-right py-1">Acción</th>
                       </tr></thead>
                       <tbody>
-                        {cartItems.map((item, idx) => (
-                          <tr key={idx} className="border-b border-gray-700/50">
+                        {cartItems.map((item, idx) => {
+                          const skuK = `${item.refId}|${item.talla}|${item.color}|${item.forma||'_'}`;
+                          const invRow = inventario.find(i => i.sku === skuK);
+                          const st = invRow ? invRow.stock : 0;
+                          const stColor = st > 5 ? 'text-green-400' : st > 2 ? 'text-yellow-400' : 'text-red-400';
+                          const stLabel = st > 5 ? 'OK' : st > 2 ? 'Bajo' : 'Crítico';
+                          return (
+                          <React.Fragment key={idx}>
+                          <tr className="border-b border-gray-700/20">
                             <td className="py-1 pr-2 text-gray-300 text-xs">{item.ref.split(' ').slice(0,3).join(' ')}</td>
                             <td className="py-1 pr-2 text-gray-300">{item.color}</td>
                             <td className="py-1 pr-2 text-gray-300">{item.talla}</td>
@@ -1440,7 +1436,14 @@ export default function App() {
                               <button onClick={() => setCartItems(prev => prev.filter((_,i) => i !== idx))} className="text-red-400 hover:text-red-300 text-xs px-1">✕</button>
                             </td>
                           </tr>
-                        ))}
+                          <tr className="border-b border-gray-700/50">
+                            <td colSpan={7} className="py-0.5 pb-1 text-xs text-gray-500 pl-1">
+                              SKU: <span className="text-gray-400 font-mono">{skuK}</span> · Stock: <span className={stColor}>{st} u. · {stLabel}</span>
+                            </td>
+                          </tr>
+                          </React.Fragment>
+                          );
+                        })}
                         <tr className="border-t border-gray-600">
                           <td colSpan={5} className="py-1 text-gray-400 text-xs font-semibold">TOTAL GENERAL</td>
                           <td className="py-1 text-right text-green-400 font-semibold text-xs">{cop(cartItems.reduce((s,i) => s + i.precio, 0))}</td>
@@ -1724,6 +1727,7 @@ export default function App() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="text-gray-400 border-b border-gray-700">
+                  <th className="text-left py-2 pr-3">SKU</th>
                   <th className="text-left py-2 pr-3">Referencia</th>
                   <th className="text-left py-2 pr-3">Cat.</th>
                   <th className="text-left py-2 pr-3">Talla</th>
@@ -1737,6 +1741,7 @@ export default function App() {
                 <tbody>
                   {displayInventario.map((i,idx) => (
                     <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                      <td className="py-2 pr-3 text-gray-500 font-mono text-xs">{i.sku || '-'}</td>
                       <td className="py-2 pr-3 font-medium text-gray-200">{i.ref}</td>
                       <td className="py-2 pr-3 text-gray-400">{i.cat}</td>
                       <td className="py-2 pr-3 text-gray-300">{i.talla}</td>
