@@ -1366,7 +1366,7 @@ export default function App() {
             <Card>
               <CardTitle text="Costos de Produccion" />
               <div className="space-y-3">
-                <FG label="Margen de ganancia" hint="53% estandar | 55% | 47% | 45% | 40%"><Sel options={["53%","55%","47%","45%","40%"]} value={(selMargenPct*100).toFixed(0)+"%"} onChange={(e:any)=>setSelMargenPct(parseFloat(e.target.value)/100)} /></FG>
+                <FG label="Margen de ganancia" hint="53% estandar | 55% | 47% | 45% | 43% | 40%"><Sel options={["53%","55%","47%","45%","43%","40%"]} value={(selMargenPct*100).toFixed(0)+"%"} onChange={(e:any)=>setSelMargenPct(parseFloat(e.target.value)/100)} /></FG>
               <FG label="Tipo de impresion">
                   <Sel options={TIPOS_IMP} value={selTipoImp} onChange={e => { setSelTipoImp(e.target.value); setCostoDTG(0); setCostoBordado(0); }} />
                 </FG>
