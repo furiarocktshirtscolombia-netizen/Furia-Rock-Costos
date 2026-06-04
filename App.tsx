@@ -387,8 +387,22 @@ export default function App() {
   const agregarItem = () => {
     if (!currentRef || !selColor || !selTalla) { showToast('Completa todos los campos del ítem'); return; }
     if (!calc) { showToast('No hay precio calculado'); return; }
-    const skuKey = `${currentRef.id}|${selTalla}|${selColor}|${selForma||'_'}`;
-    const invItem = inventario.find(i => i.sku === skuKey);
+    // Buscar en inventario Drive por nombre+talla+color+forma para obtener SKU real
+    const invItemDrive = invDrive.find((i: any) =>
+      (i.ref === currentRef.name || i.referencia === currentRef.name) &&
+      String(i.talla||'').trim() === String(selTalla).trim() &&
+      String(i.color||'').trim() === String(selColor).trim() &&
+      (!selForma || !i.forma || String(i.forma).trim() === String(selForma).trim())
+    );
+    const skuKey = invItemDrive ? String(invItemDrive.sku || invItemDrive.refId || '').trim()
+      : `${currentRef.id}|${selTalla}|${selColor}|${selForma||'_'}`;
+    const invItem = invItemDrive
+      || inventario.find((i: any) => i.sku === skuKey)
+      || inventario.find((i: any) =>
+          (i.ref === currentRef.name || i.referencia === currentRef.name) &&
+          String(i.talla||'').trim() === String(selTalla).trim() &&
+          String(i.color||'').trim() === String(selColor).trim()
+        );
     const stockDisp = invItem ? invItem.stock : 0;
     if (stockDisp < selQty) {
       showToast('Stock insuficiente: ' + skuKey + ' — Disponible: ' + stockDisp + ' u., Solicitado: ' + selQty + ' u.');
@@ -398,6 +412,7 @@ export default function App() {
       ref: currentRef.name, refId: currentRef.id, cat: currentRef.cat,
       color: selColor, talla: selTalla, forma: selForma,
       qty: selQty, precio: calc!.precio, costo: calc!.costo,
+      sku: skuKey,
     };
     setCartItems(prev => [...prev, item]);
     setSelRef(''); setSelColor(''); setSelTalla(''); setSelQty(1);
@@ -761,7 +776,10 @@ export default function App() {
   const registrarVenta = async () => {
     if (cartItems.length === 0) { showToast('Agrega al menos un ítem al pedido'); return; }
     for (const item of cartItems) {
-      const skuKey = item.refId+'|'+item.talla+'|'+item.color+'|'+(item.forma||'_');
+      // Usar SKU real del item si existe, si no construir desde datos
+      const skuKey = (item as any).sku && String((item as any).sku).trim()
+        ? String((item as any).sku).trim()
+        : item.refId+'|'+item.talla+'|'+item.color+'|'+(item.forma||'_');
       const invItem = inventario.find(i => i.sku === skuKey);
       const stockDisp = invItem ? invItem.stock : 0;
       if (stockDisp < item.qty) {
@@ -774,7 +792,7 @@ export default function App() {
     for (const item of cartItems) {
       const v: Venta = {
         id: uid(), fecha: today(), cliente: clienteNombre,
-        ref: item.ref, refId: item.refId,
+        ref: item.ref, refId: item.refId, sku: (item as any).sku || '',
         talla: item.talla, color: item.color, cantidad: item.qty,
         cat: item.cat, precio: item.precio / item.qty,
         totalVenta: item.precio, costo: item.costo,
