@@ -1577,10 +1577,10 @@ export default function App() {
                     <th className="text-left py-2 pr-3 text-indigo-300">ID Pedido</th>
                     <th className="text-left py-2 pr-3">Fecha</th>
                     <th className="text-left py-2 pr-3">Cliente</th>
-                    <th className="text-left py-2 pr-3">Referencia</th>
+                    <th className="text-left py-2 pr-3 w-56">Referencia</th>
                     <th className="text-left py-2 pr-3">Color</th>
                     <th className="text-left py-2 pr-3">Talla</th>
-                    <th className="text-left py-2 pr-3">Forma</th>
+                    <th className="text-left py-2 pr-3 whitespace-nowrap w-28">Forma</th>
                     <th className="text-right py-2 pr-3">Cant.</th>
                     <th className="text-right py-2 pr-3">Total</th>
                     <th className="text-right py-2">Ganancia</th>
@@ -1765,7 +1765,7 @@ export default function App() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="text-gray-400 border-b border-gray-700">
-                  <th className="text-left py-2 pr-3">SKU</th>
+                  <th className="text-left py-2 pr-3 whitespace-nowrap w-36">SKU</th>
                   <th className="text-left py-2 pr-3">Referencia</th>
                   <th className="text-left py-2 pr-3">Cat.</th>
                   <th className="text-left py-2 pr-3">Talla</th>
@@ -1779,12 +1779,12 @@ export default function App() {
                 <tbody>
                   {displayInventario.map((i,idx) => (
                     <tr key={idx} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                      <td className="py-2 pr-3 text-gray-500 font-mono text-xs">{i.sku || '-'}</td>
-                      <td className="py-2 pr-3 font-medium text-gray-200">{i.ref}</td>
+                      <td className="py-2 pr-3 text-gray-500 font-mono text-xs whitespace-nowrap w-36">{i.sku || '-'}</td>
+                      <td className="py-2 pr-3 font-medium text-gray-200 max-w-[14rem] truncate" title={i.ref}>{i.ref}</td>
                       <td className="py-2 pr-3 text-gray-400">{i.cat}</td>
                       <td className="py-2 pr-3 text-gray-300">{i.talla}</td>
                       <td className="py-2 pr-3 text-gray-300">{i.color}</td>
-                      <td className="py-2 pr-3 text-gray-300">{i.forma && i.forma !== '_' ? i.forma : '-'}</td>
+                      <td className="py-2 pr-3 text-gray-300 whitespace-nowrap w-28">{i.forma && i.forma !== '_' ? i.forma : '-'}</td>
                       <td className="py-2 pr-3 text-right text-blue-400">{i.comprado}</td>
                       <td className="py-2 pr-3 text-right text-orange-400">{i.vendido}</td>
                       <td className={`py-2 pr-3 text-right font-semibold ${i.stock<0?'text-red-400':i.stock>5?'text-green-400':'text-yellow-400'}`}>{i.stock}</td>
