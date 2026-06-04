@@ -126,7 +126,7 @@ const calcPrice = (ref: Ref, qty: number, tipoImp: string, cmDTF: number, numPla
   if (tipoImp === 'DTG') impresion = costoDTG;
   if (tipoImp === 'Bordado') impresion = costoBordado;
   const costoUnit  = base + empaque + impresion;
-  const precioUnit    = Math.round(costoUnit / (1 - margen));
+  const precioUnit    = Math.ceil(Math.round(costoUnit / (1 - margen)) / 50) * 50;
   const gananciaUnit = precioUnit - costoUnit;
   return { costo: costoUnit * qty, ganancia: gananciaUnit * qty, precio: precioUnit * qty };
 };
