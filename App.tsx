@@ -41,6 +41,9 @@ const COSTO_EMPAQUE      = 1500;
 const COSTO_PLANCHADA    = 1000;
 const MARGEN_PCT     = 0.53; // Margen de ganancia estandar (53%)
 const MARGEN_PCT_ALT = 0.55; // Margen de ganancia alternativo (55%)
+const MARGEN_47      = 0.47; // Margen de ganancia 47%
+const MARGEN_45      = 0.45; // Margen de ganancia 45%
+const MARGEN_40      = 0.40; // Margen de ganancia 40%
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
@@ -1363,7 +1366,7 @@ export default function App() {
             <Card>
               <CardTitle text="Costos de Produccion" />
               <div className="space-y-3">
-                <FG label="Margen de ganancia" hint="53% = estandar, 55% = alternativo"><Sel options={["53%","55%"]} value={selMargenPct===MARGEN_PCT?"53%":"55%"} onChange={(v)=>setSelMargenPct(v==="53%"?MARGEN_PCT:MARGEN_PCT_ALT)} /></FG>
+                <FG label="Margen de ganancia" hint="53% estandar | 55% | 47% | 45% | 40%"><Sel options={["53%","55%","47%","45%","40%"]} value={(selMargenPct*100).toFixed(0)+"%"} onChange={(v)=>setSelMargenPct(parseFloat(v)/100)} /></FG>
               <FG label="Tipo de impresion">
                   <Sel options={TIPOS_IMP} value={selTipoImp} onChange={e => { setSelTipoImp(e.target.value); setCostoDTG(0); setCostoBordado(0); }} />
                 </FG>
