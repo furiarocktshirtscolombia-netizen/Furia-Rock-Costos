@@ -1315,7 +1315,7 @@ export default function App() {
 
       {/* ═══ BARRA DE FILTRO POR FECHA GLOBAL ═══ */}
       <div className="bg-gray-800 border-b border-gray-600 px-4 py-2">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-3">
+        <div className="w-full flex flex-wrap items-center gap-3">
           <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider whitespace-nowrap">📅 Filtrar por fecha:</span>
           <div className="flex gap-1 rounded-lg overflow-hidden border border-gray-600">
             {(['rango','mes','dia'] as const).map(m => (
@@ -1353,7 +1353,7 @@ export default function App() {
       </div>
 
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+      <div className="w-full px-4 py-6 space-y-4">
 
         {/* ═══ COTIZADOR ═══ */}
         {tab === 'cotizador' && (
