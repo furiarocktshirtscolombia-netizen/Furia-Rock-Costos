@@ -9,7 +9,7 @@ const REFS_DEFAULT: Ref[] = [
 { id:"r2",  name:"CAMISETA EN ALGODON PERUANO 320 GRAMOS",                     cost:38500, cat:"Adulto" },
 { id:"r3",  name:"CAMISETA EN ALGODON PERUANO 270 GRAMOS",                     cost:34500, cat:"Adulto" },
 { id:"r4",  name:"CAMISETA CATAR",                                              cost:38500, cat:"Adulto" },
-{ id:"r5",  name:"CAMISETA C4 ALGODON NACIONAL DEL 200 GRAMOS",               cost:20500, cat:"Adulto" },
+{ id:"r5",  name:"CAMISETA C4 ALGODON NACIONAL DEL 200 GRAMOS",        hh       cost:20500, cat:"Adulto" },
 { id:"r6",  name:"HOODIE PERUANO DE 400 GRAMOS",                               cost:83500, cat:"Adulto" },
 { id:"r7",  name:"CAMISETA PARA NIÃO ALGODON PERUANO DE 20 GRAMOS",          cost:25500, cat:"NiÃ±o" },
 { id:"r8",  name:"CAMISETA PARA NIÃO NACIONAL DE 200 GRAMOS",                cost:15500, cat:"NiÃ±o" },
@@ -424,11 +424,6 @@ export default function App() {
           String(i.talla||'').trim() === String(selTalla).trim() &&
           String(i.color||'').trim() === String(selColor).trim()
         );
-    const stockDisp = invItem ? invItem.stock : 0;
-    if (stockDisp < selQty) {
-      showToast('Stock insuficiente: ' + skuKey + ' â Disponible: ' + stockDisp + ' u., Solicitado: ' + selQty + ' u.');
-      return;
-    }
     const item = {
       ref: currentRef.name, refId: currentRef.id, cat: currentRef.cat,
       color: selColor, talla: selTalla, forma: selForma,
@@ -802,11 +797,6 @@ export default function App() {
         ? String((item as any).sku).trim()
         : item.refId+'|'+item.talla+'|'+item.color+'|'+(item.forma||'_');
       const invItem = inventario.find(i => i.sku === skuKey);
-      const stockDisp = invItem ? invItem.stock : 0;
-      if (stockDisp < item.qty) {
-        showToast('No hay inventario suficiente. SKU: ' + skuKey + ' â Disponible: ' + stockDisp + ' u. Solicitado: ' + item.qty + ' u.');
-        return;
-      }
     }
     setLoading(true); setGasErr('');
     const nuevasVentas = [...ventas];
