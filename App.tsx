@@ -1250,7 +1250,7 @@ export default function App() {
     {id:'ventas',       label:'ð° Ventas'},
     {id:'compras',      label:'ð¦ Compras'},
     {id:'inventario',   label:'ð Inventario'},
-    {id:'dashboard',    label:'ð Panel''},
+    {id:'dashboard',    label:'ð Panel'},
     {id:'cuenta',       label:'ð§¾ Cuenta de Cobro'},
     {id:'cotizaciones', label:'ð Cotizaciones'},
     {id:'abonos',       label:'ð° Abonos'},
