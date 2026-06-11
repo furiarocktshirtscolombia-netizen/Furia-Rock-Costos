@@ -1,10 +1,10 @@
 import { ProductReference } from './types';
 
 export const PRODUCT_REFERENCES_INITIAL: ProductReference[] = [
-  { id: 'cam-c4', name: 'Camiseta Regular Fit de Algodón Nacional de 200 gr', baseCost: 19000 },
-  { id: 'cam-randy', name: 'Camiseta Regular Fit de Algodón Peruano de 200 gramos', baseCost: 27000 },
-  { id: 'cam-per-a', name: 'Camiseta Oversize de Algodón Peruano de 200 gramos', baseCost: 37000 },
-  { id: 'cam-per-ov-26', name: 'Camiseta Oversize Algodón Nacional de 200 gramos', baseCost: 26000 },
+  { id: 'cam-c4', name: 'Camiseta Corte Regular de Algodón Nacional de 200 gr', baseCost: 19000 },
+  { id: 'cam-randy', name: 'Camiseta Corte Regular de Algodón Peruano de 200 gramos', baseCost: 27000 },
+  { id: 'cam-per-a', name: 'Camiseta Talla Grande de Algodón Peruano de 200 gramos', baseCost: 37000 },
+  { id: 'cam-per-ov-26', name: 'Camiseta Talla Grande Algodón Nacional de 200 gramos', baseCost: 26000 },
   { id: 'cam-catar', name: 'Camiseta Catar', baseCost: 35000 },
   { id: 'cam-per-n', name: 'Camiseta Niño Peruana', baseCost: 23500 },
   { id: 'cam-acid-n', name: 'Camiseta Niño Acid Wash', baseCost: 23500 },
