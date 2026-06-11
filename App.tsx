@@ -7,7 +7,7 @@ import 'jspdf-autotable';
 const REFS_DEFAULT: Ref[] = [
 { id:"r1",  name:"CAMISETA EN ALGODON PERUANO 178 GRAMOS",                     cost:19500, cat:"Adulto" },
 { id:"r2",  name:"CAMISETA EN ALGODON PERUANO 320 GRAMOS",                     cost:38500, cat:"Adulto" },
-{ id:"r3",  name:"CAMISETA EN ALGODON PERUANO 270 GRAMOS",                     cost:34500, cat:"Adulto" },
+{ id:"r3",  name:"CAMISETA EN ALGODON PERUANO 270 GRAMOS",             h        cost:34500, cat:"Adulto" },
 { id:"r4",  name:"CAMISETA CATAR",                                              cost:38500, cat:"Adulto" },
 { id:"r5",  name:"CAMISETA C4 ALGODON NACIONAL DEL 200 GRAMOS",          cost:20500, cat:"Adulto" },
 { id:"r6",  name:"HOODIE PERUANO DE 400 GRAMOS",                               cost:83500, cat:"Adulto" },
@@ -43,7 +43,7 @@ const TALLAS_NINO      = ["0-2","2-4","4-6","6-8","8-10","10-12","12-14","14-16"
 const TODAS_TALLAS     = [...TALLAS_ADULTO, ...TALLAS_NINO];
 const TIPOS_IMP        = ["DTF","DTG","Bordado"];
 const SEDES            = ["Medellin","Bogota","Cali","Online","Otra"];
-const FORMAS_CAMISETA  = ["Oversize","Regular Fit"];
+const FORMAS_CAMISETA  = ["Talla Grande","Corte Regular"];
 
 // Helper: detectar si una referencia es de NiÃ±o (acepta "Nino","niÃ±o","nino","NiÃ±o",etc.)
 const esNino = (cat: string) =>
@@ -1075,7 +1075,7 @@ export default function App() {
     infoY += 6;
 
     // Build table data from items structured data or parsed detalle string
-    const FORMAS_VALID = ['Oversize', 'Regular Fit', 'oversize', 'regular fit'];
+    const FORMAS_VALID = ['Talla Grande', 'Corte Regular', 'talla grande', 'corte regular'];
     const detalleStr = String(cot.detalle || '');    const cantStr    = String(cot.cantidades || '');
 
     const precStr    = String(cot.precios    || '');
@@ -1250,7 +1250,7 @@ export default function App() {
     {id:'ventas',       label:'ð° Ventas'},
     {id:'compras',      label:'ð¦ Compras'},
     {id:'inventario',   label:'ð Inventario'},
-    {id:'dashboard',    label:'ð Dashboard'},
+    {id:'dashboard',    label:'ð Panel''},
     {id:'cuenta',       label:'ð§¾ Cuenta de Cobro'},
     {id:'cotizaciones', label:'ð Cotizaciones'},
     {id:'abonos',       label:'ð° Abonos'},
