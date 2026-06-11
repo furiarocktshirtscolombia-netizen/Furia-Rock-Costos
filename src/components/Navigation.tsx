@@ -17,7 +17,7 @@ interface NavigationProps {
 
 const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: PieChartIcon },
+    { id: 'dashboard', label: 'Panel', icon: PieChartIcon },
     { id: 'cotizador', label: 'Cotizador', icon: LayoutGrid },
     { id: 'ventas', label: 'Ventas', icon: ShoppingCart },
     { id: 'compras', label: 'Compras', icon: ShoppingBag },
