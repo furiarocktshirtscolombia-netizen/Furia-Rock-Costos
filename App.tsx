@@ -7,7 +7,7 @@ import 'jspdf-autotable';
 const REFS_DEFAULT: Ref[] = [
 { id:"r1",  name:"CAMISETA EN ALGODON PERUANO 178 GRAMOS",                     cost:19500, cat:"Adulto" },
 { id:"r2",  name:"CAMISETA EN ALGODON PERUANO 320 GRAMOS",                     cost:38500, cat:"Adulto" },
-{ id:"r3",  name:"CAMISETA EN ALGODON PERUANO 270 GRAMOS",             h        cost:34500, cat:"Adulto" },
+{ id:"r3",  name:"CAMISETA EN ALGODON PERUANO 270 GRAMOS",                     cost:34500, cat:"Adulto" },
 { id:"r4",  name:"CAMISETA CATAR",                                              cost:38500, cat:"Adulto" },
 { id:"r5",  name:"CAMISETA C4 ALGODON NACIONAL DEL 200 GRAMOS",          cost:20500, cat:"Adulto" },
 { id:"r6",  name:"HOODIE PERUANO DE 400 GRAMOS",                               cost:83500, cat:"Adulto" },
