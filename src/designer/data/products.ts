@@ -73,4 +73,3 @@ imageFront: '', imageBack: '', cost: 17500, price: 38000, stock: 70, status: 'ac
 export function getGarmentById(id: string): Garment | undefined {
 return GARMENTS.find((g) => g.id === id);
 }
-<
