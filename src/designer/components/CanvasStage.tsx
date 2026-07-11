@@ -281,7 +281,6 @@ return (
 );
 });
 
-);
 
 function clearGuides(canvas: fabric.Canvas, guidesRef: React.MutableRefObject<fabric.Line[]>) {
   guidesRef.current.forEach((l) => canvas.remove(l));
