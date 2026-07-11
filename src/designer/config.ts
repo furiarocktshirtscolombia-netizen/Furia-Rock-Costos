@@ -2,7 +2,7 @@
 // IMPORTANTE: pega aqui la MISMA URL de Google Apps Script (GAS_URL) que ya
 // usa App.tsx, para que el disenador escriba en las mismas hojas de calculo
 // (Inventario, Ventas, Clientes) que usa el resto del sistema Furia Rock.
-export const GAS_URL = 'PEGAR_AQUI_LA_MISMA_GAS_URL_QUE_USA_APP_TSX';
+export const GAS_URL ='https://script.google.com/macros/s/AKfycby9m-yDkajrDZyINyGjsrWW_Efu48IbI9GtjOpU0aIsO_uZsMppobAnIx8hIRU1yYsd/exec';
 
 // Cada cuantos milisegundos se autoguarda el diseno en edicion.
 export const AUTOSAVE_INTERVAL_MS = 8000;
