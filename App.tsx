@@ -91,7 +91,7 @@ interface Abono {
   estado: string;
   observaciones: string;
 }
-type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones'|'abonos'|'abonos';
+type Tab = 'cotizador'|'ventas'|'compras'|'inventario'|'dashboard'|'cuenta'|'cotizaciones'|'abonos'|'abonos'|'disenador';
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 const sendToGAS = async (body: object) => {
@@ -1254,6 +1254,7 @@ export default function App() {
     {id:'cuenta',       label:'🧾 Cuenta de Cobro'},
     {id:'cotizaciones', label:'📋 Cotizaciones'},
     {id:'abonos',       label:'💰 Abonos'},
+        {id:'disenador',   label:'🎨 Diseñador'},
   ];
 
   return (
@@ -1317,8 +1318,7 @@ export default function App() {
       </div>
       <div className="bg-gray-800 border-b border-gray-700 px-4 flex gap-1 flex-wrap">
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+          <button key={t.id} onClick={() => (t.id === 'disenador' ? (window.location.hash = '#/disenador', window.location.reload()) : setTab(t.id))}            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
               tab===t.id ? 'border-indigo-400 text-indigo-400' : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}>{t.label}</button>
         ))}
