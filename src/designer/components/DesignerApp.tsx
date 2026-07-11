@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import TopBar from './TopBar';
 import LeftPanel from './LeftPanel';
 import RightPanel from './RightPanel';
+import HelpModal from './HelpModal';
 import CanvasStage, { CanvasStageHandle, SelectedElementInfo } from './CanvasStage';
 import { GARMENTS } from '../data/products';
 import { ViewSide, CartItem } from '../types';
@@ -27,6 +28,7 @@ export default function DesignerApp() {
   const [observaciones, setObservaciones] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [autosaveLabel, setAutosaveLabel] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
   const canvasRef = useRef<CanvasStageHandle>(null);
   const historyRef = useRef<any[]>([]);
@@ -206,6 +208,7 @@ export default function DesignerApp() {
 
   return (
     <div className="p-4 max-w-[1600px] mx-auto">
+      <HelpModal open={showHelp} onClose={() => setShowHelp(false)} />
       <TopBar
         side={side}
         onToggleSide={() => setSide((s) => (s === 'front' ? 'back' : 'front'))}
@@ -222,6 +225,7 @@ export default function DesignerApp() {
         onPreview={() => window.alert('Vista previa: por ahora usa Exportar PNG.')}
         onAddToCart={handleAddToCart}
         onSendToProduction={handleSendToProduction}
+        onOpenHelp={() => setShowHelp(true)}
         autosaveLabel={autosaveLabel}
       />
       <div className="flex flex-col lg:flex-row gap-4 items-start">
