@@ -9,3 +9,11 @@ export const AUTOSAVE_INTERVAL_MS = 8000;
 
 // Nombre de la clave usada para el borrador local (respaldo si falla la red).
 export const LOCAL_DRAFT_KEY = 'furia_rock_designer_draft_v1';
+
+
+// Umbrales de DPI efectivo para la validacion automatica de resolucion DTG.
+// Configurables aqui mientras no exista un panel administrativo (ver Fase 5
+// del roadmap del Disenador Inteligente).
+export const DPI_EXCELENTE = 150;
+export const DPI_ACEPTABLE = 100;
+export const DPI_REGULAR = 72;
