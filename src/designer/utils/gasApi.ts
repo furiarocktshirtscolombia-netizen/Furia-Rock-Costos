@@ -32,3 +32,12 @@ export function sendProductionOrder(payload: ProductionOrderPayload) {
 export function fetchSavedDesigns(cliente: string) {
   return postToGAS('listarDisenosCliente', { cliente });
 }
+
+// Trae las medidas reales de impresion DTG (ancho/alto/collar en cm) por
+// prenda y lado desde la hoja "AreasDTG". Estos valores son administrables
+// desde Google Sheets sin tocar codigo (ver getAreasDTG_ en el Apps Script).
+// Si la peticion falla, quien llame debe conservar los valores por defecto
+// de data/products.ts (fallback seguro, ver utils/areaOverrides.ts).
+export function fetchAreasDTG() {
+  return postToGAS('getAreasDTG', {});
+}
