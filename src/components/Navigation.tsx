@@ -25,6 +25,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
     { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'facturacion', label: 'Facturación', icon: FileText },
     { id: 'config', label: 'Config', icon: Settings },
+    { id: 'disenador', label: 'Disenador', icon: Package },
   ];
 
   return (
@@ -35,7 +36,7 @@ const Navigation: React.FC<NavigationProps> = ({ activeTab, setActiveTab }) => {
         return (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => (tab.id === 'disenador' ? (window.location.hash = '#/disenador', window.location.reload()) : setActiveTab(tab.id))}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300 ${
               isActive 
                 ? 'bg-[#ff7a00] text-white shadow-xl shadow-[#ff7a00]/20' 
