@@ -220,6 +220,8 @@ onAddImageFromLibrary={handleAddImageFromLibrary}
 </div>
 <RightPanel
 selected={selected}
+  garment={garment}
+  side={side}
 onChange={handleChangeSelected}
 onDuplicate={() => canvasRef.current && canvasRef.current.duplicateSelected()}
 onDelete={() => canvasRef.current && canvasRef.current.deleteSelected()}
