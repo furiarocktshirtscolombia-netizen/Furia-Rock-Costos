@@ -10,6 +10,8 @@ import { buildGarmentSvgDataUrl } from '../utils/garmentArt';
   export interface SelectedElementInfo {
   id: string;
 kind: 'image' | 'text';
+    width: number;
+    height: number;
 x: number;
 y: number;
 scaleX: number;
@@ -79,6 +81,8 @@ if (!obj) { onSelectElement(null); return; }
 onSelectElement({
   id: obj.data ? obj.data.id : '',
   kind: obj.data ? obj.data.kind : 'image',
+  width: obj.width || 0,
+  height: obj.height || 0,
   x: Math.round(obj.left || 0),
   y: Math.round(obj.top || 0),
   scaleX: obj.scaleX || 1,
