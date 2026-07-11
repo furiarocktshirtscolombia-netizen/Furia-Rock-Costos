@@ -1,9 +1,9 @@
 // Cliente HTTP hacia el mismo backend (Google Apps Script) que ya usa
 // App.tsx. Reutiliza GAS_URL para que el disenador quede integrado con
 // el inventario, ventas y clientes reales de Furia Rock.
-// NOTA: las acciones 'guardarDiseno', 'crearPedidoDiseno' y
-// 'listarDisenosCliente' deben agregarse en Codigo_Inventario_Central.gs
-// (ver snippet sugerido en src/designer/README.md).
+// Las acciones 'guardarDiseno', 'enviarDisenoProduccion' y
+// 'obtenerDisenosCliente' ya existen en Codigo_Inventario_Central.gs
+// (ver handleDesignerAction).
 import { GAS_URL } from '../config';
 import { ProductionOrderPayload, DesignState } from '../types';
 
@@ -26,11 +26,11 @@ export function saveDesignToBackend(design: DesignState) {
 }
 
 export function sendProductionOrder(payload: ProductionOrderPayload) {
-  return postToGAS('crearPedidoDiseno', payload as unknown as object);
+  return postToGAS('enviarDisenoProduccion', payload as unknown as object);
 }
 
-export function fetchSavedDesigns(cliente: string) {
-  return postToGAS('listarDisenosCliente', { cliente });
+export function fetchSavedDesigns(params: { telefono?: string; documento?: string }) {
+  return postToGAS('obtenerDisenosCliente', params);
 }
 
 // Trae las medidas reales de impresion DTG (ancho/alto/collar en cm) por
