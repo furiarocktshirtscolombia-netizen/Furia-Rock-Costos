@@ -1,5 +1,5 @@
 // Panel izquierdo: seleccion de prenda/color/talla + biblioteca de elementos.
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';  
   import { Garment, LibraryCategoryId } from '../types';
 import { LIBRARY_CATEGORIES, searchLibraryItems, getLibraryItemsByCategory } from '../data/library';
 
@@ -24,6 +24,21 @@ garments, selectedGarment, onSelectGarment,
 
 const [activeCategory, setActiveCategory] = useState<LibraryCategoryId>('disenos');
 const [query, setQuery] = useState('');
+
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          if (!file.type.startsWith('image/')) { alert('Selecciona un archivo de imagen valido.'); e.target.value = ''; return; }
+          if (file.size > 5 * 1024 * 1024) { alert('La imagen supera el tamano maximo de 5MB.'); e.target.value = ''; return; }
+          const reader = new FileReader();
+          reader.onload = () => {
+                  if (typeof reader.result === 'string') onAddImageFromLibrary(reader.result);
+          };
+          reader.readAsDataURL(file);
+          e.target.value = '';
+    }
 
 const items = useMemo(() => {
 if (query.trim()) return searchLibraryItems(query);
@@ -73,8 +88,25 @@ className={'px-3 py-1 rounded-lg text-xs font-bold border ' + (selectedSize === 
 </button>
 ))}
 </div>
-</div>
 
+  <div className="border-t border-white/10 pt-3">
+  <h3 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Subir imagen</h3>
+  <input
+    ref={fileInputRef}
+    type="file"
+    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+    onChange={handleUploadFile}
+    className="hidden"
+    />
+  <button
+    onClick={() => fileInputRef.current?.click()}
+    className="w-full text-sm font-bold px-3 py-2 rounded-lg bg-[#ff7a00] text-white hover:bg-[#e86e00] transition"
+    >
+  + Subir imagen desde tu equipo
+  </button>
+  <p className="text-[10px] text-white/40 mt-1">PNG, JPG, WEBP o SVG. Maximo 5MB.</p>
+  </div>
+</div>
 <div className="border-t border-white/10 pt-3">
 <h3 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Biblioteca</h3>
 <input
