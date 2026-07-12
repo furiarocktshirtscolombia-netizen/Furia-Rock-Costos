@@ -241,7 +241,7 @@ export default function DesignerApp() {
         />
         <div className="flex-1 flex flex-col items-center gap-3">
           <button onClick={handleAddText} className="btn-light text-xs self-start">+ Agregar texto</button>
-          <CanvasStage ref={canvasRef} garment={garment} colorHex={colorHex} side={side} onSelectElement={handleSelectElement} />
+          <CanvasStage ref={canvasRef} garment={garment} colorHex={colorHex} colorId={colorId} side={side} onSelectElement={handleSelectElement} />
         </div>
         <RightPanel
           selected={selected}

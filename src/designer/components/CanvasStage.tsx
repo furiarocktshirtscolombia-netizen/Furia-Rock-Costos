@@ -50,6 +50,7 @@ clearSelection: () => void;
 interface Props {
   garment: Garment;
 colorHex: string;
+colorId: string;
 side: ViewSide;
 onSelectElement: (info: SelectedElementInfo | null) => void;
 }
@@ -58,7 +59,7 @@ const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 500;
 
 const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
-{ garment, colorHex, side, onSelectElement },
+{ garment, colorHex, colorId, side, onSelectElement },
 ref
 ) {
 const canvasElRef = useRef<HTMLCanvasElement | null>(null);
@@ -140,7 +141,8 @@ fabricRef.current = null;
 useEffect(() => {
   const canvas = fabricRef.current;
 if (!canvas) return;
-const url = buildGarmentSvgDataUrl(garment.type, side, colorHex);
+const realUrl = (garment.colorImages && garment.colorImages[colorId]) ? (side === 'front' ? garment.colorImages[colorId].front : garment.colorImages[colorId].back) : '';
+const url = realUrl || buildGarmentSvgDataUrl(garment.type, side, colorHex);
 fabric.FabricImage.fromURL(url).then((img: any) => {
   img.set({
   left: 0,
@@ -154,7 +156,7 @@ canvas.backgroundImage = img;
 drawPrintAreaGuide(canvas, garment, side, printAreaRectRef);
 canvas.requestRenderAll();
 });
-}, [garment, colorHex, side]);
+}, [garment, colorId, colorHex, side]);
 
 useImperativeHandle(ref, () => ({
 addImageFromUrl(url: string) {
