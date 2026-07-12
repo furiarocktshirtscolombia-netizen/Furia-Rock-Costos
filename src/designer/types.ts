@@ -40,6 +40,8 @@ export interface Garment {
     printAreaBack: PrintArea;
     imageFront: string;
     imageBack: string;
+    // Aditivo: fotos reales opcionales por color (si no existen, se usa el SVG placeholder).
+    colorImages?: Record<string, { front: string; back: string }>;
     cost: number;
     price: number;
     stock: number;
