@@ -25,6 +25,7 @@ export const GARMENTS: Garment[] = [
     printAreaFront: { x: 130, y: 110, width: 240, height: 300, maxWidthCm: 35, maxHeightCm: 45, collarOffsetCm: 8 },
     printAreaBack: { x: 130, y: 100, width: 240, height: 300, maxWidthCm: 35, maxHeightCm: 45, collarOffsetCm: 6 },
     imageFront: '', imageBack: '', cost: 19500, price: 45000, stock: 120, status: 'activo',
+    colorImages: { negro: { front: '/garments/g1-negro-frente.png', back: '/garments/g1-negro-espalda.png' } },
   },
   {
     id: 'g2', name: 'Camiseta Oversize', type: 'oversize',
