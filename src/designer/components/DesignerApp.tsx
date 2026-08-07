@@ -12,6 +12,7 @@ import { ViewSide, CartItem } from '../types';
 import { AUTOSAVE_INTERVAL_MS, LOCAL_DRAFT_KEY } from '../config';
 import { saveDesignToBackend, sendProductionOrder, fetchAreasDTG } from '../utils/gasApi';
 import { applyAreaOverrides } from '../utils/areaOverrides';
+import jsPDF from 'jspdf';
 
 export default function DesignerApp() {
   // Prendas con las medidas DTG por defecto (data/products.ts). Si la hoja
@@ -163,6 +164,56 @@ export default function DesignerApp() {
     a.download = 'diseno-furia-rock.png';
     a.click();
   }
+  
+    function handleExportPDF() {
+    const dataUrl = canvasRef.current ? canvasRef.current.exportPNG() : undefined;
+    if (!dataUrl) return;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ml = 18;
+    pdf.setFillColor(11, 11, 13);
+    pdf.rect(0, 0, pageW, 32, 'F');
+    pdf.setFillColor(255, 122, 0);
+    pdf.rect(0, 0, 4, 32, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('FURIA ROCK', ml, 15);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(185, 192, 204);
+    pdf.text('Diseno personalizado', ml, 22);
+    const fecha = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    pdf.setFontSize(8);
+    pdf.text('Fecha: ' + fecha, pageW - ml, 22, { align: 'right' });
+    const infoY = 44;
+    pdf.setTextColor(15, 23, 42);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(garment.name, ml, infoY);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    const colorName = (garment.colors.find((c) => c.id === colorId) || garment.colors[0]).name;
+    pdf.text('Color: ' + colorName + '   Talla: ' + size + '   Vista: ' + (side === 'front' ? 'Frente' : 'Espalda'), ml, infoY + 6);
+    pdf.text('Referencia: ' + garment.reference, ml, infoY + 12);
+    const imgW = 110;
+    const imgH = imgW * 1.25;
+    const imgX = (pageW - imgW) / 2;
+    const imgY = infoY + 20;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.3);
+    pdf.rect(imgX - 2, imgY - 2, imgW + 4, imgH + 4);
+    pdf.addImage(dataUrl, 'PNG', imgX, imgY, imgW, imgH);
+    const footY = pageH - 14;
+    pdf.line(ml, footY - 4, pageW - ml, footY - 4);
+    pdf.setFontSize(7);
+    pdf.setTextColor(148, 163, 184);
+    pdf.text('FURIA ROCK - Diseno personalizado', ml, footY);
+    pdf.text('Documento de referencia. No reemplaza la ficha tecnica de produccion.', pageW / 2, footY, { align: 'center' });
+    const todayStr = new Date().toISOString().split('T')[0];
+    pdf.save('Diseno_FuriaRock_' + garment.name.replace(/\s+/g, '_') + '_' + side + '_' + todayStr + '.pdf');
+  }
 
   function handleAddToCart() {
     const dataUrl = (canvasRef.current ? canvasRef.current.exportPNG() : '') || '';
@@ -221,7 +272,7 @@ export default function DesignerApp() {
         canUndo={canUndo}
         canRedo={canRedo}
         onExportPNG={handleExportPNG}
-        onExportPDF={() => window.alert('Exportar PDF: pendiente (usar jsPDF, ya disponible en el proyecto).')}
+        onExportPDF={handleExportPDF}
         onPreview={() => window.alert('Vista previa: por ahora usa Exportar PNG.')}
         onAddToCart={handleAddToCart}
         onSendToProduction={handleSendToProduction}
